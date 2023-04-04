@@ -1,0 +1,2 @@
+# mini-vite
+learn vite
