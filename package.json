@@ -1,12 +1,19 @@
 {
   "name": "mini-vite",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "you can use mini-vite to learn vite",
+  "author": "lyk990",
+  "license": "ISC",
   "main": "index.js",
+  "homepage": "https://github.com/lyk990/mini-vite",
+  "keywords": [
+    "vite",
+    "mini-vite"
+  ],
+  "bin": {
+    "mini-vite": "bin/mini-vite"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }
