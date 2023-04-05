@@ -1,3 +1,5 @@
 packages:
   - 'packages/*'
   - 'playground/**'
+  - 'mini-vite-example/**'
+  - '!**/test/**'
