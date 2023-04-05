@@ -11,6 +11,7 @@
     "mini-vite"
   ],
   "scripts": {
+    "build": "pnpm -r --filter='./packages/*' run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

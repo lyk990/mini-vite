@@ -11,5 +11,18 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "cac": "^6.7.14",
+    "chokidar": "^3.5.3",
+    "connect": "^3.7.0",
+    "debug": "^4.3.4",
+    "es-module-lexer": "^1.2.1",
+    "esbuild": "^0.17.15",
+    "magic-string": "^0.30.0",
+    "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11"
+  }
 }
