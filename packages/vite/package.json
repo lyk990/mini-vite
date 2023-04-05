@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "@mini-vite/vite",
   "main": "index.js",
+  "bin": {
+    "mini-vite": "bin/mini-vite"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
