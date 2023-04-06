@@ -66,6 +66,7 @@ export function preBundlePlugin(deps: Set<string>): Plugin {
             );
           } else {
             // esm 格式比较好处理，export * 或者 export default 即可
+            // @ts-ignore: Unreachable code error
             if (exports.includes("default")) {
               proxyModule.push(`import d from "${entryPath}";export default d`);
             }
