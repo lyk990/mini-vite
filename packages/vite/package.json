@@ -7,6 +7,8 @@
     "mini-vite": "bin/mini-vite"
   },
   "scripts": {
+    "dev": "rimraf dist && pnpm run build-bundle -w",
+    "build-bundle": "rollup --config rollup.config.ts --configPlugin typescript",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -20,6 +22,8 @@
     "es-module-lexer": "^1.2.1",
     "esbuild": "^0.17.15",
     "magic-string": "^0.30.0",
+    "rollup-plugin-license": "^3.0.1",
+    "tslib": "^2.5.0",
     "ws": "^8.13.0"
   },
   "devDependencies": {
