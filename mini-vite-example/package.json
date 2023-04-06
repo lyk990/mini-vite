@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "myVite": "mini-vite",
+    "test-dev": "mini-vite",
     "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "rm": "rimraf node_modules"
   },
   "dependencies": {
     "@mini-vite/vite": "workspace:^",

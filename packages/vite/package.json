@@ -4,8 +4,9 @@
   "description": "@mini-vite/vite",
   "main": "index.js",
   "bin": {
-    "mini-vite": "bin/mini-vite"
+    "mini-vite": "bin/mini-vite.js"
   },
+  "type":"module",
   "scripts": {
     "dev": "rimraf dist && pnpm run build-bundle -w",
     "build-bundle": "rollup --config rollup.config.ts --configPlugin typescript",
