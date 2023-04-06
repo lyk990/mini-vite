@@ -5,7 +5,8 @@ cli
   .alias("serve")
   .alias("dev")
   .action(async () => {
-    console.log('测试 cli~');
+    const { createServer } = await import("./server");
+    createServer();
   });
 
 cli.help();

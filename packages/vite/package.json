@@ -6,7 +6,7 @@
   "bin": {
     "mini-vite": "bin/mini-vite.js"
   },
-  "type":"module",
+  "type": "module",
   "scripts": {
     "dev": "rimraf dist && pnpm run build-bundle -w",
     "build-bundle": "rollup --config rollup.config.ts --configPlugin typescript",
@@ -28,6 +28,9 @@
     "ws": "^8.13.0"
   },
   "devDependencies": {
+    "@types/connect": "^3.4.35",
+    "@types/debug": "^4.1.7",
+    "@types/fs-extra": "^11.0.1",
     "@types/node": "^18.15.11"
   }
 }

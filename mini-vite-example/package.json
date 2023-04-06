@@ -5,16 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "test-dev": "mini-vite",
+    "serve": "mini-vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "rm": "rimraf node_modules"
+    "rm": "rimraf node_modules",
+    "i": "rimraf node_modules && pnpm i"
   },
   "dependencies": {
     "@mini-vite/vite": "workspace:^",
     "vue": "^3.2.47"
   },
   "devDependencies": {
+    "@types/connect": "^3.4.35",
     "@vitejs/plugin-vue": "^4.1.0",
     "typescript": "^4.9.3",
     "vite": "^4.2.0",
