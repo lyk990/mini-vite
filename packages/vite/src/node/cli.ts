@@ -4,7 +4,7 @@ cli
   .command("[root]", "Run the development server")
   .alias("serve")
   .alias("dev")
-  .action(async () => {
+  .action(async (_root, _options) => {
     const { createServer } = await import("./server");
     createServer();
   });
