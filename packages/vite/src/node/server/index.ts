@@ -4,6 +4,7 @@ import { optimize } from "../optimizer/index";
 import { resolvePlugins } from "../plugins";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import { Plugin } from "../plugin";
+import { ViteDevServer } from "vite";
 
 export interface ServerContext {
   root: string;
@@ -11,6 +12,8 @@ export interface ServerContext {
   app: connect.Server;
   plugins: Plugin[];
 }
+
+async function startServer(server: ViteDevServer, inlinePort?: number) {}
 
 /** 创建server监听端口、解析vite配置、解析http配置、解析chokidar配置 */
 export async function createServer() {
