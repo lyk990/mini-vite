@@ -1,7 +1,6 @@
 import type { Logger } from "./logger";
 import type { Server as HttpServer } from "node:http";
 import type { Connect } from "dep-types/connect";
-import { blue } from "picocolors";
 
 export async function resolveHttpServer(app: Connect.Server) {
   const { createServer } = await import("node:http");
@@ -36,13 +35,13 @@ export async function httpServerStart(
     };
     httpServer.on("error", onError);
     // 监听端口
-    httpServer.listen(port, async () => {
+    httpServer.listen(port, host, async () => {
       // TODO vite启动耗时
       // console.log(
       //   green("🚀 mini-vite 服务已经成功启动!"),
       //   `耗时: ${Date.now() - startTime}ms`
       // );
-      console.log(`> 本地访问路径: ${blue("http://localhost:3003")}`);
+      httpServer.removeListener("error", onError);
       resolve(port);
     });
   });
