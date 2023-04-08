@@ -24,3 +24,4 @@ export const EXTERNAL_TYPES = [
 
 export const BARE_IMPORT_RE = /^[\w@][^:]/;
 export const PRE_BUNDLE_DIR = path.join("node_modules", ".m-vite");
+export const DEFAULT_DEV_PORT = 5173

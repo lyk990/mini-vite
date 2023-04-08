@@ -117,6 +117,12 @@ importers:
       '@types/node':
         specifier: ^18.15.11
         version: 18.15.11
+      dep-types:
+        specifier: link:./src/types
+        version: link:src/types
+      types:
+        specifier: link:./types
+        version: link:types
 
 packages:
 

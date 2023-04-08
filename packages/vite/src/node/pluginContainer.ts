@@ -1,17 +1,13 @@
 import type {
-  LoadResult,
-  PartialResolvedId,
-  SourceDescription,
+  // LoadResult,
+  // PartialResolvedId,
+  // SourceDescription,
   PluginContext as RollupPluginContext,
   ResolvedId,
 } from "rollup";
 import { Plugin } from "./plugin";
+import { PluginContainer } from "vite";
 
-export interface PluginContainer {
-  resolveId(id: string, importer?: string): Promise<PartialResolvedId | null>;
-  load(id: string): Promise<LoadResult | null>;
-  transform(code: string, id: string): Promise<SourceDescription | null>;
-}
 export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
   // @ts-ignore 这里仅实现上下文对象的 resolve 方法
   class Context implements RollupPluginContext {
@@ -22,7 +18,7 @@ export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
     }
   }
   // 插件容器
-  const pluginContainer: PluginContainer = {
+  const pluginContainer = {
     async resolveId(id: string, importer?: string) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
@@ -36,7 +32,7 @@ export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
       }
       return null;
     },
-    async load(id) {
+    async load(id: string) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
         if (plugin.load) {
@@ -48,7 +44,7 @@ export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
       }
       return null;
     },
-    async transform(code, id) {
+    async transform(code: string, id: string) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
         if (plugin.transform) {
@@ -63,7 +59,11 @@ export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
       }
       return { code };
     },
+    options: {},
+    async getModuleInfo(id: string) {},
+    buildStart(options: any) {},
+    async close() {},
   };
 
-  return pluginContainer;
+  return pluginContainer as any;
 };
