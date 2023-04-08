@@ -2,7 +2,9 @@ import type { Logger } from "./logger";
 import type { Server as HttpServer } from "node:http";
 import type { Connect } from "dep-types/connect";
 
-export async function resolveHttpServer(app: Connect.Server) {
+export async function resolveHttpServer(
+  app: Connect.Server
+): Promise<HttpServer> {
   const { createServer } = await import("node:http");
   return createServer(app);
 }

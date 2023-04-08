@@ -2,11 +2,13 @@ import { InlineConfig, UserConfigExport } from "vite";
 import { createLogger } from "vite";
 import { Logger } from "./logger";
 
-// import type { ResolvedConfig } from "vite";
+import type { ResolvedServerOptions } from "./server";
 
 // TODO
 export interface ResolvedConfig {
   logger: Logger;
+  server: ResolvedServerOptions;
+  root: string;
 }
 
 export async function resolveConfig(
@@ -28,6 +30,18 @@ export async function resolveConfig(
   });
   const resolvedConfig: ResolvedConfig = {
     logger,
+    root: process.cwd(),
+    server: {
+      preTransformRequests: true,
+      middlewareMode: true,
+      host: "localhost",
+      // TODO
+      fs: {
+        strict: true,
+        allow: [""],
+        deny: [".env", ".env.*", "*.{crt,pem}"],
+      },
+    },
   };
   const resolved: ResolvedConfig = {
     ...config,
