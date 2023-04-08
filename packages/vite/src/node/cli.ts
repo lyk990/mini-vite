@@ -7,7 +7,10 @@ cli
   .action(async (_root, options) => {
     const { createServer } = await import("./server");
     try {
-      await createServer({ mode: options.dev });
+      const server = await createServer({ mode: options.dev });
+      if (!server.httpServer) {
+        throw new Error("HTTP server not available");
+      }
     } catch (error) {}
   });
 
