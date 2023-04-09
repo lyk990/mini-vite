@@ -57,6 +57,7 @@ cli
       const server = await createServer({
         mode: options.dev,
         server: cleanOptions(options),
+        optimizeDeps: { force: options.force },
       });
       if (!server.httpServer) {
         throw new Error("HTTP server not available");

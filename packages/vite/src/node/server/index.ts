@@ -17,6 +17,7 @@ import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
 import { resolveServerUrls } from "../utils";
 import { printServerUrls } from "../logger";
+import { initDepsOptimizer } from "../optimizer";
 export interface ResolvedServerUrls {
   local: string[];
   network: string[];
@@ -62,7 +63,11 @@ async function startServer(server: ViteDevServer, inlinePort?: number) {
 /** 创建server监听端口、解析vite配置、解析http配置、解析chokidar配置 */
 export async function createServer(inlineConfig: InlineConfig = {}) {
   const config = await resolveConfig(inlineConfig, "serve");
-  const { root, server: serverConfig } = config
+  //TODO 依赖预构建
+  if (true) {
+    await initDepsOptimizer(config);
+  }
+  const { root, server: serverConfig } = config;
   const middlewares = connect() as Connect.Server;
   const httpServer = await resolveHttpServer(middlewares);
   const plugins = await resolvePlugins();

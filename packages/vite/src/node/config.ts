@@ -1,5 +1,12 @@
-import { InlineConfig, UserConfigExport } from "vite";
+import {
+  Alias,
+  DepOptimizationOptions,
+  InlineConfig,
+  ResolveOptions,
+  UserConfigExport,
+} from "vite";
 import { createLogger } from "vite";
+import { DEFAULT_EXTENSIONS, DEFAULT_MAIN_FIELDS } from "./constants";
 import { Logger } from "./logger";
 
 import type { ResolvedServerOptions } from "./server";
@@ -9,6 +16,10 @@ export interface ResolvedConfig {
   logger: Logger;
   server: ResolvedServerOptions;
   root: string;
+  optimizeDeps: DepOptimizationOptions;
+  resolve: Required<ResolveOptions> & {
+    alias: Alias[];
+  };
 }
 
 export async function resolveConfig(
@@ -28,6 +39,21 @@ export async function resolveConfig(
     allowClearScreen: config.clearScreen,
     customLogger: config.customLogger,
   });
+  // TODO
+   // resolve alias with internal client alias
+  //  const resolvedAlias = normalizeAlias(
+  //   mergeAlias(clientAlias, config.resolve?.alias || []),
+  // )
+  const optimizeDeps = config.optimizeDeps || {};
+  const resolveOptions: ResolvedConfig["resolve"] = {
+    mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS,
+    browserField: config.resolve?.browserField ?? true,
+    conditions: config.resolve?.conditions ?? [],
+    extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS,
+    dedupe: config.resolve?.dedupe ?? [],
+    preserveSymlinks: config.resolve?.preserveSymlinks ?? false,
+    alias: [{ find: "", replacement: "@" }],
+  };
   const resolvedConfig: ResolvedConfig = {
     logger,
     root: process.cwd(),
@@ -40,6 +66,15 @@ export async function resolveConfig(
         strict: true,
         allow: [""],
         deny: [".env", ".env.*", "*.{crt,pem}"],
+      },
+    },
+    resolve: resolveOptions,
+    optimizeDeps: {
+      disabled: "build",
+      ...optimizeDeps,
+      esbuildOptions: {
+        preserveSymlinks: resolveOptions.preserveSymlinks,
+        ...optimizeDeps.esbuildOptions,
       },
     },
   };

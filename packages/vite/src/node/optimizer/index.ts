@@ -1,34 +1,35 @@
-import path from "path";
-import { build } from "esbuild";
-import { green } from "picocolors";
-import { scanPlugin } from "./scanPlugin";
-import { preBundlePlugin } from "./preBundlePlugin";
-import { PRE_BUNDLE_DIR } from "../constants";
-/**依赖预构建 */
-export async function optimize(root: any) {
-  const entry = path.resolve(root, "src/main.ts"); // 依赖预构建入口文件
-  const deps = new Set<string>();
-  // 扫描需要解析的依赖
-  await build({
-    entryPoints: [entry],
-    bundle: true,
-    write: false,
-    plugins: [scanPlugin(deps)],
-  });
-  // 预构建依赖
-  await build({
-    entryPoints: [...deps],
-    write: true,
-    bundle: true,
-    format: "esm",
-    splitting: true,
-    outdir: path.resolve(root, PRE_BUNDLE_DIR),
-    plugins: [preBundlePlugin(deps)],
-  });
-  console.log(
-    `${green("需要预构建的依赖")}:\n${[...deps]
-      .map(green)
-      .map((item) => `  ${item}`)
-      .join("\n")}`
-  );
+import type { DepOptimizationMetadata } from "vite";
+import { ResolvedConfig } from "../config";
+import { ViteDevServer } from "../server";
+import { normalizePath } from "../utils";
+import path from "node:path";
+
+export async function initDepsOptimizer(
+  config: ResolvedConfig,
+  server?: ViteDevServer
+) {
+  await createDepsOptimizer(config, server);
+}
+
+async function createDepsOptimizer(
+  config: ResolvedConfig,
+  server?: ViteDevServer
+) {
+  const { logger } = config;
+  const cachedMetadata = await loadCachedDepOptimizationMetadata(config, false);
+}
+
+export async function loadCachedDepOptimizationMetadata(
+  config: ResolvedConfig,
+  ssr: boolean,
+  force = config.optimizeDeps.force,
+  asCommand = false
+): Promise<DepOptimizationMetadata | undefined> {
+  const depsCacheDir = getDepsCacheDir(config, ssr);
+  return;
+}
+
+// TODO
+export function getDepsCacheDir(config: ResolvedConfig, ssr: boolean): string {
+  return normalizePath(path.resolve("node_modules/.mini-vite", "deps"));
 }
