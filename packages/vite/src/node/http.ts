@@ -38,11 +38,6 @@ export async function httpServerStart(
     httpServer.on("error", onError);
     // 监听端口
     httpServer.listen(port, host, async () => {
-      // TODO vite启动耗时
-      // console.log(
-      //   green("🚀 mini-vite 服务已经成功启动!"),
-      //   `耗时: ${Date.now() - startTime}ms`
-      // );
       httpServer.removeListener("error", onError);
       resolve(port);
     });

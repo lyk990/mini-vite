@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "serve": "mini-vite",
+    "op": "mini-vite optimize",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
     "rm": "rimraf node_modules",

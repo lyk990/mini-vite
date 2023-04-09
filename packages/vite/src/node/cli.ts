@@ -44,11 +44,13 @@ function cleanOptions<Options extends GlobalCLIOptions>(
   return ret;
 }
 
-const cli = cac();
+const cli = cac("mini-vite");
+// dev
 cli
   .command("[root]", "Run the development server")
   .option("--dev", `development`)
   .option("--prod", `production`)
+  .option("--port <port>", `[number] specify port`)
   .action(async (_root, options) => {
     const { createServer } = await import("./server");
     try {
@@ -84,6 +86,16 @@ cli
       process.exit(1);
     }
   });
+
+// optimize
+cli
+  .command('optimize [root]', 'pre-bundle dependencies')
+  .option(
+    '--force',
+    `[boolean] force the optimizer to ignore the cache and re-bundle`,
+  ).action(async () => {
+    console.log('optimize pre-bundle dependencies')
+  })
 
 cli.help();
 
