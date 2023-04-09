@@ -4,6 +4,7 @@ import type { AddressInfo, Server } from "node:net";
 import type { CommonServerOptions } from "vite";
 import type { ResolvedConfig } from "./config";
 import type { ResolvedServerUrls } from "./server";
+import debug from 'debug'
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -36,3 +37,32 @@ export async function resolveServerUrls(
   network.push("ipv4地址");
   return { local, network };
 }
+export type ViteDebugScope = `vite:${string}`
+interface DebuggerOptions {
+  onlyWhenFocused?: boolean | string
+}
+export function createDebugger(
+  namespace: ViteDebugScope,
+  options: DebuggerOptions = {}
+): debug.Debugger["log"] | undefined {
+  const log = debug(namespace);
+  const { onlyWhenFocused } = options;
+
+  let enabled = log.enabled;
+  if (enabled && onlyWhenFocused) {
+    const ns =
+      typeof onlyWhenFocused === "string" ? onlyWhenFocused : namespace;
+    enabled = !!DEBUG?.includes(ns);
+  }
+
+  if (enabled) {
+    return (msg: string, ...args: any[]) => {
+      if (!filter || msg.includes(filter)) {
+        log(msg, ...args);
+      }
+    };
+  }
+}
+
+const filter = process.env.VITE_DEBUG_FILTER
+const DEBUG = process.env.DEBUG
