@@ -4,6 +4,7 @@ import { ViteDevServer } from "../server";
 import { createDebugger, normalizePath } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
+import { BuildContext } from "esbuild";
 
 const debug = createDebugger("vite:deps");
 
@@ -17,13 +18,23 @@ export async function initDepsOptimizer(
 async function createDepsOptimizer(
   config: ResolvedConfig,
   server?: ViteDevServer
-) {
-  const isBuild = false;
-  const { logger } = config;
+): Promise<void> {
+  // const isBuild = false;
+  // const { logger } = config;
+  // const sessionTimestamp = Date.now().toString();
   const cachedMetadata = await loadCachedDepOptimizationMetadata(config, false);
+  let discover;
+  if (!cachedMetadata) {
+    discover = discoverProjectDependencies(config);
+    const deps = await discover.result;
+    discover = undefined;
+    console.log("deps", deps);
+    // TODO
+    runOptimizeDeps(config, deps);
+  }
 }
 
-// TODO
+/**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig,
   ssr: boolean,
@@ -32,7 +43,6 @@ export async function loadCachedDepOptimizationMetadata(
 ): Promise<DepOptimizationMetadata | undefined> {
   const log = asCommand ? config.logger.info : debug;
   const depsCacheDir = getDepsCacheDir(config, ssr);
-  console.log("depsCacheDir", depsCacheDir);
   if (!force) {
     let cachedMetadata: DepOptimizationMetadata | undefined;
     try {
@@ -55,7 +65,6 @@ export async function loadCachedDepOptimizationMetadata(
   await fsp.rm(depsCacheDir, { recursive: true, force: true });
 }
 
-// TODO
 export function getDepsCacheDir(config: ResolvedConfig, ssr: boolean): string {
   return normalizePath(path.resolve("node_modules/.-pre-mini-vite", "deps"));
 }
@@ -117,7 +126,36 @@ export function addOptimizedDepInfo(
   return depInfo;
 }
 
-// TODO 比较hash
 export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
   return "false";
+}
+/**查找项目预构建依赖 */
+// TODO
+export function discoverProjectDependencies(config: ResolvedConfig): {
+  cancel: () => Promise<void>;
+  result: Promise<Record<string, string>>;
+} {
+  const { cancel, result } = scanImports(config);
+  return {
+    cancel,
+    result,
+  };
+}
+
+export function scanImports(config: ResolvedConfig): {
+  cancel: () => Promise<void>;
+  result: Promise<{
+    deps: Record<string, string>;
+    missing: Record<string, string>;
+  }>;
+} {
+  let entries: string;
+  // const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
+  //   config,
+  // ).
+  //依赖扫描入口文件
+  entries = path.resolve(process.cwd(), "src/main.ts");
+  console.log("entries", entries);
+  let res: any;
+  return res;
 }
