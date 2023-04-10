@@ -11,12 +11,8 @@ export async function scanImports(config: ResolvedConfig): {
     missing: Record<string, string>;
   }>;
 } {
-  let entries: string;
-  // const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
-  //   config,
-  // ).
   //依赖扫描入口文件
-  entries = path.resolve(process.cwd(), "index.html");
+  let entries = path.resolve(process.cwd(), "src/main.tsx");
   console.log("entries", entries);
   let res: any;
   const deps = new Set<string>();
