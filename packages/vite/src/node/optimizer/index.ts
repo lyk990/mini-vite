@@ -4,7 +4,7 @@ import { ViteDevServer } from "../server";
 import { createDebugger, normalizePath } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { BuildContext } from "esbuild";
+import { scanImports } from "./scan";
 
 const debug = createDebugger("vite:deps");
 
@@ -142,20 +142,5 @@ export function discoverProjectDependencies(config: ResolvedConfig): {
   };
 }
 
-export function scanImports(config: ResolvedConfig): {
-  cancel: () => Promise<void>;
-  result: Promise<{
-    deps: Record<string, string>;
-    missing: Record<string, string>;
-  }>;
-} {
-  let entries: string;
-  // const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
-  //   config,
-  // ).
-  //依赖扫描入口文件
-  entries = path.resolve(process.cwd(), "src/main.ts");
-  console.log("entries", entries);
-  let res: any;
-  return res;
-}
+
+export function runOptimizeDeps() {}
