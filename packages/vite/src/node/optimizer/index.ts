@@ -30,7 +30,7 @@ async function createDepsOptimizer(
     discover = undefined;
     console.log("deps", deps);
     // TODO
-    runOptimizeDeps(config, deps);
+    // runOptimizeDeps(config, deps);
   }
 }
 
@@ -133,7 +133,7 @@ export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
 // TODO
 export function discoverProjectDependencies(config: ResolvedConfig): {
   cancel: () => Promise<void>;
-  result: Promise<Record<string, string>>;
+  result: Promise<Set<string>>;
 } {
   const { cancel, result } = scanImports(config);
   return {
@@ -141,6 +141,5 @@ export function discoverProjectDependencies(config: ResolvedConfig): {
     result,
   };
 }
-
 
 export function runOptimizeDeps() {}

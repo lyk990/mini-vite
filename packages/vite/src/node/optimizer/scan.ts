@@ -1,35 +1,41 @@
-import esbuild, { formatMessages, transform, Plugin } from "esbuild";
+import esbuild, { Plugin } from "esbuild";
 import { ResolvedConfig } from "../config";
 import path from "node:path";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import { green } from "picocolors";
 
-export async function scanImports(config: ResolvedConfig): {
+export function scanImports(_config: ResolvedConfig): {
   cancel: () => Promise<void>;
   result: Promise<{
-    deps: Record<string, string>;
+    deps: Set<string>;
     missing: Record<string, string>;
   }>;
 } {
   //依赖扫描入口文件
-  let entries = path.resolve(process.cwd(), "src/main.tsx");
-  console.log("entries", entries);
-  let res: any;
+  const missing: Record<string, string> = {};
+  let entries = path.resolve(process.cwd(), "src/main.ts");
   const deps = new Set<string>();
-  await esbuild.build({
-    entryPoints: [entries],
-    bundle: true,
-    write: false,
-    plugins: [esbuildScanPlugin(deps)],
-  });
-  console.log("deps", deps);
-  console.log(
-    `${green("需要预构建的依赖")}:\n${[...deps]
-      .map(green)
-      .map((item) => `  ${item}`)
-      .join("\n")}\n`
-  );
-  return res;
+
+  const result = esbuild
+    .build({
+      entryPoints: [entries],
+      bundle: true,
+      write: false,
+      plugins: [esbuildScanPlugin(deps)],
+    })
+    .then(() => {
+      console.log(
+        `${green("需要预构建的依赖")}:\n${[...deps]
+          .map(green)
+          .map((item) => `  ${item}`)
+          .join("\n")}\n`
+      );
+      return { deps, missing };
+    });
+  return {
+    cancel: async () => {},
+    result,
+  };
 }
 
 export function esbuildScanPlugin(deps: Set<string>): Plugin {
@@ -63,3 +69,9 @@ export function esbuildScanPlugin(deps: Set<string>): Plugin {
     },
   };
 }
+
+// function orderedDependencies(deps: Set<string>) {
+//   const depsList = Object.entries(deps);
+//   depsList.sort((a, b) => a[0].localeCompare(b[0]));
+//   return Object.fromEntries(depsList);
+// }
