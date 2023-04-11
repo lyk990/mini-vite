@@ -138,7 +138,9 @@ export function discoverProjectDependencies(config: ResolvedConfig): {
   const { cancel, result } = scanImports(config);
   return {
     cancel,
-    result,
+    result: result.then(({ deps, missing: _missing }) => {
+      return deps;
+    }),
   };
 }
 
