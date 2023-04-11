@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "rimraf dist && pnpm run build-bundle -w",
     "build-bundle": "rollup --config rollup.config.ts --configPlugin typescript",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "rm": "rimraf node_modules && rimraf dist"
   },
   "keywords": [],
   "author": "",

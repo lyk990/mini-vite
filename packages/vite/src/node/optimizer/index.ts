@@ -5,6 +5,8 @@ import { createDebugger, normalizePath } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
 import { scanImports } from "./scan";
+import { build } from "esbuild";
+import { PRE_BUNDLE_DIR } from "../constants";
 
 const debug = createDebugger("vite:deps");
 
@@ -26,11 +28,21 @@ async function createDepsOptimizer(
   let discover;
   if (!cachedMetadata) {
     discover = discoverProjectDependencies(config);
-    const deps = await discover.result;
+    let deps = await discover.result;
     discover = undefined;
-    console.log("deps", deps);
     // TODO
     // runOptimizeDeps(config, deps);
+    // TODO 从小册copy出来的  需要改写
+    // const root = normalizePath(process.cwd());
+    // await build({
+    //   entryPoints: [...deps],
+    //   write: true,
+    //   bundle: true,
+    //   format: "esm",
+    //   splitting: true,
+    //   outdir: path.resolve(root, PRE_BUNDLE_DIR),
+    //   plugins: [preBundlePlugin(deps)],
+    // });
   }
 }
 
@@ -55,8 +67,6 @@ export async function loadCachedDepOptimizationMetadata(
     // 比较hash是否一直来判断需不需要重复预构建依赖
     if (cachedMetadata && cachedMetadata.hash === getDepHash(config, ssr)) {
       log?.("Hash is consistent. Skipping. Use --force to override.");
-      // Nothing to commit or cancel as we are using the cache, we only
-      // need to resolve the processing promise so requests can move on
       return cachedMetadata;
     }
   } else {

@@ -1,15 +1,19 @@
+import path from "node:path";
 import {
   Alias,
   DepOptimizationOptions,
   InlineConfig,
+  ResolvedBuildOptions,
   ResolveOptions,
   UserConfigExport,
 } from "vite";
 import { createLogger } from "vite";
+import { resolveBuildOptions } from "./build";
 import { DEFAULT_EXTENSIONS, DEFAULT_MAIN_FIELDS } from "./constants";
 import { Logger } from "./logger";
 
 import type { ResolvedServerOptions } from "./server";
+import { normalizePath } from "./utils";
 
 // TODO
 export interface ResolvedConfig {
@@ -20,6 +24,7 @@ export interface ResolvedConfig {
   resolve: Required<ResolveOptions> & {
     alias: Alias[];
   };
+  build: ResolvedBuildOptions;
 }
 
 export async function resolveConfig(
@@ -40,7 +45,7 @@ export async function resolveConfig(
     customLogger: config.customLogger,
   });
   // TODO
-   // resolve alias with internal client alias
+  // resolve alias with internal client alias
   //  const resolvedAlias = normalizeAlias(
   //   mergeAlias(clientAlias, config.resolve?.alias || []),
   // )
@@ -54,6 +59,14 @@ export async function resolveConfig(
     preserveSymlinks: config.resolve?.preserveSymlinks ?? false,
     alias: [{ find: "", replacement: "@" }],
   };
+  const resolvedRoot = normalizePath(
+    config.root ? path.resolve(config.root) : process.cwd()
+  );
+  const resolvedBuildOptions = resolveBuildOptions(
+    config.build,
+    logger,
+    resolvedRoot
+  );
   const resolvedConfig: ResolvedConfig = {
     logger,
     root: process.cwd(),
@@ -77,6 +90,7 @@ export async function resolveConfig(
         ...optimizeDeps.esbuildOptions,
       },
     },
+    build: resolvedBuildOptions,
   };
   const resolved: ResolvedConfig = {
     ...config,
