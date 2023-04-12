@@ -2,7 +2,7 @@ import type { PluginContext as RollupPluginContext, ResolvedId } from "rollup";
 import { Plugin } from "./plugin";
 import { ModuleGraph, PluginContainer } from "vite";
 import { ResolvedConfig } from "./config";
-import type { FSWatcher } from 'chokidar'
+import type { FSWatcher } from "chokidar";
 
 export function createPluginContainer(
   config: ResolvedConfig,
@@ -18,7 +18,7 @@ export function createPluginContainer(
     }
   }
   // 插件容器
-  const pluginContainer = {
+  const container = {
     async resolveId(id: string, importer?: string) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
@@ -59,11 +59,7 @@ export function createPluginContainer(
       }
       return { code };
     },
-    options: {},
-    async getModuleInfo(id: string) {},
-    buildStart(options: any) {},
-    async close() {},
   };
 
-  return pluginContainer as any;
+  return container;
 }
