@@ -1,5 +1,5 @@
 import { LoadResult, PartialResolvedId, SourceDescription } from "rollup";
-import { ViteDevServer } from "./server";
+import { ViteDevServer } from "vite";
 
 export type ServerHook = (
   server: ViteDevServer
@@ -20,3 +20,4 @@ export interface Plugin {
   ) => Promise<SourceDescription | null> | SourceDescription | null;
   transformIndexHtml?: (raw: string) => Promise<string> | string;
 }
+
