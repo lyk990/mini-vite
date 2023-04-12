@@ -1,14 +1,12 @@
-import type {
-  // LoadResult,
-  // PartialResolvedId,
-  // SourceDescription,
-  PluginContext as RollupPluginContext,
-  ResolvedId,
-} from "rollup";
+import type { PluginContext as RollupPluginContext, ResolvedId } from "rollup";
 import { Plugin } from "./plugin";
 import { PluginContainer } from "vite";
 
-export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
+export function createPluginContainer(
+  config: ResolvedConfig,
+  moduleGraph?: ModuleGraph,
+  watcher?: FSWatcher
+): Promise<PluginContainer> {
   // @ts-ignore 这里仅实现上下文对象的 resolve 方法
   class Context implements RollupPluginContext {
     async resolve(id: string, importer?: string) {
@@ -66,4 +64,4 @@ export const createPluginContainer = (plugins: Plugin[]): PluginContainer => {
   };
 
   return pluginContainer as any;
-};
+}
