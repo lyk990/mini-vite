@@ -6,7 +6,6 @@ export function resolveBuildOptions(
   logger: Logger,
   root: string
 ): ResolvedBuildOptions {
-  console.log("raw", raw);
   const defaultBuildOptions: BuildOptions = {
     outDir: "dist",
     assetsDir: "assets",
@@ -29,6 +28,11 @@ export function resolveBuildOptions(
     watch: null,
   };
   const userBuildOptions = defaultBuildOptions;
+  const modulePreload = raw?.modulePreload;
+  const defaultModulePreload = {
+    polyfill: true,
+  };
+  // @ts-expect-error Fallback options instead of merging
   const resolved: ResolvedBuildOptions = {
     target: "modules",
     cssTarget: false,

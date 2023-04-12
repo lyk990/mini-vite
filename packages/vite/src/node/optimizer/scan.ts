@@ -4,6 +4,8 @@ import path from "node:path";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import { green } from "picocolors";
 import glob from "fast-glob";
+import { PluginContainer } from "vite";
+import { createPluginContainer } from "../pluginContainer";
 
 export function scanImports(config: ResolvedConfig): {
   cancel: () => Promise<void>;
@@ -17,7 +19,24 @@ export function scanImports(config: ResolvedConfig): {
   const deps: Record<string, string> = {};
   const missing: Record<string, string> = {};
   let entries: string[];
-  const esbuildContext = computeEntries(config);
+  const scanContext = { cancelled: false };
+
+  const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
+    config
+  ).then((computedEntries) => {
+    entries = computedEntries;
+    console.log("entries", entries);
+    return prepareEsbuildScanner(config, entries, deps, missing, scanContext);
+  });
+
+  const result = esbuildContext.then((context) => {
+    return context.rebuild().then(() => {
+      return {
+        deps: orderedDependencies(deps),
+        missing,
+      };
+    });
+  });
   // const result = esbuild
   //   .build({
   //     entryPoints: [entries],
@@ -40,7 +59,13 @@ export function scanImports(config: ResolvedConfig): {
   };
 }
 
-export function esbuildScanPlugin(deps: Set<string>): Plugin {
+export function esbuildScanPlugin(
+  config: ResolvedConfig,
+  container: PluginContainer,
+  depImports: Record<string, string>,
+  missing: Record<string, string>,
+  entries: string[]
+): Plugin {
   return {
     name: "esbuild:scan-deps",
     setup(build) {
@@ -72,15 +97,20 @@ export function esbuildScanPlugin(deps: Set<string>): Plugin {
   };
 }
 
-// function orderedDependencies(deps: Set<string>) {
-//   const depsList = Object.entries(deps);
-//   depsList.sort((a, b) => a[0].localeCompare(b[0]));
-//   return Object.fromEntries(depsList);
-// }
+function orderedDependencies(deps: Set<string>) {
+  const depsList = Object.entries(deps);
+  depsList.sort((a, b) => a[0].localeCompare(b[0]));
+  return Object.fromEntries(depsList);
+}
+/**找出入口文件 */
 async function computeEntries(config: ResolvedConfig) {
   let entries: string[] = [];
+  // 优先使用配置的入口文件
   const explicitEntryPatterns = config.optimizeDeps.entries;
-  entries = await globEntries(explicitEntryPatterns, config);
+  if (!explicitEntryPatterns) {
+    entries = await globEntries("**/*.html", config);
+  }
+  return entries;
 }
 function globEntries(pattern: string | string[], config: ResolvedConfig) {
   return glob(pattern, {
@@ -88,7 +118,6 @@ function globEntries(pattern: string | string[], config: ResolvedConfig) {
     ignore: [
       "**/node_modules/**",
       `**/${config.build.outDir}/**`,
-      // if there aren't explicit entries, also ignore other common folders
       ...(config.optimizeDeps.entries
         ? []
         : [`**/__tests__/**`, `**/coverage/**`]),
@@ -103,5 +132,25 @@ async function prepareEsbuildScanner(
   entries: string[],
   deps: Record<string, string>,
   missing: Record<string, string>,
-  scanContext?: { cancelled: boolean }
-): Promise<BuildContext | undefined> {}
+  _scanContext?: { cancelled: boolean }
+): Promise<BuildContext | undefined> {
+  const container = await createPluginContainer(config)
+
+  const plugin = esbuildScanPlugin(config, container, deps, missing, entries);
+  const { plugins = [], ...esbuildOptions } =
+    config.optimizeDeps?.esbuildOptions ?? {};
+
+  return await esbuild.context({
+    absWorkingDir: process.cwd(),
+    write: false,
+    stdin: {
+      contents: entries.map((e) => `import ${JSON.stringify(e)}`).join("\n"),
+      loader: "js",
+    },
+    bundle: true,
+    format: "esm",
+    logLevel: "silent",
+    plugins: [...plugins, plugin],
+    ...esbuildOptions,
+  });
+}
