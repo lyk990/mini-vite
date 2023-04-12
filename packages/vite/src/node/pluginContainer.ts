@@ -1,6 +1,8 @@
 import type { PluginContext as RollupPluginContext, ResolvedId } from "rollup";
 import { Plugin } from "./plugin";
-import { PluginContainer } from "vite";
+import { ModuleGraph, PluginContainer } from "vite";
+import { ResolvedConfig } from "./config";
+import type { FSWatcher } from 'chokidar'
 
 export function createPluginContainer(
   config: ResolvedConfig,
