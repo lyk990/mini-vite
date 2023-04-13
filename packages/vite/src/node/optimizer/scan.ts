@@ -4,8 +4,7 @@ import path from "node:path";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import { green } from "picocolors";
 import glob from "fast-glob";
-import { PluginContainer } from "vite";
-import { createPluginContainer } from "../pluginContainer";
+import { createPluginContainer, PluginContainer } from "../pluginContainer";
 
 export function scanImports(config: ResolvedConfig): {
   cancel: () => Promise<void>;

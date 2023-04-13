@@ -2,15 +2,10 @@ import connect from "connect";
 import type { Connect } from "dep-types/connect";
 // import { optimize } from "../optimizer/index";
 import { resolvePlugins } from "../plugins";
-import { createPluginContainer } from "../pluginContainer";
+import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import { Plugin } from "../plugin";
 import { DEFAULT_DEV_PORT } from "../constants";
-import type {
-  PluginContainer,
-  InlineConfig,
-  ServerOptions,
-  FileSystemServeOptions,
-} from "vite";
+import type { InlineConfig, ServerOptions, FileSystemServeOptions } from "vite";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
@@ -71,7 +66,7 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
   const middlewares = connect() as Connect.Server;
   const httpServer = await resolveHttpServer(middlewares);
   const plugins = await resolvePlugins();
-  const container = createPluginContainer(plugins);
+  const container = await createPluginContainer(config);
 
   const server: ViteDevServer = {
     root,

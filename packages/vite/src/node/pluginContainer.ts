@@ -1,24 +1,37 @@
-import type { PluginContext as RollupPluginContext, ResolvedId } from "rollup";
-import { Plugin } from "./plugin";
-import { ModuleGraph, PluginContainer } from "vite";
+import type {
+  LoadResult,
+  PartialResolvedId,
+  SourceDescription,
+  PluginContext as RollupPluginContext,
+  ResolvedId,
+} from "rollup";
+import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
 import type { FSWatcher } from "chokidar";
+import { resolvePlugins } from "./plugins";
 
-export function createPluginContainer(
+export interface PluginContainer {
+  resolveId(id: string, importer?: string): Promise<PartialResolvedId | null>;
+  load(id: string): Promise<LoadResult | null>;
+  transform(code: string, id: string): Promise<SourceDescription | null>;
+}
+
+export async function createPluginContainer(
   config: ResolvedConfig,
   moduleGraph?: ModuleGraph,
   watcher?: FSWatcher
 ): Promise<PluginContainer> {
+  // TODO
+  const plugins = resolvePlugins();
   // @ts-ignore 这里仅实现上下文对象的 resolve 方法
   class Context implements RollupPluginContext {
     async resolve(id: string, importer?: string) {
-      let out = await pluginContainer.resolveId(id, importer);
+      let out = await container.resolveId(id, importer);
       if (typeof out === "string") out = { id: out };
       return out as ResolvedId | null;
     }
   }
-  // 插件容器
-  const container = {
+  const container: PluginContainer = {
     async resolveId(id: string, importer?: string) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
