@@ -1,8 +1,6 @@
 import esbuild, { BuildContext, Plugin } from "esbuild";
 import { ResolvedConfig } from "../config";
-import path from "node:path";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
-import { green } from "picocolors";
 import glob from "fast-glob";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
 
@@ -24,11 +22,14 @@ export function scanImports(config: ResolvedConfig): {
     config
   ).then((computedEntries) => {
     entries = computedEntries;
-    console.log("entries", entries);
     return prepareEsbuildScanner(config, entries, deps, missing, scanContext);
   });
 
   const result = esbuildContext.then((context) => {
+    //  如果没有扫描到入口文件，直接返回
+    if (!context || scanContext?.cancelled) {
+      return { deps: {}, missing: {} };
+    }
     return context.rebuild().then(() => {
       return {
         deps: orderedDependencies(deps),
@@ -36,22 +37,6 @@ export function scanImports(config: ResolvedConfig): {
       };
     });
   });
-  // const result = esbuild
-  //   .build({
-  //     entryPoints: [entries],
-  //     bundle: true,
-  //     write: false,
-  //     plugins: [esbuildScanPlugin(deps)],
-  //   })
-  //   .then(() => {
-  //     console.log(
-  //       `${green("需要预构建的依赖")}:\n${[...deps]
-  //         .map(green)
-  //         .map((item) => `  ${item}`)
-  //         .join("\n")}\n`
-  //     );
-  //     return { deps, missing };
-  //   });
   return {
     cancel: async () => {},
     result,
@@ -72,6 +57,7 @@ export function esbuildScanPlugin(
       build.onResolve(
         { filter: new RegExp(`\\.(${EXTERNAL_TYPES.join("|")})$`) },
         (resolveInfo) => {
+          console.log(resolveInfo, "resolveInfo");
           return {
             path: resolveInfo.path,
             external: true,
@@ -85,7 +71,8 @@ export function esbuildScanPlugin(
         },
         (resolveInfo) => {
           const { path: id } = resolveInfo;
-          deps.add(id);
+          console.log(depImports, "depImports");
+          console.log(id, "id");
           return {
             path: id,
             external: true,
@@ -96,7 +83,7 @@ export function esbuildScanPlugin(
   };
 }
 
-function orderedDependencies(deps: Set<string>) {
+function orderedDependencies(deps: Record<string, string>) {
   const depsList = Object.entries(deps);
   depsList.sort((a, b) => a[0].localeCompare(b[0]));
   return Object.fromEntries(depsList);
@@ -133,8 +120,7 @@ async function prepareEsbuildScanner(
   missing: Record<string, string>,
   _scanContext?: { cancelled: boolean }
 ): Promise<BuildContext | undefined> {
-  const container = await createPluginContainer(config)
-
+  const container = await createPluginContainer(config);
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);
   const { plugins = [], ...esbuildOptions } =
     config.optimizeDeps?.esbuildOptions ?? {};
