@@ -54,6 +54,7 @@ export function esbuildScanPlugin(
     name: "esbuild:scan-deps",
     setup(build) {
       // 忽略的文件类型
+      console.log(build, 'build')
       build.onResolve(
         { filter: new RegExp(`\\.(${EXTERNAL_TYPES.join("|")})$`) },
         (resolveInfo) => {
