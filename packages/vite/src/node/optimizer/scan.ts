@@ -3,6 +3,7 @@ import { ResolvedConfig } from "../config";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import glob from "fast-glob";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
+// import { dataUrlRE, externalRE } from "../utils";
 
 export function scanImports(config: ResolvedConfig): {
   cancel: () => Promise<void>;
@@ -43,7 +44,7 @@ export function scanImports(config: ResolvedConfig): {
   };
 }
 
-export function esbuildScanPlugin(
+function esbuildScanPlugin(
   config: ResolvedConfig,
   container: PluginContainer,
   depImports: Record<string, string>,
@@ -54,13 +55,12 @@ export function esbuildScanPlugin(
     name: "esbuild:scan-deps",
     setup(build) {
       // 忽略的文件类型
-      console.log(build, 'build')
       build.onResolve(
         { filter: new RegExp(`\\.(${EXTERNAL_TYPES.join("|")})$`) },
-        (resolveInfo) => {
-          console.log(resolveInfo, "resolveInfo");
+        ({ path }) => {
+          console.log(path, "path");
           return {
-            path: resolveInfo.path,
+            path,
             external: true,
           };
         }
@@ -71,9 +71,8 @@ export function esbuildScanPlugin(
           filter: BARE_IMPORT_RE,
         },
         (resolveInfo) => {
+          console.log("resolveInfo", resolveInfo);
           const { path: id } = resolveInfo;
-          console.log(depImports, "depImports");
-          console.log(id, "id");
           return {
             path: id,
             external: true,

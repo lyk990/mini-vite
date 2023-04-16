@@ -42,4 +42,11 @@ export const EXTERNAL_TYPES = [
   "ico",
   "webp",
   "avif",
+  // EXTERNAL_TYPES
+  // 'html',
+  // 'vue',
+  // 'svelte',
+  // 'astro',
+  // 'imba',
 ];
+export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/
