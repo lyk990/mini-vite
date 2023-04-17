@@ -140,10 +140,9 @@ export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
   return "false";
 }
 /**查找项目预构建依赖 */
-// TODO
 export function discoverProjectDependencies(config: ResolvedConfig): {
   cancel: () => Promise<void>;
-  result: Promise<Set<string>>;
+  result: Promise<Record<string, string>>;
 } {
   const { cancel, result } = scanImports(config);
   return {

@@ -68,3 +68,5 @@ const filter = process.env.VITE_DEBUG_FILTER
 const DEBUG = process.env.DEBUG
 export const externalRE = /^(https?:)?\/\//
 export const dataUrlRE = /^\s*data:/i
+export const virtualModuleRE = /^virtual-module:.*/
+export const virtualModulePrefix = 'virtual-module:'

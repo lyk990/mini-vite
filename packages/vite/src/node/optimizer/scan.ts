@@ -58,7 +58,6 @@ function esbuildScanPlugin(
       build.onResolve(
         { filter: new RegExp(`\\.(${EXTERNAL_TYPES.join("|")})$`) },
         ({ path }) => {
-          console.log(path, "path");
           return {
             path,
             external: true,
@@ -71,7 +70,6 @@ function esbuildScanPlugin(
           filter: BARE_IMPORT_RE,
         },
         (resolveInfo) => {
-          console.log("resolveInfo", resolveInfo);
           const { path: id } = resolveInfo;
           return {
             path: id,
