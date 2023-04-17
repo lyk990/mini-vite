@@ -3,6 +3,7 @@ import { ResolvedConfig } from "../config";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import glob from "fast-glob";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
+import path from "node:path";
 // import { dataUrlRE, externalRE } from "../utils";
 
 export function scanImports(config: ResolvedConfig): {
@@ -13,7 +14,6 @@ export function scanImports(config: ResolvedConfig): {
   }>;
 } {
   //依赖扫描入口文件
-  // let entries = path.resolve(process.cwd(), "src/main.ts");
   const deps: Record<string, string> = {};
   const missing: Record<string, string> = {};
   let entries: string[];
@@ -52,7 +52,7 @@ function esbuildScanPlugin(
   entries: string[]
 ): Plugin {
   return {
-    name: "esbuild:scan-deps",
+    name: "vite:dep-scan",
     setup(build) {
       // 忽略的文件类型
       build.onResolve(
@@ -70,6 +70,7 @@ function esbuildScanPlugin(
           filter: BARE_IMPORT_RE,
         },
         (resolveInfo) => {
+          console.log("resolveInfo", resolveInfo);
           const { path: id } = resolveInfo;
           return {
             path: id,
@@ -92,7 +93,7 @@ async function computeEntries(config: ResolvedConfig) {
   // 优先使用配置的入口文件
   const explicitEntryPatterns = config.optimizeDeps.entries;
   if (!explicitEntryPatterns) {
-    entries = await globEntries("**/*.html", config);
+    entries = await globEntries("**/main.ts", config);
   }
   return entries;
 }
