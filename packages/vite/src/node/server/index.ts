@@ -13,6 +13,8 @@ import { ResolvedConfig } from "../config";
 import { resolveServerUrls } from "../utils";
 import { printServerUrls } from "../logger";
 import { initDepsOptimizer } from "../optimizer";
+
+export interface ServerContext {}
 export interface ResolvedServerUrls {
   local: string[];
   network: string[];

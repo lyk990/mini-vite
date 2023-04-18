@@ -103,19 +103,8 @@ function esbuildScanPlugin(
       //   };
       // });
       // 记录依赖
-      // build.onResolve(
-      //   {
-      //     filter: BARE_IMPORT_RE,
-      //   },
-      //   (resolveInfo) => {
-      //     console.log("resolveInfo", resolveInfo);
-      //     const { path: id } = resolveInfo;
-      //     return {
-      //       path: id,
-      //       external: true,
-      //     };
-      //   }
-      // );
+      // build.onLoad({ filter: htmlTypesRE,namespace: "html", }, async ({ path }) => {
+      // });
     },
   };
 }
