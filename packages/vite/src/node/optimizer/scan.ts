@@ -3,8 +3,10 @@ import { ResolvedConfig } from "../config";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import glob from "fast-glob";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
-// import path from "node:path";
-// import { dataUrlRE, externalRE } from "../utils";
+import path from "node:path";
+import { normalizePath } from "../utils";
+const htmlTypesRE = /\.(html|vue|svelte|astro|imba)$/;
+type ResolveIdOptions = Parameters<PluginContainer["resolveId"]>[2];
 
 export function scanImports(config: ResolvedConfig): {
   cancel: () => Promise<void>;
@@ -51,9 +53,33 @@ function esbuildScanPlugin(
   missing: Record<string, string>,
   entries: string[]
 ): Plugin {
+  // 对路径进行处理
+  const resolve = async (
+    id: string,
+    importer?: string,
+    options?: ResolveIdOptions
+  ) => {
+    const seen = new Map<string, string | undefined>();
+    const key = id + (importer && path.dirname(importer));
+    if (seen.has(key)) {
+      return seen.get(key);
+    }
+    const resolved = await container.resolveId(
+      id,
+      importer && normalizePath(importer),
+      {
+        ...options,
+        scan: true,
+      }
+    );
+    const res = resolved?.id;
+    seen.set(key, res);
+    return res;
+  };
   return {
     name: "vite:dep-scan",
     setup(build) {
+      //  TODO 依赖预构建未完成
       // 忽略的文件类型
       build.onResolve(
         { filter: new RegExp(`\\.(${EXTERNAL_TYPES.join("|")})$`) },
@@ -64,20 +90,32 @@ function esbuildScanPlugin(
           };
         }
       );
+      // 忽略的文件类型
+      // build.onResolve({ filter: htmlTypesRE }, async ({ path, importer }) => {
+      //   console.log("pat111h", path);
+      //   console.log("importer", importer);
+      //   const resolved = await resolve(path, importer);
+      //   if (!resolved) return;
+      //   console.log(path, "path");
+      //   return {
+      //     path: resolved,
+      //     namespace: "html",
+      //   };
+      // });
       // 记录依赖
-      build.onResolve(
-        {
-          filter: BARE_IMPORT_RE,
-        },
-        (resolveInfo) => {
-          console.log("resolveInfo", resolveInfo);
-          const { path: id } = resolveInfo;
-          return {
-            path: id,
-            external: true,
-          };
-        }
-      );
+      // build.onResolve(
+      //   {
+      //     filter: BARE_IMPORT_RE,
+      //   },
+      //   (resolveInfo) => {
+      //     console.log("resolveInfo", resolveInfo);
+      //     const { path: id } = resolveInfo;
+      //     return {
+      //       path: id,
+      //       external: true,
+      //     };
+      //   }
+      // );
     },
   };
 }
@@ -93,6 +131,7 @@ async function computeEntries(config: ResolvedConfig) {
   // 优先使用配置的入口文件
   const explicitEntryPatterns = config.optimizeDeps.entries;
   if (!explicitEntryPatterns) {
+    // TODO 依赖预构建未完成
     entries = await globEntries("**/main.ts", config);
   }
   return entries;
@@ -119,6 +158,7 @@ async function prepareEsbuildScanner(
   missing: Record<string, string>,
   _scanContext?: { cancelled: boolean }
 ): Promise<BuildContext | undefined> {
+  // TODO依赖预构建未完成
   const container = await createPluginContainer(config);
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);
   const { plugins = [], ...esbuildOptions } =

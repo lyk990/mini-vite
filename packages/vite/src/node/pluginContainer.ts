@@ -1,17 +1,34 @@
+import type { Plugin } from "vite";
 import type {
   LoadResult,
   PartialResolvedId,
   SourceDescription,
   PluginContext as RollupPluginContext,
   ResolvedId,
+  CustomPluginOptions,
 } from "rollup";
 import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
 import type { FSWatcher } from "chokidar";
 import { resolvePlugins } from "./plugins";
+import { join } from "path";
 
 export interface PluginContainer {
-  resolveId(id: string, importer?: string): Promise<PartialResolvedId | null>;
+  resolveId(
+    id: string,
+    importer?: string,
+    options?: {
+      assertions?: Record<string, string>;
+      custom?: CustomPluginOptions;
+      skip?: Set<Plugin>;
+      ssr?: boolean;
+      /**
+       * @internal
+       */
+      scan?: boolean;
+      isEntry?: boolean;
+    }
+  ): Promise<PartialResolvedId | null>;
   load(id: string): Promise<LoadResult | null>;
   transform(code: string, id: string): Promise<SourceDescription | null>;
 }
@@ -21,6 +38,11 @@ export async function createPluginContainer(
   moduleGraph?: ModuleGraph,
   watcher?: FSWatcher
 ): Promise<PluginContainer> {
+  const {
+    logger,
+    root,
+    build: { rollupOptions },
+  } = config;
   // TODO
   const plugins = resolvePlugins();
   // @ts-ignore 这里仅实现上下文对象的 resolve 方法
@@ -32,7 +54,7 @@ export async function createPluginContainer(
     }
   }
   const container: PluginContainer = {
-    async resolveId(id: string, importer?: string) {
+    async resolveId(id: string, importer = join(root, "index.html"), options) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
         if (plugin.resolveId) {

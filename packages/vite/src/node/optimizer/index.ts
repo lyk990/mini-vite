@@ -30,21 +30,18 @@ async function createDepsOptimizer(
     discover = discoverProjectDependencies(config);
     let deps = await discover.result;
     discover = undefined;
-    console.log("deps", deps);
-    return;
-    // TODO
+    // TODO 依赖预构建
     // runOptimizeDeps(config, deps);
-    // TODO 从小册copy出来的  需要改写
     // const root = normalizePath(process.cwd());
-    await build({
-      entryPoints: [...deps],
-      write: true,
-      bundle: true,
-      format: "esm",
-      splitting: true,
-      outdir: path.resolve(root, PRE_BUNDLE_DIR),
-      plugins: [preBundlePlugin(deps)],
-    });
+    // await build({
+    //   entryPoints: [...deps],
+    //   write: true,
+    //   bundle: true,
+    //   format: "esm",
+    //   splitting: true,
+    //   outdir: path.resolve(root, PRE_BUNDLE_DIR),
+    //   plugins: [preBundlePlugin(deps)],
+    // });
   }
 }
 
@@ -155,11 +152,10 @@ export function discoverProjectDependencies(config: ResolvedConfig): {
   };
 }
 
-export function runOptimizeDeps(
-  resolvedConfig: ResolvedConfig,
-  depsInfo: Record<string, OptimizedDepInfo>,
-  ssr: boolean = false
-): {
-  cancel: () => Promise<void>;
-  result: Promise<DepOptimizationResult>;
-} {}
+// export function runOptimizeDeps(
+//   resolvedConfig: ResolvedConfig,
+//   depsInfo: Record<string, OptimizedDepInfo>
+// ): {
+//   cancel: () => Promise<void>;
+//   result: Promise<DepOptimizationResult>;
+// } {}
