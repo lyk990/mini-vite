@@ -3,7 +3,7 @@ import { ResolvedConfig } from "../config";
 import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
 import glob from "fast-glob";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
-import path from "node:path";
+// import path from "node:path";
 // import { dataUrlRE, externalRE } from "../utils";
 
 export function scanImports(config: ResolvedConfig): {

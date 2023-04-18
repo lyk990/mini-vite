@@ -43,10 +43,11 @@ export const EXTERNAL_TYPES = [
   "webp",
   "avif",
   // EXTERNAL_TYPES
-  // 'html',
-  // 'vue',
-  // 'svelte',
-  // 'astro',
-  // 'imba',
+  'html',
+  'vue',
+  'svelte',
+  'astro',
+  'imba',
+  'ts',
 ];
 export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/
