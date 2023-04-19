@@ -47,8 +47,25 @@ export async function createPluginContainer(
   const plugins = resolvePlugins();
   // @ts-ignore 这里仅实现上下文对象的 resolve 方法
   class Context implements RollupPluginContext {
-    async resolve(id: string, importer?: string) {
-      let out = await container.resolveId(id, importer);
+    async resolve(
+      id: string,
+      importer?: string,
+      options?: {
+        assertions?: Record<string, string>;
+        custom?: CustomPluginOptions;
+        isEntry?: boolean;
+        skipSelf?: boolean;
+      }
+    ) {
+      let skip: Set<Plugin> | undefined
+      let out = await container.resolveId(id, importer, {
+        assertions: options?.assertions,
+        custom: options?.custom,
+        isEntry: !!options?.isEntry,
+        skip,
+        ssr: false,
+        scan: false,
+      });
       if (typeof out === "string") out = { id: out };
       return out as ResolvedId | null;
     }

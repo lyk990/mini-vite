@@ -1,8 +1,9 @@
 import { LoadResult, PartialResolvedId, SourceDescription } from "rollup";
 import { ViteDevServer } from "vite";
+import { ServerContext } from "./server";
 
 export type ServerHook = (
-  server: ViteDevServer
+  server: ServerContext
 ) => (() => void) | void | Promise<(() => void) | void>;
 
 // 只实现以下这几个钩子
