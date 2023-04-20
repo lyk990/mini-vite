@@ -59,11 +59,11 @@ function esbuildScanPlugin(
     importer?: string,
     options?: ResolveIdOptions
   ) => {
-    const seen = new Map<string, string | undefined>();
-    const key = id + (importer && path.dirname(importer));
-    if (seen.has(key)) {
-      return seen.get(key);
-    }
+    // const seen = new Map<string, string | undefined>();
+    // const key = id + (importer && path.dirname(importer));
+    // if (seen.has(key)) {
+    //   return seen.get(key);
+    // }
     const resolved = await container.resolveId(
       id,
       importer && normalizePath(importer),
@@ -73,7 +73,7 @@ function esbuildScanPlugin(
       }
     );
     const res = resolved?.id;
-    seen.set(key, res);
+    // seen.set(key, res);
     return res;
   };
   return {

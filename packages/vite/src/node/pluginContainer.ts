@@ -73,7 +73,8 @@ export async function createPluginContainer(
   const container: PluginContainer = {
     async resolveId(id: string, importer = join(root, "index.html"), options) {
       const ctx = new Context() as any;
-      for (const plugin of plugins) {
+      for (const plugin of plugins) { 
+        // 判断插件是否有resolveId属性
         if (plugin.resolveId) {
           const newId = await plugin.resolveId.call(ctx as any, id, importer);
           if (newId) {
