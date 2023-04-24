@@ -13,6 +13,7 @@ import { ResolvedConfig } from "../config";
 import { resolveServerUrls } from "../utils";
 import { printServerUrls } from "../logger";
 import { initDepsOptimizer } from "../optimizer";
+import { transformMiddleware } from "./middlewares/transform";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -98,7 +99,7 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
       }
     },
   };
-
+  middlewares.use(transformMiddleware(server));
   // for (const plugin of plugins) {
   //   if (plugin.configureServer) {
   //     await plugin.configureServer(serverContext);
