@@ -5,8 +5,13 @@ import { resolvePlugins } from "../plugins";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import { Plugin } from "../plugin";
 import { DEFAULT_DEV_PORT } from "../constants";
-import type { InlineConfig, ServerOptions, FileSystemServeOptions } from "vite";
-import type * as http from "node:http";
+import {
+  InlineConfig,
+  ServerOptions,
+  FileSystemServeOptions,
+  ModuleGraph,
+} from "vite";
+ import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
@@ -39,6 +44,7 @@ export interface ViteDevServer {
   resolvedUrls: ResolvedServerUrls | null;
   printUrls(): void;
   listen(port?: number, isRestart?: boolean): Promise<ViteDevServer>;
+  moduleGraph: ModuleGraph;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -70,6 +76,10 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
   const plugins = await resolvePlugins();
   const container = await createPluginContainer(config);
 
+  const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>
+    container.resolveId(url, undefined, { ssr })
+  );
+
   const server: ViteDevServer = {
     root,
     middlewares,
@@ -77,6 +87,7 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
     pluginContainer: container,
     plugins,
     config,
+    moduleGraph,
     resolvedUrls: null,
     async listen(port?: number, isRestart?: boolean) {
       await startServer(server, port);
