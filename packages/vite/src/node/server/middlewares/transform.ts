@@ -9,6 +9,7 @@ export function transformMiddleware(
     if (req.url === "/") {
       res.statusCode = 200;
       res.setHeader("Content-Type", "text/html");
+      const url = "/@vite/client";
       const result = await transformRequest(url, server, {
         html: req.headers.accept?.includes("text/html"),
       });
