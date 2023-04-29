@@ -29,7 +29,12 @@ export interface PluginContainer {
       isEntry?: boolean;
     }
   ): Promise<PartialResolvedId | null>;
-  load(id: string): Promise<LoadResult | null>;
+  load(
+    id: string,
+    options?: {
+      ssr?: boolean;
+    }
+  ): Promise<LoadResult | null>;
   transform(code: string, id: string): Promise<SourceDescription | null>;
 }
 
@@ -57,7 +62,7 @@ export async function createPluginContainer(
         skipSelf?: boolean;
       }
     ) {
-      let skip: Set<Plugin> | undefined
+      let skip: Set<Plugin> | undefined;
       let out = await container.resolveId(id, importer, {
         assertions: options?.assertions,
         custom: options?.custom,
@@ -73,7 +78,7 @@ export async function createPluginContainer(
   const container: PluginContainer = {
     async resolveId(id: string, importer = join(root, "index.html"), options) {
       const ctx = new Context() as any;
-      for (const plugin of plugins) { 
+      for (const plugin of plugins) {
         // 判断插件是否有resolveId属性
         if (plugin.resolveId) {
           const newId = await plugin.resolveId.call(ctx as any, id, importer);
@@ -85,7 +90,7 @@ export async function createPluginContainer(
       }
       return null;
     },
-    async load(id: string) {
+    async load(id: string, _options) {
       const ctx = new Context() as any;
       for (const plugin of plugins) {
         if (plugin.load) {

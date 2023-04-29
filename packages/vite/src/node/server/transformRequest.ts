@@ -19,7 +19,7 @@ async function doTransform(
   const { config, pluginContainer } = server;
   const ssr = false;
   const module = await server.moduleGraph.getModuleByUrl(url, ssr);
-  // check if we have a fresh cache
+  // 判断是否由缓存数据
   const cached =
     module && (ssr ? module.ssrTransformResult : module.transformResult);
   if (cached) {
@@ -31,4 +31,14 @@ async function doTransform(
   const result = loadAndTransform(id, url, server, options, timestamp);
   getDepsOptimizer(config, ssr)?.delayDepsOptimizerUntil(id, () => result);
   return result;
+}
+async function loadAndTransform(
+  id: string,
+  url: string,
+  server: ViteDevServer,
+  options: TransformOptions,
+  timestamp: number
+) {
+  const { config, pluginContainer, moduleGraph } = server;
+  const loadResult = await pluginContainer.load(id, { ssr: false });
 }
