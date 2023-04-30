@@ -1,5 +1,8 @@
 import { ResolvedConfig } from "../config";
 import { Plugin } from "../plugin";
+import { cssPlugin } from "./css";
+import { importAnalysisPlugin } from "./importAnalysis";
+import { resolvePlugin } from "./resolve";
 
 export function resolvePlugins(
   config?: ResolvedConfig,
@@ -9,11 +12,11 @@ export function resolvePlugins(
 ): Plugin[] {
   return [
     // clientInjectPlugin(),
-    // resolvePlugin(),
+    resolvePlugin(),
     // esbuildTransformPlugin(),
     // reactHMRPlugin(),
-    // importAnalysisPlugin(),
-    // cssPlugin(),
+    importAnalysisPlugin(),
+    cssPlugin(),
     // assetPlugin(),
   ];
 }

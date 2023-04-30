@@ -10,17 +10,20 @@ import {
   ServerOptions,
   FileSystemServeOptions,
   ModuleGraph,
+  WebSocketServer,
 } from "vite";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
-import { resolveServerUrls } from "../utils";
+import { normalizePath, resolveServerUrls } from "../utils";
 import { printServerUrls } from "../logger";
 import { initDepsOptimizer } from "../optimizer";
 import { transformMiddleware } from "./middlewares/transform";
 import { FSWatcher } from "chokidar";
 import chokidar from "chokidar";
+import { createWebSocketServer } from "./ws";
+import { handleHMRUpdate } from "./hmr";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -29,7 +32,6 @@ export interface ResolvedServerUrls {
 export interface ResolvedServerOptions extends ServerOptions {
   fs: Required<FileSystemServeOptions>;
   middlewareMode: boolean;
-  // TODO
   sourcemapIgnoreList?: Exclude<
     ServerOptions["sourcemapIgnoreList"],
     false | undefined
@@ -48,6 +50,7 @@ export interface ViteDevServer {
   listen(port?: number, isRestart?: boolean): Promise<ViteDevServer>;
   moduleGraph: ModuleGraph;
   watcher: FSWatcher;
+  ws: WebSocketServer ;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -76,17 +79,36 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
   const { root, server: serverConfig } = config;
   const middlewares = connect() as Connect.Server;
   const httpServer = await resolveHttpServer(middlewares);
+  const httpsOptions = undefined;
+  const ws = createWebSocketServer(httpServer, config, httpsOptions);
   const plugins = await resolvePlugins();
-  const container = await createPluginContainer(config);
-
   const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>
     container.resolveId(url, undefined, { ssr })
   );
+  const container = await createPluginContainer(config);
 
   const watcher = chokidar.watch(root, {
     ignored: ["**/node_modules/**", "**/.git/**"],
     ignoreInitial: true,
   }) as FSWatcher;
+
+  const onHMRUpdate = async (file: string, configOnly: boolean) => {
+    if (serverConfig.hmr !== false) {
+      try {
+        await handleHMRUpdate(file, server, configOnly);
+      } catch (err) {
+        console.log(err);
+      }
+    }
+  };
+
+  watcher.on("change", async (file) => {
+    file = normalizePath(file);
+    // invalidate module graph cache on file change
+    moduleGraph.onFileChange(file);
+
+    await onHMRUpdate(file, false);
+  });
 
   const server: ViteDevServer = {
     root,
@@ -98,6 +120,7 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
     moduleGraph,
     resolvedUrls: null,
     watcher,
+    ws,
     async listen(port?: number, isRestart?: boolean) {
       await startServer(server, port);
       if (httpServer) {

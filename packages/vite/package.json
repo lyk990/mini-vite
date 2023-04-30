@@ -36,6 +36,7 @@
     "@types/etag": "^1.8.1",
     "@types/fs-extra": "^11.0.1",
     "@types/node": "^18.15.11",
+    "@types/ws": "^8.5.4",
     "dep-types": "link:src\\types",
     "types": "link:types"
   }
