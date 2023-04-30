@@ -13,7 +13,7 @@
   "scripts": {
     "build": "pnpm -r --filter='./packages/*' run build",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "op": "pnpm run --filter ./mini-vite-example op",
+    "op": "pnpm run --filter ./ mini-vite-example op",
     "dev": "pnpm run --filter ./mini-vite-example dev",
     "serve": "pnpm run --filter ./mini-vite-example serve",
     "rm": "pnpm run --filter ./mini-vite-example rm",
@@ -24,6 +24,7 @@
     "@rollup/plugin-json": "^6.0.0",
     "@rollup/plugin-node-resolve": "^15.0.2",
     "@rollup/plugin-typescript": "^11.1.0",
+    "convert-source-map": "^2.0.0",
     "fast-glob": "^3.2.12",
     "fs-extra": "^11.1.1",
     "picocolors": "^1.0.0",
@@ -34,6 +35,7 @@
     "typescript": "^4.9.5"
   },
   "devDependencies": {
+    "@types/convert-source-map": "^2.0.0",
     "@types/resolve": "^1.20.2"
   }
 }

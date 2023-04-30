@@ -11,7 +11,7 @@ import {
   FileSystemServeOptions,
   ModuleGraph,
 } from "vite";
- import type * as http from "node:http";
+import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
@@ -19,6 +19,8 @@ import { resolveServerUrls } from "../utils";
 import { printServerUrls } from "../logger";
 import { initDepsOptimizer } from "../optimizer";
 import { transformMiddleware } from "./middlewares/transform";
+import { FSWatcher } from "chokidar";
+import chokidar from "chokidar";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -45,6 +47,7 @@ export interface ViteDevServer {
   printUrls(): void;
   listen(port?: number, isRestart?: boolean): Promise<ViteDevServer>;
   moduleGraph: ModuleGraph;
+  watcher: FSWatcher;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -80,6 +83,11 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
     container.resolveId(url, undefined, { ssr })
   );
 
+  const watcher = chokidar.watch(root, {
+    ignored: ["**/node_modules/**", "**/.git/**"],
+    ignoreInitial: true,
+  }) as FSWatcher;
+
   const server: ViteDevServer = {
     root,
     middlewares,
@@ -89,6 +97,7 @@ export async function createServer(inlineConfig: InlineConfig = {}) {
     config,
     moduleGraph,
     resolvedUrls: null,
+    watcher,
     async listen(port?: number, isRestart?: boolean) {
       await startServer(server, port);
       if (httpServer) {

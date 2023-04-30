@@ -35,7 +35,14 @@ export interface PluginContainer {
       ssr?: boolean;
     }
   ): Promise<LoadResult | null>;
-  transform(code: string, id: string): Promise<SourceDescription | null>;
+  transform(
+    code: string,
+    id: string,
+    options?: {
+      inMap?: SourceDescription["map"];
+      ssr?: boolean;
+    }
+  ): Promise<SourceDescription | null>;
 }
 
 export async function createPluginContainer(

@@ -16,6 +16,9 @@ importers:
       '@rollup/plugin-typescript':
         specifier: ^11.1.0
         version: 11.1.0(rollup@3.20.2)(typescript@4.9.5)
+      convert-source-map:
+        specifier: ^2.0.0
+        version: 2.0.0
       fast-glob:
         specifier: ^3.2.12
         version: 3.2.12
@@ -41,6 +44,9 @@ importers:
         specifier: ^4.9.5
         version: 4.9.5
     devDependencies:
+      '@types/convert-source-map':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/resolve':
         specifier: ^1.20.2
         version: 1.20.2
@@ -446,6 +452,10 @@ packages:
       '@types/node': 18.15.11
     dev: true
 
+  /@types/convert-source-map@2.0.0:
+    resolution: {integrity: sha512-QUm4YOC/ENo0VjPVl2o8HGyTbHHQGDOw8PCg3rXBucYHKyZN/XjXRbPFAV1tB2FvM0/wyFoDct4cTIctzKrQFg==}
+    dev: true
+
   /@types/debug@4.1.7:
     resolution: {integrity: sha512-9AonUzyTjXXhEOa0DnqpzZi6VHlqKMswga9EXjpXnnqxwLtdvPPtlO8evrI5D9S6asFRCQ6v+wpiUKbw+vKqyg==}
     dependencies:
@@ -689,6 +699,10 @@ packages:
       utils-merge: 1.0.1
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /convert-source-map@2.0.0:
+    resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
     dev: false
 
   /csstype@2.6.21:

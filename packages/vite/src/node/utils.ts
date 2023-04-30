@@ -4,10 +4,24 @@ import type { AddressInfo, Server } from "node:net";
 import type { CommonServerOptions } from "vite";
 import type { ResolvedConfig } from "./config";
 import type { ResolvedServerUrls } from "./server";
-import debug from 'debug'
+import debug from "debug";
+import type { FSWatcher } from 'chokidar'
+import fs from 'node:fs'
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
+}
+
+export function isObject(value: unknown): value is Record<string, any> {
+  return Object.prototype.toString.call(value) === "[object Object]";
+}
+
+export const blankReplacer = (match: string): string =>
+  " ".repeat(match.length);
+
+const postfixRE = /[?#].*$/s;
+export function cleanUrl(url: string): string {
+  return url.replace(postfixRE, "");
 }
 
 export const isWindows = os.platform() === "win32";
@@ -37,9 +51,9 @@ export async function resolveServerUrls(
   network.push("ipv4地址");
   return { local, network };
 }
-export type ViteDebugScope = `vite:${string}`
+export type ViteDebugScope = `vite:${string}`;
 interface DebuggerOptions {
-  onlyWhenFocused?: boolean | string
+  onlyWhenFocused?: boolean | string;
 }
 export function createDebugger(
   namespace: ViteDebugScope,
@@ -64,9 +78,27 @@ export function createDebugger(
   }
 }
 
-const filter = process.env.VITE_DEBUG_FILTER
-const DEBUG = process.env.DEBUG
-export const externalRE = /^(https?:)?\/\//
-export const dataUrlRE = /^\s*data:/i
-export const virtualModuleRE = /^virtual-module:.*/
-export const virtualModulePrefix = 'virtual-module:'
+const filter = process.env.VITE_DEBUG_FILTER;
+const DEBUG = process.env.DEBUG;
+export const externalRE = /^(https?:)?\/\//;
+export const dataUrlRE = /^\s*data:/i;
+export const virtualModuleRE = /^virtual-module:.*/;
+export const virtualModulePrefix = "virtual-module:";
+
+export function ensureWatchedFile(
+  watcher: FSWatcher,
+  file: string | null,
+  root: string
+): void {
+  if (
+    file &&
+    // only need to watch if out of root
+    !file.startsWith(root + "/") &&
+    // some rollup plugins use null bytes for private resolved Ids
+    !file.includes("\0") &&
+    fs.existsSync(file)
+  ) {
+    // resolve file to normalized system path
+    watcher.add(path.resolve(file));
+  }
+}
