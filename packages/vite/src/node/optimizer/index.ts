@@ -5,8 +5,8 @@ import { createDebugger, normalizePath } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
 import { scanImports } from "./scan";
-import { build } from "esbuild";
-import { PRE_BUNDLE_DIR } from "../constants";
+// import { build } from "esbuild";
+// import { PRE_BUNDLE_DIR } from "../constants";
 
 const debug = createDebugger("vite:deps");
 
@@ -28,7 +28,7 @@ async function createDepsOptimizer(
   let discover;
   if (!cachedMetadata) {
     discover = discoverProjectDependencies(config);
-    let deps = await discover.result;
+    await discover.result;
     discover = undefined;
     // TODO 依赖预构建
     // runOptimizeDeps(config, deps);

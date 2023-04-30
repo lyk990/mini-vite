@@ -1,11 +1,11 @@
 import esbuild, { BuildContext, Plugin } from "esbuild";
 import { ResolvedConfig } from "../config";
-import { BARE_IMPORT_RE, EXTERNAL_TYPES } from "../constants";
+import { EXTERNAL_TYPES } from "../constants";
 import glob from "fast-glob";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
-import path from "node:path";
+// import path from "node:path";
 import { normalizePath } from "../utils";
-const htmlTypesRE = /\.(html|vue|svelte|astro|imba)$/;
+// const htmlTypesRE = /\.(html|vue|svelte|astro|imba)$/;
 type ResolveIdOptions = Parameters<PluginContainer["resolveId"]>[2];
 
 export function scanImports(config: ResolvedConfig): {
@@ -54,11 +54,7 @@ function esbuildScanPlugin(
   entries: string[]
 ): Plugin {
   // 对路径进行处理
-  const resolve = async (
-    id: string,
-    importer?: string,
-    options?: ResolveIdOptions
-  ) => {
+  async (id: string, importer?: string, options?: ResolveIdOptions) => {
     // const seen = new Map<string, string | undefined>();
     // const key = id + (importer && path.dirname(importer));
     // if (seen.has(key)) {

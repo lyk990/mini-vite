@@ -51,9 +51,9 @@ export async function createPluginContainer(
   watcher?: FSWatcher
 ): Promise<PluginContainer> {
   const {
-    logger,
+    logger: _logger,
     root,
-    build: { rollupOptions },
+    build: { rollupOptions: _r },
   } = config;
   // TODO
   const plugins = resolvePlugins();

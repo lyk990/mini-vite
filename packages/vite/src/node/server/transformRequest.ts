@@ -4,6 +4,8 @@ import { blankReplacer, cleanUrl, ensureWatchedFile, isObject } from "../utils";
 import { promises as fs } from "node:fs";
 import convertSourceMap from "convert-source-map";
 import { SourceDescription } from "rollup";
+import getEtag from "etag";
+import { getDepsOptimizer } from "../optimizer/optimizer";
 
 export function transformRequest(
   url: string,
@@ -96,9 +98,23 @@ async function loadAndTransform(
   const mod = await moduleGraph.ensureEntryFromUrl(url, ssr);
   ensureWatchedFile(watcher, mod.file, root);
   // transform
-  const transformStart = performance.now();
   const transformResult = await pluginContainer.transform(code, id, {
     inMap: map,
     ssr,
   });
+  if (
+    transformResult == null ||
+    (isObject(transformResult) && transformResult.code == null)
+  ) {
+    // no transform applied, keep code as-is
+  } else {
+    code = transformResult.code!;
+    map = transformResult.map;
+  }
+  const result = {
+    code,
+    map,
+    etag: getEtag(code, { weak: true }),
+  } as TransformResult;
+  return result;
 }

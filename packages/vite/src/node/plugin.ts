@@ -1,9 +1,8 @@
 import { LoadResult, PartialResolvedId, SourceDescription } from "rollup";
-import { ViteDevServer } from "vite";
-import { ServerContext } from "./server";
+import { ViteDevServer } from "./server";
 
 export type ServerHook = (
-  server: ServerContext
+  server: ViteDevServer
 ) => (() => void) | void | Promise<(() => void) | void>;
 
 // 只实现以下这几个钩子
@@ -21,4 +20,3 @@ export interface Plugin {
   ) => Promise<SourceDescription | null> | SourceDescription | null;
   transformIndexHtml?: (raw: string) => Promise<string> | string;
 }
-

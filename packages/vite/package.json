@@ -23,6 +23,7 @@
     "debug": "^4.3.4",
     "es-module-lexer": "^1.2.1",
     "esbuild": "^0.17.16",
+    "etag": "^1.8.1",
     "magic-string": "^0.30.0",
     "rollup-plugin-license": "^3.0.1",
     "tslib": "^2.5.0",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@types/connect": "^3.4.35",
     "@types/debug": "^4.1.7",
+    "@types/etag": "^1.8.1",
     "@types/fs-extra": "^11.0.1",
     "@types/node": "^18.15.11",
     "dep-types": "link:src\\types",

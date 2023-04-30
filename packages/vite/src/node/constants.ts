@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 const { version } = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url)).toString()
 );
+export const CSS_LANGS_RE =
+  /\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)(?:$|\?)/;
 export const BARE_IMPORT_RE = /^[\w@][^:]/;
 export const PRE_BUNDLE_DIR = path.join("node_modules", ".m-vite");
 export const DEFAULT_DEV_PORT = 5173;
@@ -43,11 +45,11 @@ export const EXTERNAL_TYPES = [
   "webp",
   "avif",
   // EXTERNAL_TYPES
-  'html',
-  'vue',
-  'svelte',
-  'astro',
-  'imba',
-  'ts',
+  "html",
+  "vue",
+  "svelte",
+  "astro",
+  "imba",
+  "ts",
 ];
-export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/
+export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/;
