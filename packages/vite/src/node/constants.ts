@@ -1,5 +1,6 @@
-import path from "path";
 import { readFileSync } from "node:fs";
+import path, { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const { version } = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url)).toString()
@@ -53,3 +54,9 @@ export const EXTERNAL_TYPES = [
   "ts",
 ];
 export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/;
+
+export const VITE_PACKAGE_DIR = resolve(
+  // import.meta.url is `dist/node/constants.js` after bundle
+  fileURLToPath(import.meta.url),
+  "../../.."
+);

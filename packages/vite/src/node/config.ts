@@ -3,6 +3,8 @@ import {
   Alias,
   DepOptimizationOptions,
   InlineConfig,
+  loadConfigFromFile,
+  mergeConfig,
   ResolvedBuildOptions,
   ResolveOptions,
   UserConfigExport,
@@ -25,6 +27,9 @@ export interface ResolvedConfig {
     alias: Alias[];
   };
   build: ResolvedBuildOptions;
+  configFile: string | undefined;
+  configFileDependencies: string[];
+  inlineConfig: InlineConfig
 }
 
 export async function resolveConfig(
@@ -34,7 +39,8 @@ export async function resolveConfig(
   defaultNodeEnv = "development"
 ): Promise<ResolvedConfig> {
   let config = inlineConfig;
-  // @ts-ignore TODO
+  let configFileDependencies: string[] = [];
+  // @ts-ignore
   const configEnv = {
     mode: defaultMode,
     command: command,
@@ -44,6 +50,20 @@ export async function resolveConfig(
     allowClearScreen: config.clearScreen,
     customLogger: config.customLogger,
   });
+  let { configFile } = config;
+  if (configFile !== false) {
+    const loadResult = await loadConfigFromFile(
+      configEnv,
+      configFile,
+      config.root,
+      config.logLevel
+    );
+    if (loadResult) {
+      config = mergeConfig(loadResult.config, config);
+      configFile = loadResult.path;
+      configFileDependencies = loadResult.dependencies;
+    }
+  }
   // TODO
   // resolve alias with internal client alias
   //  const resolvedAlias = normalizeAlias(
@@ -68,6 +88,11 @@ export async function resolveConfig(
     resolvedRoot
   );
   const resolvedConfig: ResolvedConfig = {
+    configFile: configFile ? normalizePath(configFile) : undefined,
+    configFileDependencies: configFileDependencies.map((name) =>
+      normalizePath(path.resolve(name))
+    ),
+    inlineConfig,
     logger,
     root: process.cwd(),
     server: {

@@ -6,11 +6,14 @@ import type {
   PluginContext as RollupPluginContext,
   ResolvedId,
   CustomPluginOptions,
+  AsyncPluginHooks,
+  ParallelPluginHooks,
+  FunctionPluginHooks,
 } from "rollup";
 import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
 import type { FSWatcher } from "chokidar";
-import { resolvePlugins } from "./plugins";
+import { createPluginHookUtils, resolvePlugins } from "./plugins";
 import { join } from "path";
 
 export interface PluginContainer {
@@ -43,6 +46,7 @@ export interface PluginContainer {
       ssr?: boolean;
     }
   ): Promise<SourceDescription | null>;
+  close(): Promise<void>;
 }
 
 export async function createPluginContainer(
@@ -57,6 +61,32 @@ export async function createPluginContainer(
   } = config;
   // TODO
   const plugins = resolvePlugins();
+  const { getSortedPluginHooks: _getSortedPluginHooks, getSortedPlugins } =
+    createPluginHookUtils(plugins);
+
+  // parallel, ignores returns
+  async function hookParallel<H extends AsyncPluginHooks & ParallelPluginHooks>(
+    hookName: H,
+    context: (plugin: Plugin) => ThisType<FunctionPluginHooks[H]>,
+    args: (plugin: Plugin) => Parameters<FunctionPluginHooks[H]>
+  ): Promise<void> {
+    const parallelPromises: Promise<unknown>[] = [];
+    for (const plugin of getSortedPlugins(hookName)) {
+      const hook = plugin[hookName];
+      if (!hook) continue;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore hook is not a primitive
+      const handler: Function = "handler" in hook ? hook.handler : hook;
+      if ((hook as { sequential?: boolean }).sequential) {
+        await Promise.all(parallelPromises);
+        parallelPromises.length = 0;
+        await handler.apply(context(plugin), args(plugin));
+      } else {
+        parallelPromises.push(handler.apply(context(plugin), args(plugin)));
+      }
+    }
+    await Promise.all(parallelPromises);
+  }
   // @ts-ignore 这里仅实现上下文对象的 resolve 方法
   class Context implements RollupPluginContext {
     async resolve(
@@ -123,6 +153,21 @@ export async function createPluginContainer(
         }
       }
       return { code };
+    },
+    async close() {
+      if (closed) return;
+      const ctx = new Context();
+      await hookParallel(
+        "buildEnd",
+        () => ctx,
+        () => []
+      );
+      await hookParallel(
+        "closeBundle",
+        () => ctx,
+        () => []
+      );
+      closed = true;
     },
   };
 

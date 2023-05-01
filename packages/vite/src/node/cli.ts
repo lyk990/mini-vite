@@ -56,6 +56,7 @@ cli
     try {
       const server = await createServer({
         mode: options.dev,
+        configFile: options.config,
         server: cleanOptions(options),
         optimizeDeps: { force: options.force },
       });

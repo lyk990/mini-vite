@@ -3,10 +3,10 @@ import path from "node:path";
 import type { AddressInfo, Server } from "node:net";
 import type { CommonServerOptions } from "vite";
 import type { ResolvedConfig } from "./config";
-import type { ResolvedServerUrls } from "./server";
+import type { ResolvedServerUrls, ViteDevServer } from "./server";
 import debug from "debug";
-import type { FSWatcher } from 'chokidar'
-import fs from 'node:fs'
+import type { FSWatcher } from "chokidar";
+import fs from "node:fs";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -101,4 +101,30 @@ export function ensureWatchedFile(
     // resolve file to normalized system path
     watcher.add(path.resolve(file));
   }
+}
+
+export function arrayEqual(a: any[], b: any[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+export function diffDnsOrderChange(
+  oldUrls: ViteDevServer["resolvedUrls"],
+  newUrls: ViteDevServer["resolvedUrls"]
+): boolean {
+  return !(
+    oldUrls === newUrls ||
+    (oldUrls &&
+      newUrls &&
+      arrayEqual(oldUrls.local, newUrls.local) &&
+      arrayEqual(oldUrls.network, newUrls.network))
+  );
+}
+
+export function isDefined<T>(value: T | undefined | null): value is T {
+  return value != null
 }
