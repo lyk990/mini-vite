@@ -7,7 +7,7 @@ import type { ResolvedServerUrls, ViteDevServer } from "./server";
 import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
-import { FS_PREFIX } from "./constants";
+import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -136,4 +136,184 @@ export function fsPathFromId(id: string): string {
     id.startsWith(FS_PREFIX) ? id.slice(FS_PREFIX.length) : id
   );
   return fsPath[0] === "/" || fsPath.match(VOLUME_RE) ? fsPath : `/${fsPath}`;
+}
+
+export async function asyncFlatten<T>(arr: T[]): Promise<T[]> {
+  do {
+    arr = (await Promise.all(arr)).flat(Infinity) as any;
+  } while (arr.some((v: any) => v?.then));
+  return arr;
+}
+
+export function arraify<T>(target: T | T[]): T[] {
+  return Array.isArray(target) ? target : [target];
+}
+
+export function joinUrlSegments(a: string, b: string): string {
+  if (!a || !b) {
+    return a || b || "";
+  }
+  if (a[a.length - 1] === "/") {
+    a = a.substring(0, a.length - 1);
+  }
+  if (b[0] !== "/") {
+    b = "/" + b;
+  }
+  return a + b;
+}
+
+export function wrapId(id: string): string {
+  return id.startsWith(VALID_ID_PREFIX)
+    ? id
+    : VALID_ID_PREFIX + id.replace("\0", NULL_BYTE_PLACEHOLDER);
+}
+
+export function unwrapId(id: string): string {
+  return id.startsWith(VALID_ID_PREFIX)
+    ? id.slice(VALID_ID_PREFIX.length).replace(NULL_BYTE_PLACEHOLDER, "\0")
+    : id;
+}
+
+export function stripBase(path: string, base: string): string {
+  if (path === base) {
+    return "/";
+  }
+  const devBase = base[base.length - 1] === "/" ? base : base + "/";
+  return path.startsWith(devBase) ? path.slice(devBase.length - 1) : path;
+}
+
+const splitRE = /\r?\n/;
+const range: number = 2;
+
+export function posToNumber(
+  source: string,
+  pos: number | { line: number; column: number }
+): number {
+  if (typeof pos === "number") return pos;
+  const lines = source.split(splitRE);
+  const { line, column } = pos;
+  let start = 0;
+  for (let i = 0; i < line - 1 && i < lines.length; i++) {
+    start += lines[i].length + 1;
+  }
+  return start + column;
+}
+
+export function generateCodeFrame(
+  source: string,
+  start: number | { line: number; column: number } = 0,
+  end?: number
+): string {
+  start = posToNumber(source, start);
+  end = end || start;
+  const lines = source.split(splitRE);
+  let count = 0;
+  const res: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    count += lines[i].length + 1;
+    if (count >= start) {
+      for (let j = i - range; j <= i + range || end > count; j++) {
+        if (j < 0 || j >= lines.length) continue;
+        const line = j + 1;
+        res.push(
+          `${line}${" ".repeat(Math.max(3 - String(line).length, 0))}|  ${
+            lines[j]
+          }`
+        );
+        const lineLength = lines[j].length;
+        if (j === i) {
+          // push underline
+          const pad = Math.max(start - (count - lineLength) + 1, 0);
+          const length = Math.max(
+            1,
+            end > count ? lineLength - pad : end - start
+          );
+          res.push(`   |  ` + " ".repeat(pad) + "^".repeat(length));
+        } else if (j > i) {
+          if (end > count) {
+            const length = Math.max(Math.min(end - count, lineLength), 1);
+            res.push(`   |  ` + "^".repeat(length));
+          }
+          count += lineLength + 1;
+        }
+      }
+      break;
+    }
+  }
+  return res.join("\n");
+}
+
+const replacePercentageRE = /%/g;
+export function injectQuery(url: string, queryToInject: string): string {
+  // encode percents for consistent behavior with pathToFileURL
+  // see #2614 for details
+  const resolvedUrl = new URL(
+    url.replace(replacePercentageRE, "%25"),
+    "relative:///"
+  );
+  const { search, hash } = resolvedUrl;
+  let pathname = cleanUrl(url);
+  pathname = isWindows ? slash(pathname) : pathname;
+  return `${pathname}?${queryToInject}${search ? `&` + search.slice(1) : ""}${
+    hash ?? ""
+  }`;
+}
+
+interface ImageCandidate {
+  url: string;
+  descriptor: string;
+}
+function reduceSrcset(ret: { url: string; descriptor: string }[]) {
+  return ret.reduce((prev, { url, descriptor }, index) => {
+    descriptor ??= "";
+    return (prev +=
+      url + ` ${descriptor}${index === ret.length - 1 ? "" : ", "}`);
+  }, "");
+}
+
+const cleanSrcSetRE =
+  /(?:url|image|gradient|cross-fade)\([^)]*\)|"([^"]|(?<=\\)")*"|'([^']|(?<=\\)')*'/g;
+
+function splitSrcSet(srcs: string) {
+  const parts: string[] = [];
+  // There could be a ',' inside of url(data:...), linear-gradient(...) or "data:..."
+  const cleanedSrcs = srcs.replace(cleanSrcSetRE, blankReplacer);
+  let startIndex = 0;
+  let splitIndex: number;
+  do {
+    splitIndex = cleanedSrcs.indexOf(",", startIndex);
+    parts.push(
+      srcs.slice(startIndex, splitIndex !== -1 ? splitIndex : undefined)
+    );
+    startIndex = splitIndex + 1;
+  } while (splitIndex !== -1);
+  return parts;
+}
+const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g;
+const imageSetUrlRE = /^(?:[\w\-]+\(.*?\)|'.*?'|".*?"|\S*)/;
+
+function splitSrcSetDescriptor(srcs: string): ImageCandidate[] {
+  return splitSrcSet(srcs)
+    .map((s) => {
+      const src = s.replace(escapedSpaceCharacters, " ").trim();
+      const [url] = imageSetUrlRE.exec(src) || [""];
+
+      return {
+        url,
+        descriptor: src?.slice(url.length).trim(),
+      };
+    })
+    .filter(({ url }) => !!url);
+}
+
+export function processSrcSetSync(
+  srcs: string,
+  replacer: (arg: ImageCandidate) => string
+): string {
+  return reduceSrcset(
+    splitSrcSetDescriptor(srcs).map(({ url, descriptor }) => ({
+      url: replacer({ url, descriptor }),
+      descriptor,
+    }))
+  );
 }

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
-import path, { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import path, { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const { version } = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url)).toString()
@@ -61,4 +61,8 @@ export const VITE_PACKAGE_DIR = resolve(
   "../../.."
 );
 
-export const FS_PREFIX = `/@fs/`
+export const FS_PREFIX = `/@fs/`;
+
+export const VALID_ID_PREFIX = `/@id/`;
+export const NULL_BYTE_PLACEHOLDER = `__x00__`
+export const CLIENT_PUBLIC_PATH = `/@vite/client`

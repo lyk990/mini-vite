@@ -4,7 +4,9 @@ import {
   DepOptimizationOptions,
   InlineConfig,
   loadConfigFromFile,
+  loadEnv,
   mergeConfig,
+  resolveBaseUrl,
   ResolvedBuildOptions,
   ResolveOptions,
   UserConfigExport,
@@ -12,10 +14,12 @@ import {
 import { createLogger } from "vite";
 import { resolveBuildOptions } from "./build";
 import { DEFAULT_EXTENSIONS, DEFAULT_MAIN_FIELDS } from "./constants";
+import { resolveEnvPrefix } from "./env";
 import { Logger } from "./logger";
+import { Plugin } from "./plugin";
 
 import type { ResolvedServerOptions } from "./server";
-import { normalizePath } from "./utils";
+import { asyncFlatten, normalizePath } from "./utils";
 
 export type AppType = "spa" | "mpa" | "custom";
 // TODO
@@ -32,6 +36,12 @@ export interface ResolvedConfig {
   configFileDependencies: string[];
   inlineConfig: InlineConfig;
   appType: AppType;
+  plugins: readonly Plugin[];
+  define?: Record<string, any>;
+  env: Record<string, any>;
+  envPrefix?: string | string[];
+  base: string;
+  publicDir?: string | false;
 }
 
 export async function resolveConfig(
@@ -42,6 +52,8 @@ export async function resolveConfig(
 ): Promise<ResolvedConfig> {
   let config = inlineConfig;
   let configFileDependencies: string[] = [];
+  let mode = inlineConfig.mode || defaultMode;
+
   // @ts-ignore
   const configEnv = {
     mode: defaultMode,
@@ -89,7 +101,49 @@ export async function resolveConfig(
     logger,
     resolvedRoot
   );
+  mode = inlineConfig.mode || config.mode || mode;
+  const filterPlugin = (p: Plugin) => {
+    if (!p) {
+      return false;
+    } else if (!p.apply) {
+      return true;
+    } else if (typeof p.apply === "function") {
+      return p.apply({ ...config, mode }, configEnv);
+    } else {
+      return p.apply === command;
+    }
+  };
+  // const rawWorkerUserPlugins = (
+  //   (await asyncFlatten(config.worker?.plugins || [])) as Plugin[]
+  // ).filter(filterPlugin);
+
+  const rawUserPlugins = (
+    (await asyncFlatten(config.plugins || [])) as Plugin[]
+  ).filter(filterPlugin);
+
+  const [prePlugins, normalPlugins, postPlugins] =
+    sortUserPlugins(rawUserPlugins);
   const middlewareMode = config?.server?.middlewareMode;
+  const userPlugins = [...prePlugins, ...normalPlugins, ...postPlugins];
+
+  const isBuild = command === "build";
+  const relativeBaseShortcut = config.base === "" || config.base === "./";
+
+  const resolvedBase = relativeBaseShortcut
+    ? true || config.build?.ssr
+      ? "/"
+      : "./"
+    : resolveBaseUrl(config.base, isBuild, logger) ?? "/";
+  const BASE_URL = resolvedBase;
+
+  const envDir = config.envDir
+    ? normalizePath(path.resolve(resolvedRoot, config.envDir))
+    : resolvedRoot;
+
+  const userEnv =
+    inlineConfig.envFile !== false &&
+    loadEnv(mode, envDir, resolveEnvPrefix(config));
+
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
@@ -98,6 +152,14 @@ export async function resolveConfig(
     inlineConfig,
     logger,
     root: process.cwd(),
+    base: resolvedBase.endsWith("/") ? resolvedBase : resolvedBase + "/",
+    env: {
+      ...userEnv,
+      BASE_URL,
+      MODE: mode,
+      DEV: true,
+      PROD: false,
+    },
     server: {
       preTransformRequests: true,
       middlewareMode: true,
@@ -120,6 +182,7 @@ export async function resolveConfig(
     },
     build: resolvedBuildOptions,
     appType: config.appType ?? (middlewareMode === "ssr" ? "custom" : "spa"),
+    plugins: userPlugins,
   };
   const resolved: ResolvedConfig = {
     ...config,
@@ -130,4 +193,22 @@ export async function resolveConfig(
 
 export function defineConfig(config: UserConfigExport): UserConfigExport {
   return config;
+}
+
+export function sortUserPlugins(
+  plugins: (Plugin | Plugin[])[] | undefined
+): [Plugin[], Plugin[], Plugin[]] {
+  const prePlugins: Plugin[] = [];
+  const postPlugins: Plugin[] = [];
+  const normalPlugins: Plugin[] = [];
+
+  if (plugins) {
+    plugins.flat().forEach((p) => {
+      if (p.enforce === "pre") prePlugins.push(p);
+      else if (p.enforce === "post") postPlugins.push(p);
+      else normalPlugins.push(p);
+    });
+  }
+
+  return [prePlugins, normalPlugins, postPlugins];
 }
