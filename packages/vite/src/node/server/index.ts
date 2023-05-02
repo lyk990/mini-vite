@@ -31,7 +31,10 @@ import { getDepsOptimizer } from "../optimizer/optimizer";
 import type * as net from "node:net";
 import { openBrowser as _openBrowser } from "./openBrowser";
 import { transformRequest } from "./transformRequest";
-import { createDevHtmlTransformFn, indexHtmlMiddleware } from "./middlewares/indexHtml";
+import {
+  createDevHtmlTransformFn,
+  indexHtmlMiddleware,
+} from "./middlewares/indexHtml";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -149,7 +152,6 @@ export async function _createServer(
   options: { ws: boolean }
 ): Promise<ViteDevServer> {
   const config = await resolveConfig(inlineConfig, "serve");
-  //TODO 依赖预构建
   if (true) {
     await initDepsOptimizer(config);
   }
@@ -286,8 +288,7 @@ export async function _createServer(
     _shortcutsOptions: undefined,
   };
   middlewares.use(transformMiddleware(server));
-  // TODO
-  server.transformIndexHtml = createDevHtmlTransformFn(server)
+  server.transformIndexHtml = createDevHtmlTransformFn(server);
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(indexHtmlMiddleware(server));
   }

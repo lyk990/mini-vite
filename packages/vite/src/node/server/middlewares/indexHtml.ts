@@ -82,7 +82,7 @@ function getHtmlFilename(url: string, server: ViteDevServer) {
     );
   }
 }
-
+/**改造index.html */
 export function createDevHtmlTransformFn(
   server: ViteDevServer
 ): (url: string, html: string, originalUrl: string) => Promise<string> {

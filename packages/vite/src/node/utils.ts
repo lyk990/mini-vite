@@ -30,7 +30,6 @@ export const isWindows = os.platform() === "win32";
 export function normalizePath(id: string): string {
   return path.posix.normalize(isWindows ? slash(id) : id);
 }
-// TODO
 export async function resolveServerUrls(
   server: Server,
   options: CommonServerOptions,

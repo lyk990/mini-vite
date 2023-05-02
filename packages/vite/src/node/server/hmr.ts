@@ -32,7 +32,6 @@ export async function handleHMRUpdate(
     config.inlineConfig.envFile !== false &&
     (fileName === ".env" || fileName.startsWith(".env."));
   if (isConfig || isConfigDependency || isEnv) {
-    // auto restart server
     debugHmr?.(`[config change] ${colors.dim(shortFile)}`);
     config.logger.info(
       colors.green(
@@ -104,7 +103,7 @@ export async function handleHMRUpdate(
 
   updateModules(shortFile, hmrContext.modules, timestamp, server);
 }
-
+/**给浏览器端推送消息 */
 export function updateModules(
   file: string,
   modules: ModuleNode[],
