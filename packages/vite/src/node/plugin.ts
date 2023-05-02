@@ -1,5 +1,5 @@
-import { LoadResult, PartialResolvedId, SourceDescription } from "rollup";
-import type { ConfigEnv, IndexHtmlTransform, UserConfig } from "vite";
+import { LoadResult, ObjectHook, PartialResolvedId, SourceDescription } from "rollup";
+import type { ConfigEnv, HmrContext, IndexHtmlTransform, ModuleNode, UserConfig } from "vite";
 import { ViteDevServer } from "./server";
 
 export type ServerHook = (
@@ -20,10 +20,16 @@ export interface Plugin {
     id: string
   ) => Promise<SourceDescription | null> | SourceDescription | null;
   // transformIndexHtml?: (raw: string) => Promise<string> | string;
-  transformIndexHtml?: IndexHtmlTransform
+  transformIndexHtml?: IndexHtmlTransform;
   enforce?: "pre" | "post";
   apply?:
     | "serve"
     | "build"
     | ((this: void, config: UserConfig, env: ConfigEnv) => boolean);
+  handleHotUpdate?: ObjectHook<
+    (
+      this: void,
+      ctx: HmrContext
+    ) => Array<ModuleNode> | void | Promise<Array<ModuleNode> | void>
+  >;
 }

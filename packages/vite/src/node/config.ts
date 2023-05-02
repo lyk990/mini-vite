@@ -2,6 +2,7 @@ import path from "node:path";
 import {
   Alias,
   DepOptimizationOptions,
+  HookHandler,
   InlineConfig,
   loadConfigFromFile,
   loadEnv,
@@ -9,6 +10,7 @@ import {
   resolveBaseUrl,
   ResolvedBuildOptions,
   ResolveOptions,
+  UserConfig,
   UserConfigExport,
 } from "vite";
 import { createLogger } from "vite";
@@ -23,27 +25,35 @@ import { asyncFlatten, normalizePath } from "./utils";
 
 export type AppType = "spa" | "mpa" | "custom";
 // TODO
-export interface ResolvedConfig {
-  logger: Logger;
-  server: ResolvedServerOptions;
-  root: string;
-  optimizeDeps: DepOptimizationOptions;
-  resolve: Required<ResolveOptions> & {
-    alias: Alias[];
-  };
-  build: ResolvedBuildOptions;
-  configFile: string | undefined;
-  configFileDependencies: string[];
-  inlineConfig: InlineConfig;
-  appType: AppType;
-  plugins: readonly Plugin[];
-  define?: Record<string, any>;
-  env: Record<string, any>;
-  envPrefix?: string | string[];
-  base: string;
-  publicDir?: string | false;
-}
+export type ResolvedConfig = Readonly<
+  Omit<UserConfig, "plugins" | "assetsInclude" | "optimizeDeps" | "worker"> & {
+    logger: Logger;
+    server: ResolvedServerOptions;
+    root: string;
+    optimizeDeps: DepOptimizationOptions;
+    resolve: Required<ResolveOptions> & {
+      alias: Alias[];
+    };
+    build: ResolvedBuildOptions;
+    configFile: string | undefined;
+    configFileDependencies: string[];
+    inlineConfig: InlineConfig;
+    appType: AppType;
+    plugins: readonly Plugin[];
+    define?: Record<string, any>;
+    env: Record<string, any>;
+    envPrefix?: string | string[];
+    base: string;
+    publicDir?: string | false;
+  } & PluginHookUtils
+>;
 
+export interface PluginHookUtils {
+  getSortedPlugins: (hookName: keyof Plugin) => Plugin[];
+  getSortedPluginHooks: <K extends keyof Plugin>(
+    hookName: K
+  ) => NonNullable<HookHandler<Plugin[K]>>[];
+}
 export async function resolveConfig(
   inlineConfig: InlineConfig,
   command: "build" | "serve",
@@ -183,6 +193,8 @@ export async function resolveConfig(
     build: resolvedBuildOptions,
     appType: config.appType ?? (middlewareMode === "ssr" ? "custom" : "spa"),
     plugins: userPlugins,
+    getSortedPluginHooks: undefined!,
+    getSortedPlugins: undefined!,
   };
   const resolved: ResolvedConfig = {
     ...config,

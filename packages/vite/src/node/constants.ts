@@ -11,6 +11,14 @@ export const BARE_IMPORT_RE = /^[\w@][^:]/;
 export const PRE_BUNDLE_DIR = path.join("node_modules", ".m-vite");
 export const DEFAULT_DEV_PORT = 5173;
 export const VERSION = version as string;
+export const VITE_PACKAGE_DIR = resolve(
+  // import.meta.url is `dist/node/constants.js` after bundle
+  fileURLToPath(import.meta.url),
+  "../../.."
+);
+export const CLIENT_ENTRY = resolve(VITE_PACKAGE_DIR, "dist/client/client.mjs");
+export const CLIENT_DIR = path.dirname(CLIENT_ENTRY);
+
 export const DEFAULT_MAIN_FIELDS = [
   "module",
   "jsnext:main", // moment still uses this...
@@ -55,14 +63,8 @@ export const EXTERNAL_TYPES = [
 ];
 export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/;
 
-export const VITE_PACKAGE_DIR = resolve(
-  // import.meta.url is `dist/node/constants.js` after bundle
-  fileURLToPath(import.meta.url),
-  "../../.."
-);
-
 export const FS_PREFIX = `/@fs/`;
 
 export const VALID_ID_PREFIX = `/@id/`;
-export const NULL_BYTE_PLACEHOLDER = `__x00__`
-export const CLIENT_PUBLIC_PATH = `/@vite/client`
+export const NULL_BYTE_PLACEHOLDER = `__x00__`;
+export const CLIENT_PUBLIC_PATH = `/@vite/client`;

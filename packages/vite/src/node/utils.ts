@@ -317,3 +317,19 @@ export function processSrcSetSync(
     }))
   );
 }
+
+const knownJsSrcRE = /\.(?:[jt]sx?|m[jt]s|vue|marko|svelte|astro|imba)(?:$|\?)/;
+export const isJSRequest = (url: string): boolean => {
+  url = cleanUrl(url);
+  if (knownJsSrcRE.test(url)) {
+    return true;
+  }
+  if (!path.extname(url) && url[url.length - 1] !== "/") {
+    return true;
+  }
+  return false;
+};
+
+export function unique<T>(arr: T[]): T[] {
+  return Array.from(new Set(arr));
+}

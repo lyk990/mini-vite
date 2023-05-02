@@ -11,7 +11,8 @@
     "dev": "rimraf dist && pnpm run build-bundle -w",
     "build-bundle": "rollup --config rollup.config.ts --configPlugin typescript",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "rm": "rimraf node_modules && rimraf dist"
+    "rm": "rimraf node_modules && rimraf dist",
+    "i": "rimraf node_modules && pnpm i"
   },
   "keywords": [],
   "author": "",
@@ -26,6 +27,7 @@
     "esbuild": "^0.17.16",
     "etag": "^1.8.1",
     "magic-string": "^0.30.0",
+    "micromatch": "^4.0.5",
     "open": "^8.4.2",
     "parse5": "^7.1.2",
     "rollup-plugin-license": "^3.0.1",
@@ -39,6 +41,7 @@
     "@types/debug": "^4.1.7",
     "@types/etag": "^1.8.1",
     "@types/fs-extra": "^11.0.1",
+    "@types/micromatch": "^4.0.2",
     "@types/node": "^18.15.11",
     "@types/ws": "^8.5.4",
     "dep-types": "link:src\\types",

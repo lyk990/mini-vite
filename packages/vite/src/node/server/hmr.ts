@@ -1,12 +1,19 @@
 import { ViteDevServer } from ".";
-import { createDebugger, normalizePath } from "../utils";
+import { createDebugger, normalizePath, unique, wrapId } from "../utils";
 import path from "node:path";
-import colors from 'picocolors'
+import colors from "picocolors";
+import { CLIENT_DIR } from "../constants";
+import { HmrContext, isCSSRequest, ModuleNode } from "vite";
+import fsp from "node:fs/promises";
+import type { Update } from "types/hmrPayload";
+import { isExplicitImportRequired } from "../plugins/importAnalysis";
+import { getAffectedGlobModules } from "../plugins/importMetaGlob";
 
 export function getShortName(file: string, root: string): string {
   return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
 }
-export const debugHmr = createDebugger('vite:hmr')
+export const debugHmr = createDebugger("vite:hmr");
+const normalizedClientDir = normalizePath(CLIENT_DIR);
 
 export async function handleHMRUpdate(
   file: string,
@@ -65,7 +72,7 @@ export async function handleHMRUpdate(
     timestamp,
     modules: mods ? [...mods] : [],
     read: () => readModifiedFile(file),
-    server,
+    server: server as any,
   };
 
   for (const hook of config.getSortedPluginHooks("handleHotUpdate")) {
@@ -180,4 +187,131 @@ export async function handleFileAddUnlink(
       server
     );
   }
+}
+
+async function readModifiedFile(file: string): Promise<string> {
+  const content = await fsp.readFile(file, "utf-8");
+  if (!content) {
+    const mtime = (await fsp.stat(file)).mtimeMs;
+    await new Promise((r) => {
+      let n = 0;
+      const poll = async () => {
+        n++;
+        const newMtime = (await fsp.stat(file)).mtimeMs;
+        if (newMtime !== mtime || n > 10) {
+          r(0);
+        } else {
+          setTimeout(poll, 10);
+        }
+      };
+      setTimeout(poll, 10);
+    });
+    return await fsp.readFile(file, "utf-8");
+  } else {
+    return content;
+  }
+}
+
+function propagateUpdate(
+  node: ModuleNode,
+  traversedModules: Set<ModuleNode>,
+  boundaries: { boundary: ModuleNode; acceptedVia: ModuleNode }[],
+  currentChain: ModuleNode[] = [node]
+): boolean /* hasDeadEnd */ {
+  if (traversedModules.has(node)) {
+    return false;
+  }
+  traversedModules.add(node);
+
+  // #7561
+  // if the imports of `node` have not been analyzed, then `node` has not
+  // been loaded in the browser and we should stop propagation.
+  if (node.id && node.isSelfAccepting === undefined) {
+    debugHmr?.(
+      `[propagate update] stop propagation because not analyzed: ${colors.dim(
+        node.id
+      )}`
+    );
+    return false;
+  }
+
+  if (node.isSelfAccepting) {
+    boundaries.push({ boundary: node, acceptedVia: node });
+
+    // additionally check for CSS importers, since a PostCSS plugin like
+    // Tailwind JIT may register any file as a dependency to a CSS file.
+    for (const importer of node.importers) {
+      if (isCSSRequest(importer.url) && !currentChain.includes(importer)) {
+        propagateUpdate(
+          importer,
+          traversedModules,
+          boundaries,
+          currentChain.concat(importer)
+        );
+      }
+    }
+
+    return false;
+  }
+
+  if (node.acceptedHmrExports) {
+    boundaries.push({ boundary: node, acceptedVia: node });
+  } else {
+    if (!node.importers.size) {
+      return true;
+    }
+    if (
+      !isCSSRequest(node.url) &&
+      [...node.importers].every((i) => isCSSRequest(i.url))
+    ) {
+      return true;
+    }
+  }
+
+  for (const importer of node.importers) {
+    const subChain = currentChain.concat(importer);
+    if (importer.acceptedHmrDeps.has(node)) {
+      boundaries.push({ boundary: importer, acceptedVia: node });
+      continue;
+    }
+
+    if (node.id && node.acceptedHmrExports && importer.importedBindings) {
+      const importedBindingsFromNode = importer.importedBindings.get(node.id);
+      if (
+        importedBindingsFromNode &&
+        areAllImportsAccepted(importedBindingsFromNode, node.acceptedHmrExports)
+      ) {
+        continue;
+      }
+    }
+
+    if (currentChain.includes(importer)) {
+      // circular deps is considered dead end
+      return true;
+    }
+
+    if (propagateUpdate(importer, traversedModules, boundaries, subChain)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function normalizeHmrUrl(url: string): string {
+  if (url[0] !== "." && url[0] !== "/") {
+    url = wrapId(url);
+  }
+  return url;
+}
+
+function areAllImportsAccepted(
+  importedBindings: Set<string>,
+  acceptedExports: Set<string>,
+) {
+  for (const binding of importedBindings) {
+    if (!acceptedExports.has(binding)) {
+      return false
+    }
+  }
+  return true
 }

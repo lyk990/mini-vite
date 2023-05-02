@@ -107,6 +107,9 @@ importers:
       magic-string:
         specifier: ^0.30.0
         version: 0.30.0
+      micromatch:
+        specifier: ^4.0.5
+        version: 4.0.5
       open:
         specifier: ^8.4.2
         version: 8.4.2
@@ -141,6 +144,9 @@ importers:
       '@types/fs-extra':
         specifier: ^11.0.1
         version: 11.0.1
+      '@types/micromatch':
+        specifier: ^4.0.2
+        version: 4.0.2
       '@types/node':
         specifier: ^18.15.11
         version: 18.15.11
@@ -467,6 +473,10 @@ packages:
       rollup: 3.20.2
     dev: false
 
+  /@types/braces@3.0.1:
+    resolution: {integrity: sha512-+euflG6ygo4bn0JHtn4pYqcXwRtLvElQ7/nnjDu7iYG56H0+OhCd7d6Ug0IE3WcFpZozBKW2+80FUbv5QGk5AQ==}
+    dev: true
+
   /@types/connect@3.4.35:
     resolution: {integrity: sha512-cdeYyv4KWoEgpBISTxWvqYsVy444DOqehiF3fM3ne10AmJ62RSyNkUnxMJXHQWRQQX2eR94m5y1IZyDwBjV9FQ==}
     dependencies:
@@ -510,6 +520,12 @@ packages:
     resolution: {integrity: sha512-GSgiRCVeapDN+3pqA35IkQwasaCh/0YFH5dEF6S88iDvEn901DjOeH3/QPY+XYP1DFzDZPvIvfeEgk+7br5png==}
     dependencies:
       '@types/node': 18.15.11
+    dev: true
+
+  /@types/micromatch@4.0.2:
+    resolution: {integrity: sha512-oqXqVb0ci19GtH0vOA/U2TmHTcRY9kuZl4mqUxe0QmJAlIW13kzhuK5pi1i9+ngav8FjpSb9FVS/GE00GLX1VA==}
+    dependencies:
+      '@types/braces': 3.0.1
     dev: true
 
   /@types/ms@0.7.31:
