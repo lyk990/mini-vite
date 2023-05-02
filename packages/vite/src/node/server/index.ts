@@ -12,6 +12,7 @@ import {
   ModuleGraph,
   TransformResult,
   mergeConfig,
+  TransformOptions,
 } from "vite";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
@@ -28,7 +29,9 @@ import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
 import { bindShortcuts, BindShortcutsOptions } from "../shortcuts";
 import { getDepsOptimizer } from "../optimizer/optimizer";
 import type * as net from "node:net";
-import { openBrowser as _openBrowser } from './openBrowser'
+import { openBrowser as _openBrowser } from "./openBrowser";
+import { transformRequest } from "./transformRequest";
+import { indexHtmlMiddleware } from "./middlewares/indexHtml";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -71,7 +74,16 @@ export interface ViteDevServer {
   _importGlobMap: Map<string, string[][]>;
   _shortcutsOptions: any | undefined;
   close(): Promise<void>;
-  openBrowser(): void
+  openBrowser(): void;
+  transformIndexHtml(
+    url: string,
+    html: string,
+    originalUrl?: string
+  ): Promise<string>;
+  transformRequest(
+    url: string,
+    options?: TransformOptions
+  ): Promise<TransformResult | null>;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -188,7 +200,7 @@ export async function _createServer(
   // 删除文件时
   watcher.on("unlink", onFileAddUnlink);
   let exitProcess: () => void;
-  
+
   const server: ViteDevServer = {
     root,
     middlewares,
@@ -200,6 +212,10 @@ export async function _createServer(
     resolvedUrls: null,
     watcher,
     ws,
+    transformRequest(url, options) {
+      return transformRequest(url, server, options);
+    },
+    transformIndexHtml: null!, // to be immediately set
     async listen(port?: number, isRestart?: boolean) {
       await startServer(server, port);
       if (httpServer) {
@@ -221,17 +237,17 @@ export async function _createServer(
       }
     },
     openBrowser() {
-      const options = server.config.server
-      const url = server.resolvedUrls?.local[0]
+      const options = server.config.server;
+      const url = server.resolvedUrls?.local[0];
       if (url) {
         const path =
-          typeof options.open === 'string'
+          typeof options.open === "string"
             ? new URL(options.open, url).href
-            : url
+            : url;
 
-        _openBrowser(path, true, server.config.logger)
+        _openBrowser(path, true, server.config.logger);
       } else {
-        server.config.logger.warn('No URL available to open in browser')
+        server.config.logger.warn("No URL available to open in browser");
       }
     },
     async close() {
@@ -270,11 +286,11 @@ export async function _createServer(
     _shortcutsOptions: undefined,
   };
   middlewares.use(transformMiddleware(server));
-  // for (const plugin of plugins) {
-  //   if (plugin.configureServer) {
-  //     await plugin.configureServer(serverContext);
-  //   }
-  // }
+  // TODO
+  // server.transformIndexHtml = createDevHtmlTransformFn(server)
+  if (config.appType === "spa" || config.appType === "mpa") {
+    middlewares.use(indexHtmlMiddleware(server));
+  }
   return server;
 }
 

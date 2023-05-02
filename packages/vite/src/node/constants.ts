@@ -60,3 +60,5 @@ export const VITE_PACKAGE_DIR = resolve(
   fileURLToPath(import.meta.url),
   "../../.."
 );
+
+export const FS_PREFIX = `/@fs/`

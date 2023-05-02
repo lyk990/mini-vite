@@ -7,6 +7,7 @@ import type { ResolvedServerUrls, ViteDevServer } from "./server";
 import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
+import { FS_PREFIX } from "./constants";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -124,7 +125,15 @@ export function diffDnsOrderChange(
       arrayEqual(oldUrls.network, newUrls.network))
   );
 }
+const VOLUME_RE = /^[A-Z]:/i;
 
 export function isDefined<T>(value: T | undefined | null): value is T {
-  return value != null
+  return value != null;
+}
+
+export function fsPathFromId(id: string): string {
+  const fsPath = normalizePath(
+    id.startsWith(FS_PREFIX) ? id.slice(FS_PREFIX.length) : id
+  );
+  return fsPath[0] === "/" || fsPath.match(VOLUME_RE) ? fsPath : `/${fsPath}`;
 }

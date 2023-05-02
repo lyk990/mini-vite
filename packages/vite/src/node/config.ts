@@ -17,6 +17,7 @@ import { Logger } from "./logger";
 import type { ResolvedServerOptions } from "./server";
 import { normalizePath } from "./utils";
 
+export type AppType = "spa" | "mpa" | "custom";
 // TODO
 export interface ResolvedConfig {
   logger: Logger;
@@ -29,7 +30,8 @@ export interface ResolvedConfig {
   build: ResolvedBuildOptions;
   configFile: string | undefined;
   configFileDependencies: string[];
-  inlineConfig: InlineConfig
+  inlineConfig: InlineConfig;
+  appType: AppType;
 }
 
 export async function resolveConfig(
@@ -87,6 +89,7 @@ export async function resolveConfig(
     logger,
     resolvedRoot
   );
+  const middlewareMode = config?.server?.middlewareMode;
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
@@ -116,6 +119,7 @@ export async function resolveConfig(
       },
     },
     build: resolvedBuildOptions,
+    appType: config.appType ?? (middlewareMode === "ssr" ? "custom" : "spa"),
   };
   const resolved: ResolvedConfig = {
     ...config,
