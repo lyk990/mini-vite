@@ -332,3 +332,7 @@ export const isJSRequest = (url: string): boolean => {
 export function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
 }
+
+export function isInNodeModules(id: string): boolean {
+  return id.includes('node_modules')
+}

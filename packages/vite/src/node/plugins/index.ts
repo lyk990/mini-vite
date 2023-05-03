@@ -1,6 +1,8 @@
 import { HookHandler, PluginHookUtils } from "vite";
 import { ResolvedConfig } from "../config";
+// import { watchPackageDataPlugin } from "../package";
 import { Plugin } from "../plugin";
+// import { clientInjectionsPlugin } from "./clientInjections";
 import { cssPlugin } from "./css";
 import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
@@ -12,13 +14,13 @@ export function resolvePlugins(
   postPlugins?: Plugin[]
 ): Plugin[] {
   return [
-    // clientInjectPlugin(),
     resolvePlugin(),
-    // esbuildTransformPlugin(),
-    // reactHMRPlugin(),
+    // esbuildPlugin(),
     importAnalysisPlugin(),
     cssPlugin(),
+    // watchPackageDataPlugin()
     // assetPlugin(),
+    // clientInjectionsPlugin(config),
   ];
 }
 
@@ -38,6 +40,7 @@ export function createPluginHookUtils(
     hookName: K
   ): NonNullable<HookHandler<Plugin[K]>>[] {
     const plugins = getSortedPlugins(hookName);
+    // @ts-ignore
     return plugins
       .map((p) => {
         const hook = p[hookName]!;
