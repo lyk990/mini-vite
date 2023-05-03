@@ -47,14 +47,13 @@ interface AssetNode {
 export function indexHtmlMiddleware(
   server: ViteDevServer
 ): Connect.NextHandleFunction {
-  // Keep the named function. The name is visible in debug logs via `DEBUG=connect:dispatcher ...`
   return async function viteIndexHtmlMiddleware(req, res, next) {
     if (res.writableEnded) {
       return next();
     }
 
     const url = req.url && cleanUrl(req.url);
-    // htmlFallbackMiddleware appends '.html' to URLs
+
     if (url?.endsWith(".html") && req.headers["sec-fetch-dest"] !== "script") {
       const filename = getHtmlFilename(url, server);
       if (fs.existsSync(filename)) {
@@ -96,7 +95,7 @@ export function createDevHtmlTransformFn(
         preImportMapHook(server.config),
         ...preHooks,
         htmlEnvHook(server.config),
-        devHtmlHook,
+        devHtmlHook, // 主要调用这个钩子
         ...normalHooks,
         ...postHooks,
         postImportMapHook(),
@@ -255,6 +254,8 @@ const devHtmlHook: IndexHtmlTransformHook = async (
         tag: "script",
         attrs: {
           type: "module",
+          // path.join 即会按照当前操作系统进行给定路径分隔符，
+          // 而 path.posix.join 则始终是 /
           src: path.posix.join(base, CLIENT_PUBLIC_PATH),
         },
         injectTo: "head-prepend",

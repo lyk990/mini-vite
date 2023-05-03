@@ -1,7 +1,11 @@
 import type { ErrorPayload, HMRPayload, Update } from "types/hmrPayload";
 import type { InferCustomEventPayload } from "types/customEvent";
 import { ErrorOverlay, overlayId } from "./overlay";
-import type { ModuleNamespace, ViteHotContext } from "types/hot";
+import type {
+  ModuleNamespace,
+  ViteHotContext,
+  ViteHotContext as _ViteHotContext,
+} from "types/hot";
 
 const importMetaUrl = new URL(import.meta.url);
 interface HotModule {
@@ -9,7 +13,6 @@ interface HotModule {
   callbacks: HotCallback[];
 }
 interface HotCallback {
-  // the dependencies must be fetchable paths
   deps: string[];
   fn: (modules: Array<ModuleNamespace | undefined>) => void;
 }
@@ -27,6 +30,7 @@ const pruneMap = new Map<string, (data: any) => void | Promise<void>>();
 const dataMap = new Map<string, any>();
 const base = __BASE__ || "/";
 const enableOverlay = __HMR_ENABLE_OVERLAY__;
+const ctxToListenersMap = new Map<string, CustomListenersMap>()
 
 const messageBuffer: string[] = [];
 const outdatedLinkTags = new WeakSet<HTMLLinkElement>();
@@ -50,11 +54,8 @@ const disposeMap = new Map<string, (data: any) => void | Promise<void>>();
 
 try {
   let fallback: (() => void) | undefined;
-  // only use fallback when port is inferred to prevent confusion
   if (!hmrPort) {
     fallback = () => {
-      // fallback to connecting directly to the hmr server
-      // for servers which does not support proxying websocket
       socket = setupWebSocket(socketProtocol, directSocketHost, () => {
         const currentScriptHostURL = new URL(import.meta.url);
         const currentScriptHost =
@@ -128,8 +129,6 @@ async function handleMessage(payload: HMRPayload) {
     case "connected":
       console.debug(`[vite] connected.`);
       sendMessageBuffer();
-      // proxy(nginx, docker) hmr ws maybe caused timeout,
-      // so send ping package let ws keep alive.
       setInterval(() => {
         if (socket.readyState === socket.OPEN) {
           socket.send('{"type":"ping"}');
@@ -138,10 +137,6 @@ async function handleMessage(payload: HMRPayload) {
       break;
     case "update":
       notifyListeners("vite:beforeUpdate", payload);
-      // if this is the first update and there's already an error overlay, it
-      // means the page opened with existing server compile error and the whole
-      // module script failed to load (since one of the nested imports is 500).
-      // in this case a normal update won't work and a full reload is needed.
       if (isFirstUpdate && hasErrorOverlay()) {
         window.location.reload();
         return;
@@ -173,11 +168,6 @@ async function handleMessage(payload: HMRPayload) {
             searchUrl.includes("?") ? "&" : "?"
           }t=${timestamp}`;
 
-          // rather than swapping the href on the existing tag, we will
-          // create a new link tag. Once the new stylesheet has loaded we
-          // will remove the existing link tag. This removes a Flash Of
-          // Unstyled Content that can occur when swapping out the tag href
-          // directly, as the new stylesheet has not yet been loaded.
           return new Promise((resolve) => {
             const newLinkTag = el.cloneNode() as HTMLLinkElement;
             newLinkTag.href = new URL(newPath, el.href).href;
@@ -220,10 +210,6 @@ async function handleMessage(payload: HMRPayload) {
       break;
     case "prune":
       notifyListeners("vite:beforePrune", payload);
-      // After an HMR update, some modules are no longer imported on the page
-      // but they may have left behind side effects that need to be cleaned up
-      // (.e.g style injections)
-      // TODO Trigger their dispose callbacks.
       payload.paths.forEach((path) => {
         const fn = pruneMap.get(path);
         if (fn) {
@@ -258,9 +244,6 @@ async function waitForSuccessfulPing(
   const pingHostProtocol = socketProtocol === "wss" ? "https" : "http";
 
   const ping = async () => {
-    // A fetch on a websocket URL will return a successful promise with status 400,
-    // but will reject a networking error.
-    // When running on middleware mode, it returns status 426, and an cors error happens if mode is not no-cors
     try {
       await fetch(`${pingHostProtocol}://${hostAndPath}`, {
         mode: "no-cors",
@@ -413,6 +396,114 @@ function warnFailedFetch(err: Error, path: string | string[]) {
       `This could be due to syntax errors or importing non-existent ` +
       `modules. (see errors above)`
   );
+}
+
+export function createHotContext(ownerPath: string): ViteHotContext {
+  if (!dataMap.has(ownerPath)) {
+    dataMap.set(ownerPath, {});
+  }
+
+  // when a file is hot updated, a new context is created
+  // clear its stale callbacks
+  const mod = hotModulesMap.get(ownerPath);
+  if (mod) {
+    mod.callbacks = [];
+  }
+
+  // clear stale custom event listeners
+  const staleListeners = ctxToListenersMap.get(ownerPath);
+  if (staleListeners) {
+    for (const [event, staleFns] of staleListeners) {
+      const listeners = customListenersMap.get(event);
+      if (listeners) {
+        customListenersMap.set(
+          event,
+          listeners.filter((l) => !staleFns.includes(l))
+        );
+      }
+    }
+  }
+
+  const newListeners: CustomListenersMap = new Map();
+  ctxToListenersMap.set(ownerPath, newListeners);
+
+  function acceptDeps(deps: string[], callback: HotCallback["fn"] = () => {}) {
+    const mod: HotModule = hotModulesMap.get(ownerPath) || {
+      id: ownerPath,
+      callbacks: [],
+    };
+    mod.callbacks.push({
+      deps,
+      fn: callback,
+    });
+    hotModulesMap.set(ownerPath, mod);
+  }
+
+  const hot: ViteHotContext = {
+    get data() {
+      return dataMap.get(ownerPath);
+    },
+
+    accept(deps?: any, callback?: any) {
+      if (typeof deps === "function" || !deps) {
+        // self-accept: hot.accept(() => {})
+        acceptDeps([ownerPath], ([mod]) => deps?.(mod));
+      } else if (typeof deps === "string") {
+        // explicit deps
+        acceptDeps([deps], ([mod]) => callback?.(mod));
+      } else if (Array.isArray(deps)) {
+        acceptDeps(deps, callback);
+      } else {
+        throw new Error(`invalid hot.accept() usage.`);
+      }
+    },
+
+    // export names (first arg) are irrelevant on the client side, they're
+    // extracted in the server for propagation
+    acceptExports(_, callback) {
+      acceptDeps([ownerPath], ([mod]) => callback?.(mod));
+    },
+
+    dispose(cb) {
+      disposeMap.set(ownerPath, cb);
+    },
+
+    prune(cb) {
+      pruneMap.set(ownerPath, cb);
+    },
+
+    // Kept for backward compatibility (#11036)
+    // @ts-expect-error untyped
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    decline() {},
+
+    // tell the server to re-perform hmr propagation from this module as root
+    invalidate(message) {
+      notifyListeners("vite:invalidate", { path: ownerPath, message });
+      this.send("vite:invalidate", { path: ownerPath, message });
+      console.debug(
+        `[vite] invalidate ${ownerPath}${message ? `: ${message}` : ""}`
+      );
+    },
+
+    // custom events
+    on(event, cb) {
+      const addToMap = (map: Map<string, any[]>) => {
+        const existing = map.get(event) || [];
+        existing.push(cb);
+        map.set(event, existing);
+      };
+      addToMap(customListenersMap);
+      addToMap(newListeners);
+    },
+
+    send(event, data) {
+      messageBuffer.push(JSON.stringify({ type: "custom", event, data }));
+      sendMessageBuffer();
+    },
+  };
+
+  return hot;
 }
 
 export { ErrorOverlay };

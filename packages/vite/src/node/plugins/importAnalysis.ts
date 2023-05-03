@@ -4,7 +4,7 @@ import { Plugin } from "../plugin";
 import { cleanUrl, isJSRequest } from "../utils";
 
 // TODO
-/**注入热更新代码 */
+/**注入热更新代码 import.meta.hot*/
 export function importAnalysisPlugin(config?: ResolvedConfig): Plugin {
   return {
     name: "vite:import-analysis",

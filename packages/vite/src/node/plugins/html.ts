@@ -85,7 +85,7 @@ export function resolveHtmlTransforms(
 
   return [preHooks, normalHooks, postHooks];
 }
-
+/**遍历hooks */
 export async function applyHtmlTransforms(
   html: string,
   hooks: IndexHtmlTransformHook[],
@@ -133,7 +133,7 @@ export async function applyHtmlTransforms(
 
   return html;
 }
-
+/**序列化标签 */
 function serializeTags(
   tags: HtmlTagDescriptor["children"],
   indent: string = ""
@@ -177,7 +177,7 @@ function serializeTag(
     )}</${tag}>`;
   }
 }
-
+/**注入并替换 */
 function injectToHead(
   html: string,
   tags: HtmlTagDescriptor[],
@@ -186,7 +186,6 @@ function injectToHead(
   if (tags.length === 0) return html;
 
   if (prepend) {
-    // inject as the first element of head
     if (headPrependInjectRE.test(html)) {
       return html.replace(
         headPrependInjectRE,
@@ -194,15 +193,12 @@ function injectToHead(
       );
     }
   } else {
-    // inject before head close
     if (headInjectRE.test(html)) {
-      // respect indentation of head tag
       return html.replace(
         headInjectRE,
         (match, p1) => `${serializeTags(tags, incrementIndent(p1))}${match}`
       );
     }
-    // try to inject before the body tag
     if (bodyPrependInjectRE.test(html)) {
       return html.replace(
         bodyPrependInjectRE,
@@ -210,7 +206,6 @@ function injectToHead(
       );
     }
   }
-  // if no head tag is present, we prepend the tag for both prepend and append
   return prependInjectFallback(html, tags);
 }
 
