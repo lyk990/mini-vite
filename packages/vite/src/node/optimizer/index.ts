@@ -1,12 +1,14 @@
-import type { DepOptimizationMetadata, OptimizedDepInfo } from "vite";
+import type { DepOptimizationMetadata, ExportsData, OptimizedDepInfo } from "vite";
 import { ResolvedConfig } from "../config";
 import { ViteDevServer } from "../server";
 import { createDebugger, normalizePath } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
 import { scanImports } from "./scan";
+import { init } from "es-module-lexer";
 // import { build } from "esbuild";
 // import { PRE_BUNDLE_DIR } from "../constants";
+export { getDepsOptimizer } from "./optimizer";
 
 const debug = createDebugger("vite:deps");
 
@@ -159,3 +161,116 @@ export function discoverProjectDependencies(config: ResolvedConfig): {
 //   cancel: () => Promise<void>;
 //   result: Promise<DepOptimizationResult>;
 // } {}
+
+export function optimizedDepInfoFromFile(
+  metadata: DepOptimizationMetadata,
+  file: string
+): OptimizedDepInfo | undefined {
+  return metadata.depInfoList.find((depInfo) => depInfo.file === file);
+}
+
+export async function extractExportsData(
+  filePath: string,
+  config: ResolvedConfig,
+  ssr: boolean
+): Promise<ExportsData> {
+  await init;
+
+  const optimizeDeps = getDepOptimizationConfig(config, ssr);
+
+  const esbuildOptions = optimizeDeps?.esbuildOptions ?? {};
+  if (optimizeDeps.extensions?.some((ext) => filePath.endsWith(ext))) {
+    // For custom supported extensions, build the entry file to transform it into JS,
+    // and then parse with es-module-lexer. Note that the `bundle` option is not `true`,
+    // so only the entry file is being transformed.
+    const result = await build({
+      ...esbuildOptions,
+      entryPoints: [filePath],
+      write: false,
+      format: "esm",
+    });
+    const [imports, exports] = parse(result.outputFiles[0].text);
+    return {
+      hasImports: imports.length > 0,
+      exports: exports.map((e) => e.n),
+    };
+  }
+
+  let parseResult: ReturnType<typeof parse>;
+  let usedJsxLoader = false;
+
+  const entryContent = await fsp.readFile(filePath, "utf-8");
+  try {
+    parseResult = parse(entryContent);
+  } catch {
+    const loader = esbuildOptions.loader?.[path.extname(filePath)] || "jsx";
+    debug?.(
+      `Unable to parse: ${filePath}.\n Trying again with a ${loader} transform.`
+    );
+    const transformed = await transformWithEsbuild(entryContent, filePath, {
+      loader,
+    });
+    parseResult = parse(transformed.code);
+    usedJsxLoader = true;
+  }
+
+  const [imports, exports] = parseResult;
+  const exportsData: ExportsData = {
+    hasImports: imports.length > 0,
+    exports: exports.map((e) => e.n),
+    jsxLoader: usedJsxLoader,
+  };
+  return exportsData;
+}
+
+function needsInterop(
+  config: ResolvedConfig,
+  ssr: boolean,
+  id: string,
+  exportsData: ExportsData,
+  output?: { exports: string[] }
+): boolean {
+  if (getDepOptimizationConfig(config, ssr)?.needsInterop?.includes(id)) {
+    return true;
+  }
+  const { hasImports, exports } = exportsData;
+  // entry has no ESM syntax - likely CJS or UMD
+  if (!exports.length && !hasImports) {
+    return true;
+  }
+
+  if (output) {
+    // if a peer dependency used require() on an ESM dependency, esbuild turns the
+    // ESM dependency's entry chunk into a single default export... detect
+    // such cases by checking exports mismatch, and force interop.
+    const generatedExports: string[] = output.exports;
+
+    if (
+      !generatedExports ||
+      (isSingleDefaultExport(generatedExports) &&
+        !isSingleDefaultExport(exports))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export async function optimizedDepNeedsInterop(
+  metadata: DepOptimizationMetadata,
+  file: string,
+  config: ResolvedConfig,
+  ssr: boolean
+): Promise<boolean | undefined> {
+  const depInfo = optimizedDepInfoFromFile(metadata, file);
+  if (depInfo?.src && depInfo.needsInterop === undefined) {
+    depInfo.exportsData ??= extractExportsData(depInfo.src, config, ssr);
+    depInfo.needsInterop = needsInterop(
+      config,
+      ssr,
+      depInfo.id,
+      await depInfo.exportsData
+    );
+  }
+  return depInfo?.needsInterop;
+}

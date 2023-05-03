@@ -68,3 +68,4 @@ export const FS_PREFIX = `/@fs/`;
 export const VALID_ID_PREFIX = `/@id/`;
 export const NULL_BYTE_PLACEHOLDER = `__x00__`;
 export const CLIENT_PUBLIC_PATH = `/@vite/client`;
+

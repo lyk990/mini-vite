@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
   Alias,
+  DepOptimizationConfig,
   DepOptimizationOptions,
   HookHandler,
   InlineConfig,
@@ -223,4 +224,12 @@ export function sortUserPlugins(
   }
 
   return [prePlugins, normalPlugins, postPlugins];
+}
+
+export function getDepOptimizationConfig(
+  config: ResolvedConfig,
+  ssr: boolean
+): DepOptimizationConfig {
+  // @ts-ignore
+  return ssr ? config?.ssr.optimizeDeps : config.optimizeDeps;
 }

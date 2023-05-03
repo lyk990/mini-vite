@@ -8,6 +8,7 @@ import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
 import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
+import colors from "picocolors";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -334,5 +335,35 @@ export function unique<T>(arr: T[]): T[] {
 }
 
 export function isInNodeModules(id: string): boolean {
-  return id.includes('node_modules')
+  return id.includes("node_modules");
 }
+
+// export function prettifyUrl(url: string, root: string): string {
+//   url = removeTimestampQuery(url);
+//   const isAbsoluteFile = url.startsWith(root);
+//   if (isAbsoluteFile || url.startsWith(FS_PREFIX)) {
+//     const file = path.relative(root, isAbsoluteFile ? url : fsPathFromId(url));
+//     return colors.dim(file);
+//   } else {
+//     return colors.dim(url);
+//   }
+// }
+// const timestampRE = /\bt=\d{13}&?\b/;
+// const trailingSeparatorRE = /[?&]$/;
+// export function removeTimestampQuery(url: string): string {
+//   return url.replace(timestampRE, "").replace(trailingSeparatorRE, "");
+// }
+
+// export function stripBomTag(content: string): string {
+//   if (content.charCodeAt(0) === 0xfeff) {
+//     return content.slice(1);
+//   }
+
+//   return content;
+// }
+
+export function getShortName(file: string, root: string) {
+  return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
+}
+
+

@@ -1,4 +1,4 @@
-import { DepsOptimizer } from "vite";
+import { DepOptimizationMetadata, DepsOptimizer } from "vite";
 import { ResolvedConfig } from "../config";
 
 const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
