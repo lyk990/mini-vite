@@ -30,7 +30,7 @@ const pruneMap = new Map<string, (data: any) => void | Promise<void>>();
 const dataMap = new Map<string, any>();
 const base = __BASE__ || "/";
 const enableOverlay = __HMR_ENABLE_OVERLAY__;
-const ctxToListenersMap = new Map<string, CustomListenersMap>()
+const ctxToListenersMap = new Map<string, CustomListenersMap>();
 
 const messageBuffer: string[] = [];
 const outdatedLinkTags = new WeakSet<HTMLLinkElement>();
@@ -505,5 +505,41 @@ export function createHotContext(ownerPath: string): ViteHotContext {
 
   return hot;
 }
+let lastInsertedStyle: HTMLStyleElement | undefined
+const sheetsMap = new Map<string, HTMLStyleElement>()
+// TODO
+export function updateStyle(id: string, content: string): void {
+  let style = sheetsMap.get(id);
+  if (!style) {
+    style = document.createElement("style");
+    style.setAttribute("type", "text/css");
+    style.setAttribute("data-vite-dev-id", id);
+    style.textContent = content;
 
+    if (!lastInsertedStyle) {
+      document.head.appendChild(style);
+
+      // reset lastInsertedStyle after async
+      // because dynamically imported css will be splitted into a different file
+      setTimeout(() => {
+        lastInsertedStyle = undefined;
+      }, 0);
+    } else {
+      lastInsertedStyle.insertAdjacentElement("afterend", style);
+    }
+    lastInsertedStyle = style;
+  } else {
+    style.textContent = content;
+  }
+  sheetsMap.set(id, style);
+}
+
+// TODO
+export function removeStyle(id: string): void {
+  const style = sheetsMap.get(id)
+  if (style) {
+    document.head.removeChild(style)
+    sheetsMap.delete(id)
+  }
+}
 export { ErrorOverlay };
