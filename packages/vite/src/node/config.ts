@@ -26,7 +26,12 @@ import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
 
 import type { ResolvedServerOptions } from "./server";
-import { asyncFlatten, createDebugger, normalizePath } from "./utils";
+import {
+  asyncFlatten,
+  createDebugger,
+  lookupFile,
+  normalizePath,
+} from "./utils";
 import fs from "node:fs";
 
 const debug = createDebugger("vite:config");
@@ -84,6 +89,11 @@ export async function resolveConfig(
   });
   let { configFile } = config;
   if (configFile !== false) {
+    // loadResult = {
+    //   path: "C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite/mini-vite-example/vite.config.ts",
+    //   config: { plugins: [ vue() ], },
+    //   dependencies: [ "vite.config.ts",],
+    // }
     const loadResult = await loadConfigFromFile(
       configEnv,
       configFile,
@@ -260,6 +270,7 @@ export async function loadConfigFromFile(
   if (configFile) {
     resolvedPath = path.resolve(configFile);
   } else {
+    // entry point
     // 没有配置文件，就遍历默认配置文件 DEFAULT_CONFIG_FILES  'vite.config.js',
     for (const filename of DEFAULT_CONFIG_FILES) {
       const filePath = path.resolve(configRoot, filename);
@@ -281,8 +292,9 @@ export async function loadConfigFromFile(
   } else if (/\.c[jt]s$/.test(resolvedPath)) {
     isESM = false;
   } else {
-    // check package.json for type: "module" and set `isESM` to true
+    // entry point
     try {
+      // configRoot = 'C:\\Users\\Administrator\\Desktop\\learn-Code\\vite源码\\mini-vite\\mini-vite-example'
       const pkg = lookupFile(configRoot, ["package.json"]);
       isESM =
         !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";

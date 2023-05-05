@@ -365,5 +365,30 @@ export function isInNodeModules(id: string): boolean {
 export function getShortName(file: string, root: string) {
   return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
 }
+/**查找package.json文件 */
+export function lookupFile(
+  dir: string,
+  fileNames: string[]
+): string | undefined {
+  while (dir) {
+    // fileNames=['package.json']
+    for (const fileName of fileNames) {
+      const fullPath = path.join(dir, fileName);
+      if (tryStatSync(fullPath)?.isFile()) return fullPath;
+    }
+    const parentDir = path.dirname(dir);
+    if (parentDir === dir) return;
 
-
+    dir = parentDir;
+  }
+}
+/**获取文件信息 */
+export function tryStatSync(file: string): fs.Stats | undefined {
+  try {
+    // fs.statSync 获取文件信息 throwIfNoEntry <boolean> 如果文件系统条目不存在，
+    // 是否会抛出异常。 默认值: true。
+    return fs.statSync(file, { throwIfNoEntry: false });
+  } catch {
+    // Ignore errors
+  }
+}
