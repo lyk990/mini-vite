@@ -9,6 +9,7 @@ import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
 import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
 // import colors from "picocolors";
+import { builtinModules } from "node:module";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -27,7 +28,7 @@ export function cleanUrl(url: string): string {
 }
 
 export const isWindows = os.platform() === "win32";
-
+/**处理操作系统的兼容性问题,将\\替换成/ */
 export function normalizePath(id: string): string {
   return path.posix.normalize(isWindows ? slash(id) : id);
 }
@@ -391,4 +392,28 @@ export function tryStatSync(file: string): fs.Stats | undefined {
   } catch {
     // Ignore errors
   }
+}
+const builtins = new Set([
+  ...builtinModules,
+  "assert/strict",
+  "diagnostics_channel",
+  "dns/promises",
+  "fs/promises",
+  "path/posix",
+  "path/win32",
+  "readline/promises",
+  "stream/consumers",
+  "stream/promises",
+  "stream/web",
+  "timers/promises",
+  "util/types",
+  "wasi",
+]);
+const NODE_BUILTIN_NAMESPACE = "node:";
+export function isBuiltin(id: string): boolean {
+  return builtins.has(
+    id.startsWith(NODE_BUILTIN_NAMESPACE)
+      ? id.slice(NODE_BUILTIN_NAMESPACE.length)
+      : id
+  );
 }
