@@ -25,7 +25,7 @@ import { resolveEnvPrefix } from "./env";
 import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
 
-import type { ResolvedServerOptions } from "./server";
+import { ResolvedServerOptions, resolveServerOptions } from "./server";
 import {
   asyncFlatten,
   createDebugger,
@@ -81,7 +81,6 @@ export async function resolveConfig(
 ): Promise<ResolvedConfig> {
   let config = inlineConfig;
   let configFileDependencies: string[] = [];
-  // let mode = inlineConfig.mode || defaultMode;
   let mode = "development";
   const configEnv = {
     mode,
@@ -143,6 +142,8 @@ export async function resolveConfig(
   const resolvedRoot = normalizePath(
     config.root ? path.resolve(config.root) : process.cwd()
   );
+  // 从cli.ts文件中传入的参数,默认为
+  // config.optimizeDeps = {force: undefined}
   const optimizeDeps = config.optimizeDeps || {};
   const resolveOptions: ResolvedConfig["resolve"] = {
     mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS, // = undefined
@@ -153,23 +154,11 @@ export async function resolveConfig(
     preserveSymlinks: config.resolve?.preserveSymlinks ?? false, // = undefined
     alias: [{ find: "", replacement: "@" }], // REMOVE clientAlias resolvedAlias
   };
-  // FEATURE 读取env文件
-  // const envDir = config.envDir
-  //   ? normalizePath(path.resolve(resolvedRoot, config.envDir))
-  //   : resolvedRoot;
-  // const userEnv =
-  //   inlineConfig.envFile !== false &&
-  //   loadEnv(mode, envDir, resolveEnvPrefix(config));
   const resolvedBuildOptions = resolveBuildOptions(
     config.build,
     logger,
     resolvedRoot
   );
-  // mode = inlineConfig.mode || config.mode || mode;
-
-  // const rawWorkerUserPlugins = (
-  //   (await asyncFlatten(config.worker?.plugins || [])) as Plugin[]
-  // ).filter(filterPlugin);
 
   const middlewareMode = config?.server?.middlewareMode;
 
@@ -182,7 +171,7 @@ export async function resolveConfig(
       : "./"
     : resolveBaseUrl(config.base, isBuild, logger) ?? "/";
   const BASE_URL = resolvedBase;
-
+  const server = resolveServerOptions(resolvedRoot, config.server, logger);
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
@@ -193,23 +182,12 @@ export async function resolveConfig(
     root: process.cwd(),
     base: resolvedBase.endsWith("/") ? resolvedBase : resolvedBase + "/",
     env: {
-      // ...userEnv,
       BASE_URL,
       MODE: mode,
       DEV: true,
       PROD: false,
     },
-    server: {
-      preTransformRequests: true,
-      middlewareMode: true,
-      host: "localhost",
-      // TODO
-      fs: {
-        strict: true,
-        allow: [""],
-        deny: [".env", ".env.*", "*.{crt,pem}"],
-      },
-    },
+    server,
     resolve: resolveOptions,
     optimizeDeps: {
       disabled: "build",
@@ -317,7 +295,6 @@ export async function loadConfigFromFile(
     // code: '// vite.config.ts\nimport { defineConfig } from "file:///C:/Users/Administrator/Desktop/learn-Code/vite%E6%BA%90%E7%A0%81/mini-vite/node_modules/.pnpm/vite@4.2.1_@types+node@18.15.11/node_modules/vite/dist/node/index.js";\nimport vue from "file:///C:/Users/Administrator/Desktop/learn-Code/vite%E6%BA%90%E7%A0%81/mini-vite/node_modules/.pnpm/@vitejs+plugin-vue@4.1.0_vite@4.2.1_vue@3.2.47/node_modules/@vitejs/plugin-vue/dist/index.mjs";\nvar vite_config_default = defineConfig({\n  plugins: [vue()]\n});…lRTYlQkElOTAlRTclQTAlODEvbWluaS12aXRlL21pbmktdml0ZS1leGFtcGxlL3ZpdGUuY29uZmlnLnRzXCI7aW1wb3J0IHsgZGVmaW5lQ29uZmlnIH0gZnJvbSBcInZpdGVcIjtcbmltcG9ydCB2dWUgZnJvbSBcIkB2aXRlanMvcGx1Z2luLXZ1ZVwiO1xuXG4vLyBodHRwczovL3ZpdGVqcy5kZXYvY29uZmlnL1xuZXhwb3J0IGRlZmF1bHQgZGVmaW5lQ29uZmlnKHtcbiAgcGx1Z2luczogW3Z1ZSgpXSxcbn0pO1xuIl0sCiAgIm1hcHBpbmdzIjogIjtBQUFzYixTQUFTLG9CQUFvQjtBQUNuZCxPQUFPLFNBQVM7QUFHaEIsSUFBTyxzQkFBUSxhQUFhO0FBQUEsRUFDMUIsU0FBUyxDQUFDLElBQUksQ0FBQztBQUNqQixDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=\n'
     // dependencies: (1) ['vite.config.ts']
     const bundled = await bundleConfigFile(resolvedPath, isESM);
-    // TODO
     // userConfig = { plugins: [ vite-plugin-vue ] }
     const userConfig = await loadConfigFromBundledFile(
       resolvedPath,

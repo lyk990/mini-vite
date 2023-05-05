@@ -4,7 +4,7 @@ import type { Connect } from "dep-types/connect";
 import { resolvePlugins } from "../plugins";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import { Plugin } from "../plugin";
-import { DEFAULT_DEV_PORT } from "../constants";
+import { CLIENT_DIR, DEFAULT_DEV_PORT } from "../constants";
 import {
   InlineConfig,
   ServerOptions,
@@ -13,13 +13,19 @@ import {
   TransformResult,
   mergeConfig,
   TransformOptions,
+  searchForWorkspaceRoot,
 } from "vite";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
-import { diffDnsOrderChange, normalizePath, resolveServerUrls } from "../utils";
-import { printServerUrls } from "../logger";
+import {
+  diffDnsOrderChange,
+  isInNodeModules,
+  normalizePath,
+  resolveServerUrls,
+} from "../utils";
+import { Logger, printServerUrls } from "../logger";
 import { initDepsOptimizer } from "../optimizer";
 import { transformMiddleware } from "./middlewares/transform";
 import { FSWatcher } from "chokidar";
@@ -35,6 +41,7 @@ import {
   createDevHtmlTransformFn,
   indexHtmlMiddleware,
 } from "./middlewares/indexHtml";
+import colors from "picocolors";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -322,7 +329,6 @@ async function restartServer(server: ViteDevServer) {
 
   let newServer = null;
   try {
-    // delay ws server listen
     newServer = await _createServer(inlineConfig, { ws: false });
   } catch (err: any) {
     server.config.logger.error(err.message, {
@@ -366,4 +372,30 @@ async function restartServer(server: ViteDevServer) {
 
   // new server (the current server) can restart now
   newServer._restartPromise = null;
+}
+
+export function resolveServerOptions(
+  root: string,
+  raw: ServerOptions | undefined,
+  logger: Logger
+): ResolvedServerOptions {
+  const server: ResolvedServerOptions = {
+    preTransformRequests: true,
+    ...(raw as Omit<ResolvedServerOptions, "sourcemapIgnoreList">),
+    // REMOVE sourcemapIgnoreList sourcemap 忽略列表
+    sourcemapIgnoreList:
+      raw?.sourcemapIgnoreList === false
+        ? () => false
+        : raw?.sourcemapIgnoreList || isInNodeModules,
+    middlewareMode: !!raw?.middlewareMode,
+  };
+  const deny = [".env", ".env.*", "*.{crt,pem}"];
+  let allowDirs = ["C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite"];
+
+  server.fs = {
+    strict: server.fs?.strict ?? true,
+    allow: allowDirs,
+    deny,
+  };
+  return server;
 }
