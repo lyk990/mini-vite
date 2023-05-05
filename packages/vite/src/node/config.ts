@@ -1,11 +1,11 @@
 import path from "node:path";
 import {
   Alias,
+  ConfigEnv,
   DepOptimizationConfig,
   DepOptimizationOptions,
   HookHandler,
   InlineConfig,
-  loadConfigFromFile,
   loadEnv,
   mergeConfig,
   resolveBaseUrl,
@@ -16,13 +16,20 @@ import {
 } from "vite";
 import { createLogger } from "vite";
 import { resolveBuildOptions } from "./build";
-import { DEFAULT_EXTENSIONS, DEFAULT_MAIN_FIELDS } from "./constants";
+import {
+  DEFAULT_CONFIG_FILES,
+  DEFAULT_EXTENSIONS,
+  DEFAULT_MAIN_FIELDS,
+} from "./constants";
 import { resolveEnvPrefix } from "./env";
-import { Logger } from "./logger";
+import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
 
 import type { ResolvedServerOptions } from "./server";
-import { asyncFlatten, normalizePath } from "./utils";
+import { asyncFlatten, createDebugger, normalizePath } from "./utils";
+import fs from "node:fs";
+
+const debug = createDebugger("vite:config");
 
 export type AppType = "spa" | "mpa" | "custom";
 // TODO
@@ -63,13 +70,13 @@ export async function resolveConfig(
 ): Promise<ResolvedConfig> {
   let config = inlineConfig;
   let configFileDependencies: string[] = [];
-  let mode = inlineConfig.mode || defaultMode;
-
-  // @ts-ignore
+  // let mode = inlineConfig.mode || defaultMode;
+  let mode = "development";
   const configEnv = {
-    mode: defaultMode,
-    command: command,
-    ssrBuild: !!config.build?.ssr,
+    mode,
+    command,
+    // ssrBuild: !!config.build?.ssr,
+    ssrBuild: false,
   };
   const logger = createLogger(config.logLevel, {
     allowClearScreen: config.clearScreen,
@@ -232,4 +239,81 @@ export function getDepOptimizationConfig(
 ): DepOptimizationConfig {
   // @ts-ignore
   return ssr ? config?.ssr.optimizeDeps : config.optimizeDeps;
+}
+
+/**根据相关目录获取配置文件 */
+export async function loadConfigFromFile(
+  configEnv: ConfigEnv,
+  configFile?: string,
+  configRoot: string = process.cwd(),
+  logLevel?: LogLevel
+): Promise<{
+  path: string;
+  config: UserConfig;
+  dependencies: string[];
+} | null> {
+  const start = performance.now();
+  const getTime = () => `${(performance.now() - start).toFixed(2)}ms`;
+
+  let resolvedPath: string | undefined;
+  // configFile === undefined, 有配置文件就直接解析出路径
+  if (configFile) {
+    resolvedPath = path.resolve(configFile);
+  } else {
+    // 没有配置文件，就遍历默认配置文件 DEFAULT_CONFIG_FILES  'vite.config.js',
+    for (const filename of DEFAULT_CONFIG_FILES) {
+      const filePath = path.resolve(configRoot, filename);
+      //fs.existsSync() 同步方法用于检测文件是否存在，返回布尔值类型
+      if (!fs.existsSync(filePath)) continue;
+      resolvedPath = filePath;
+      break;
+    }
+  }
+  // resolvedPath = "C:\\Users\\Administrator\\Desktop\\learn-Code\\vite源码\\mini-vite\\mini-vite-example\\vite.config.ts"
+  if (!resolvedPath) {
+    debug?.("no config file found.");
+    return null;
+  }
+  // 判断是否是esm模块
+  let isESM = false;
+  if (/\.m[jt]s$/.test(resolvedPath)) {
+    isESM = true;
+  } else if (/\.c[jt]s$/.test(resolvedPath)) {
+    isESM = false;
+  } else {
+    // check package.json for type: "module" and set `isESM` to true
+    try {
+      const pkg = lookupFile(configRoot, ["package.json"]);
+      isESM =
+        !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
+    } catch (e) {}
+  }
+
+  try {
+    const bundled = await bundleConfigFile(resolvedPath, isESM);
+    const userConfig = await loadConfigFromBundledFile(
+      resolvedPath,
+      bundled.code,
+      isESM
+    );
+    debug?.(`bundled config file loaded in ${getTime()}`);
+
+    const config = await (typeof userConfig === "function"
+      ? userConfig(configEnv)
+      : userConfig);
+    if (!isObject(config)) {
+      throw new Error(`config must export or return an object.`);
+    }
+    return {
+      path: normalizePath(resolvedPath),
+      config,
+      dependencies: bundled.dependencies,
+    };
+  } catch (e) {
+    createLogger(logLevel).error(
+      colors.red(`failed to load config from ${resolvedPath}`),
+      { error: e }
+    );
+    throw e;
+  }
 }

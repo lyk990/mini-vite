@@ -8,7 +8,7 @@ import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
 import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
-import colors from "picocolors";
+// import colors from "picocolors";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");

@@ -2,47 +2,47 @@ import cac from "cac";
 import colors from "picocolors";
 import { performance } from "node:perf_hooks";
 import { VERSION } from "./constants";
-import type { LogLevel } from "./logger";
+// import type { LogLevel } from "./logger";
 import { createLogger } from "vite";
 
-interface GlobalCLIOptions {
-  "--"?: string[];
-  c?: boolean | string;
-  config?: string;
-  base?: string;
-  l?: LogLevel;
-  logLevel?: LogLevel;
-  clearScreen?: boolean;
-  d?: boolean | string;
-  debug?: boolean | string;
-  f?: string;
-  filter?: string;
-  m?: string;
-  mode?: string;
-  force?: boolean;
-}
+// interface GlobalCLIOptions {
+//   "--"?: string[];
+//   c?: boolean | string;
+//   config?: string;
+//   base?: string;
+//   l?: LogLevel;
+//   logLevel?: LogLevel;
+//   clearScreen?: boolean;
+//   d?: boolean | string;
+//   debug?: boolean | string;
+//   f?: string;
+//   filter?: string;
+//   m?: string;
+//   mode?: string;
+//   force?: boolean;
+// }
 /**
  * removing global flags before passing as command specific sub-configs
  */
-function cleanOptions<Options extends GlobalCLIOptions>(
-  options: Options
-): Omit<Options, keyof GlobalCLIOptions> {
-  const ret = { ...options };
-  delete ret["--"];
-  delete ret.c;
-  delete ret.config;
-  delete ret.base;
-  delete ret.l;
-  delete ret.logLevel;
-  delete ret.clearScreen;
-  delete ret.d;
-  delete ret.debug;
-  delete ret.f;
-  delete ret.filter;
-  delete ret.m;
-  delete ret.mode;
-  return ret;
-}
+// function cleanOptions<Options extends GlobalCLIOptions>(
+//   options: Options
+// ): Omit<Options, keyof GlobalCLIOptions> {
+//   const ret = { ...options };
+//   delete ret["--"];
+//   delete ret.c;
+//   delete ret.config;
+//   delete ret.base;
+//   delete ret.l;
+//   delete ret.logLevel;
+//   delete ret.clearScreen;
+//   delete ret.d;
+//   delete ret.debug;
+//   delete ret.f;
+//   delete ret.filter;
+//   delete ret.m;
+//   delete ret.mode;
+//   return ret;
+// }
 
 const cli = cac("mini-vite");
 // dev
@@ -51,14 +51,19 @@ cli
   .option("--dev", `development`)
   .option("--prod", `production`)
   .option("--port <port>", `[number] specify port`)
-  .action(async (_root, options) => {
+  .action(async (root, options) => {
     const { createServer } = await import("./server");
     try {
       const server = await createServer({
-        mode: options.dev,
+        root,
+        base: options.base,
+        mode: options.mode,
         configFile: options.config,
-        server: cleanOptions(options),
+        logLevel: options.logLevel,
+        clearScreen: options.clearScreen,
         optimizeDeps: { force: options.force },
+        // server: cleanOptions(options),
+        server: {}
       });
       if (!server.httpServer) {
         throw new Error("HTTP server not available");
@@ -90,15 +95,15 @@ cli
   });
 
 // optimize
-cli
-  .command('optimize [root]', 'pre-bundle dependencies')
-  .option(
-    '--force',
-    `[boolean] force the optimizer to ignore the cache and re-bundle`,
-  ).action(async () => {
-    console.log('optimize pre-bundle dependencies')
-  })
+// cli
+//   .command('optimize [root]', 'pre-bundle dependencies')
+//   .option(
+//     '--force',
+//     `[boolean] force the optimizer to ignore the cache and re-bundle`,
+//   ).action(async () => {
+//     console.log('optimize pre-bundle dependencies')
+//   })
 
 cli.help();
-
+// 启动
 cli.parse();
