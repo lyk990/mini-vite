@@ -11,7 +11,7 @@ import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
 // import colors from "picocolors";
 import { builtinModules } from "node:module";
 import { createHash } from "node:crypto";
-import { createFilter as _createFilter } from '@rollup/pluginutils'
+import { createFilter as _createFilter } from "@rollup/pluginutils";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -445,3 +445,12 @@ export const createFilter = _createFilter as (
   exclude?: FilterPattern,
   options?: { resolve?: string | false | null }
 ) => (id: string | unknown) => boolean;
+
+export const isExternalUrl = (url: string): boolean => externalRE.test(url);
+
+export function moduleListContains(
+  moduleList: string[] | undefined,
+  id: string
+): boolean | undefined {
+  return moduleList?.some((m) => m === id || id.startsWith(m + "/"));
+}

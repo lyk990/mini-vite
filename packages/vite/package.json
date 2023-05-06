@@ -18,6 +18,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@rollup/plugin-alias": "^4.0.4",
     "@rollup/pluginutils": "^5.0.2",
     "cac": "^6.7.14",
     "chokidar": "^3.5.3",

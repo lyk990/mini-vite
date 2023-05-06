@@ -1,6 +1,9 @@
 import { InternalResolveOptions } from "vite";
 import { Plugin } from "../plugin";
 
+export const browserExternalId = "__vite-browser-external";
+export const optionalPeerDepId = "__vite-optional-peer-dep";
+
 export type InternalResolveOptionsWithOverrideConditions =
   InternalResolveOptions & {
     overrideConditions?: string[];

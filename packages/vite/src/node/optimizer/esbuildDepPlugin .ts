@@ -1,5 +1,41 @@
-import { ResolvedConfig } from "../config";
+import { ResolvedConfig, getDepOptimizationConfig } from "../config";
 import type { ImportKind, Plugin } from "esbuild";
+import { CSS_LANGS_RE, KNOWN_ASSET_TYPES } from "../constants";
+import { PackageCache } from "../packages";
+import {
+  flattenId,
+  isBuiltin,
+  isExternalUrl,
+  moduleListContains,
+  normalizePath,
+} from "../utils";
+import path from "node:path";
+import { browserExternalId, optionalPeerDepId } from "../plugins/resolve";
+
+const convertedExternalPrefix = "vite-dep-pre-bundle-external:";
+
+const externalWithConversionNamespace =
+  "vite:dep-pre-bundle:external-conversion";
+
+const externalTypes = [
+  "css",
+  "less",
+  "sass",
+  "scss",
+  "styl",
+  "stylus",
+  "pcss",
+  "postcss",
+  "wasm",
+  "vue",
+  "svelte",
+  "marko",
+  "astro",
+  "imba",
+  "jsx",
+  "tsx",
+  ...KNOWN_ASSET_TYPES,
+];
 
 export function esbuildDepPlugin(
   qualified: Record<string, string>,
@@ -7,11 +43,9 @@ export function esbuildDepPlugin(
   config: ResolvedConfig,
   ssr: boolean
 ): Plugin {
-  const { extensions } = getDepOptimizationConfig(config, ssr);
+  // const { extensions } = getDepOptimizationConfig(config, ssr);
 
-  const allExternalTypes = extensions
-    ? externalTypes.filter((type) => !extensions?.includes("." + type))
-    : externalTypes;
+  const allExternalTypes = externalTypes;
 
   const esmPackageCache: PackageCache = new Map();
   const cjsPackageCache: PackageCache = new Map();
@@ -163,6 +197,7 @@ export function esbuildDepPlugin(
       build.onLoad(
         { filter: /.*/, namespace: "browser-external" },
         ({ path }) => {
+          // 如果是生产环境
           if (config.isProduction) {
             return {
               contents: "module.exports = {}",

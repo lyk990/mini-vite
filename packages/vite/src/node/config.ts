@@ -6,10 +6,12 @@ import {
   DepOptimizationOptions,
   HookHandler,
   InlineConfig,
+  InternalResolveOptions,
   loadEnv,
   mergeConfig,
   resolveBaseUrl,
   ResolvedBuildOptions,
+  ResolveFn,
   ResolveOptions,
   UserConfig,
   UserConfigExport,
@@ -40,6 +42,8 @@ import { InternalResolveOptionsWithOverrideConditions } from "./plugins/resolve"
 import colors from "picocolors";
 import { pathToFileURL } from "node:url";
 import { findNearestPackageData, PackageCache } from "./packages";
+import { PluginContainer, createPluginContainer } from "./pluginContainer";
+import aliasPlugin from "@rollup/plugin-alias";
 
 const debug = createDebugger("vite:config");
 
@@ -67,6 +71,8 @@ export type ResolvedConfig = Readonly<
     base: string;
     publicDir?: string | false;
     command: "build" | "serve";
+    createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
+    isProduction: boolean;
   } & PluginHookUtils
 >;
 
@@ -92,7 +98,7 @@ export async function resolveConfig(
     ssrBuild: false,
   };
   const packageCache: PackageCache = new Map();
-  
+
   let { configFile } = config;
   if (configFile !== false) {
     // loadResult = {
@@ -178,7 +184,52 @@ export async function resolveConfig(
   const BASE_URL = resolvedBase;
   const server = resolveServerOptions(resolvedRoot, config.server, logger);
   const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir;
-  
+
+  const createResolver: ResolvedConfig["createResolver"] = (options) => {
+    let aliasContainer: PluginContainer | undefined;
+    let resolverContainer: PluginContainer | undefined;
+    return async (id, importer, aliasOnly, ssr) => {
+      let container: PluginContainer;
+      if (aliasOnly) {
+        container =
+          aliasContainer ||
+          (aliasContainer = await createPluginContainer({
+            ...resolved,
+            // TODO
+            plugins: [aliasPlugin({ entries: resolved.resolve.alias })],
+          }));
+      } else {
+        container =
+          resolverContainer ||
+          (resolverContainer = await createPluginContainer({
+            ...resolved,
+            plugins: [
+              aliasPlugin({ entries: resolved.resolve.alias }),
+              // TODO
+              resolvePlugin({
+                ...resolved.resolve,
+                root: resolvedRoot,
+                isProduction: false,
+                isBuild: command === "build",
+                ssrConfig: resolved.ssr,
+                asSrc: true,
+                preferRelative: false,
+                tryIndex: true,
+                ...options,
+                idOnly: true,
+              }),
+            ],
+          }));
+      }
+      return (
+        await container.resolveId(id, importer, {
+          ssr,
+          scan: options?.scan,
+        })
+      )?.id;
+    };
+  };
+
   const cacheDir = normalizePath(
     config.cacheDir
       ? path.resolve(resolvedRoot, config.cacheDir)
@@ -191,8 +242,10 @@ export async function resolveConfig(
     configFileDependencies: configFileDependencies.map((name) =>
       normalizePath(path.resolve(name))
     ),
+    isProduction: false,
     inlineConfig,
     logger,
+    createResolver,
     cacheDir,
     command,
     root: process.cwd(),
