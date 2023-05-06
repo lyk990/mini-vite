@@ -10,6 +10,8 @@ import fs from "node:fs";
 import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
 // import colors from "picocolors";
 import { builtinModules } from "node:module";
+import { createHash } from "node:crypto";
+import { createFilter as _createFilter } from '@rollup/pluginutils'
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -417,3 +419,29 @@ export function isBuiltin(id: string): boolean {
       : id
   );
 }
+
+export function getHash(text: Buffer | string): string {
+  return createHash("sha256").update(text).digest("hex").substring(0, 8);
+}
+
+const replaceSlashOrColonRE = /[/:]/g;
+const replaceDotRE = /\./g;
+const replaceNestedIdRE = /(\s*>\s*)/g;
+const replaceHashRE = /#/g;
+export const flattenId = (id: string): string =>
+  id
+    .replace(replaceSlashOrColonRE, "_")
+    .replace(replaceDotRE, "__")
+    .replace(replaceNestedIdRE, "___")
+    .replace(replaceHashRE, "____");
+
+export type FilterPattern =
+  | ReadonlyArray<string | RegExp>
+  | string
+  | RegExp
+  | null;
+export const createFilter = _createFilter as (
+  include?: FilterPattern,
+  exclude?: FilterPattern,
+  options?: { resolve?: string | false | null }
+) => (id: string | unknown) => boolean;

@@ -80,6 +80,9 @@ importers:
 
   packages/vite:
     dependencies:
+      '@rollup/pluginutils':
+        specifier: ^5.0.2
+        version: 5.0.2(rollup@3.20.2)
       cac:
         specifier: ^6.7.14
         version: 6.7.14

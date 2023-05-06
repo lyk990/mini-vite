@@ -26,14 +26,13 @@ import {
   resolveServerUrls,
 } from "../utils";
 import { Logger, printServerUrls } from "../logger";
-import { initDepsOptimizer } from "../optimizer";
 import { transformMiddleware } from "./middlewares/transform";
 import { FSWatcher } from "chokidar";
 import chokidar from "chokidar";
 import { createWebSocketServer, WebSocketServer } from "./ws";
 import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
 import { bindShortcuts, BindShortcutsOptions } from "../shortcuts";
-import { getDepsOptimizer } from "../optimizer/optimizer";
+import { getDepsOptimizer, initDepsOptimizer } from "../optimizer/optimizer";
 import type * as net from "node:net";
 import { openBrowser as _openBrowser } from "./openBrowser";
 import { transformRequest } from "./transformRequest";
@@ -179,7 +178,7 @@ export async function _createServer(
   const middlewares = connect() as Connect.Server;
 
   const httpServer = await resolveHttpServer(middlewares);
-  const httpsOptions = undefined;
+  const httpsOptions = undefined; // REMOVE
   const ws = createWebSocketServer(httpServer, config, httpsOptions);
   const plugins = await resolvePlugins();
   const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>

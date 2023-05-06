@@ -39,6 +39,7 @@ import { build } from "esbuild";
 import { InternalResolveOptionsWithOverrideConditions } from "./plugins/resolve";
 import colors from "picocolors";
 import { pathToFileURL } from "node:url";
+import { findNearestPackageData, PackageCache } from "./packages";
 
 const debug = createDebugger("vite:config");
 
@@ -57,6 +58,7 @@ export type ResolvedConfig = Readonly<
     configFile: string | undefined;
     configFileDependencies: string[];
     inlineConfig: InlineConfig;
+    cacheDir: string;
     appType: AppType;
     plugins: readonly Plugin[];
     define?: Record<string, any>;
@@ -64,6 +66,7 @@ export type ResolvedConfig = Readonly<
     envPrefix?: string | string[];
     base: string;
     publicDir?: string | false;
+    command: "build" | "serve";
   } & PluginHookUtils
 >;
 
@@ -88,6 +91,8 @@ export async function resolveConfig(
     // ssrBuild: !!config.build?.ssr,
     ssrBuild: false,
   };
+  const packageCache: PackageCache = new Map();
+  
   let { configFile } = config;
   if (configFile !== false) {
     // loadResult = {
@@ -172,6 +177,15 @@ export async function resolveConfig(
     : resolveBaseUrl(config.base, isBuild, logger) ?? "/";
   const BASE_URL = resolvedBase;
   const server = resolveServerOptions(resolvedRoot, config.server, logger);
+  const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir;
+  
+  const cacheDir = normalizePath(
+    config.cacheDir
+      ? path.resolve(resolvedRoot, config.cacheDir)
+      : pkgDir
+      ? path.join(pkgDir, `node_modules/.vite`)
+      : path.join(resolvedRoot, `.vite`)
+  );
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
@@ -179,6 +193,8 @@ export async function resolveConfig(
     ),
     inlineConfig,
     logger,
+    cacheDir,
+    command,
     root: process.cwd(),
     base: resolvedBase.endsWith("/") ? resolvedBase : resolvedBase + "/",
     env: {
@@ -473,4 +489,11 @@ async function loadConfigFromBundledFile(
   //   return raw.__esModule ? raw.default : raw
   // }
   return {} as any;
+}
+
+export function getDepOptimizationConfig(
+  config: ResolvedConfig,
+  ssr: boolean
+): DepOptimizationConfig {
+  return config.optimizeDeps;
 }

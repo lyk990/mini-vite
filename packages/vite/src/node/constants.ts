@@ -12,6 +12,13 @@ export const PRE_BUNDLE_DIR = path.join("node_modules", ".m-vite");
 export const DEFAULT_DEV_PORT = 5173;
 export const DEFAULT_HOST_NAME = "localhost";
 export const VERSION = version as string;
+export const ESBUILD_MODULES_TARGET = [
+  "es2020", // support import.meta.url
+  "edge88",
+  "firefox78",
+  "chrome87",
+  "safari14",
+];
 export const VITE_PACKAGE_DIR = resolve(
   // import.meta.url is `dist/node/constants.js` after bundle
   fileURLToPath(import.meta.url),
