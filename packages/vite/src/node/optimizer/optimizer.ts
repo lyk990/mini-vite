@@ -59,9 +59,7 @@ async function createDepsOptimizer(
     initDepsOptimizerMetadata(config, false, sessionTimestamp);
   let depOptimizationProcessing = newDepOptimizationProcessing();
 
-  // TODO 代码优化
   let discover;
-
   if (!cachedMetadata) {
     discover = discoverProjectDependencies(config);
     const deps = await discover.result;
@@ -100,7 +98,7 @@ async function createDepsOptimizer(
     }
     return knownDeps;
   }
-  
+
   function getDiscoveredBrowserHash(
     hash: string,
     deps: Record<string, string>,

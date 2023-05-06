@@ -33,9 +33,7 @@ const jsMapExtensionRE = /\.js\.map$/i;
 
 export type ExportsData = {
   hasImports: boolean;
-  // exported names (for `export { a as b }`, `b` is exported name)
   exports: readonly string[];
-  // hint if the dep requires loading as jsx
   jsxLoader?: boolean;
 };
 
@@ -61,7 +59,7 @@ export async function loadCachedDepOptimizationMetadata(
     log?.("Hash is consistent. Skipping. Use --force to override.");
     return cachedMetadata;
   }
-  // 删除文件和目录
+  // 删除预构建依赖文件和目录
   await fsp.rm(depsCacheDir, { recursive: true, force: true });
 }
 
@@ -76,8 +74,6 @@ function parseDepsOptimizerMetadata(
   const { hash, browserHash, optimized, chunks } = JSON.parse(
     jsonMetadata,
     (key: string, value: string) => {
-      // Paths can be absolute or relative to the deps cache dir where
-      // the _metadata.json is located
       if (key === "file" || key === "src") {
         return normalizePath(path.resolve(depsCacheDir, value));
       }
@@ -88,7 +84,6 @@ function parseDepsOptimizerMetadata(
     !chunks ||
     Object.values(optimized).some((depInfo: any) => !depInfo.fileHash)
   ) {
-    // outdated _metadata.json version, ignore
     return;
   }
   const metadata = {
@@ -126,9 +121,6 @@ export function addOptimizedDepInfo(
   return depInfo;
 }
 
-// export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
-//   return "false";
-// }
 /**查找node_modules中的依赖并放到deps中 */
 export function discoverProjectDependencies(config: ResolvedConfig): {
   cancel: () => Promise<void>;

@@ -19,7 +19,7 @@ export function scanImports(config: ResolvedConfig): {
   const deps: Record<string, string> = {};
   const missing: Record<string, string> = {};
   let entries: string[];
-  const scanContext = { cancelled: false };
+  const scanContext = { cancelled: false }; // REMOVE 移除scanContext
 
   const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
     config
@@ -41,7 +41,10 @@ export function scanImports(config: ResolvedConfig): {
     });
   });
   return {
-    cancel: async () => {},
+    cancel: async () => {
+      scanContext.cancelled = true;
+      return esbuildContext.then((context) => context?.cancel());
+    },
     result,
   };
 }
@@ -113,11 +116,13 @@ function orderedDependencies(deps: Record<string, string>) {
 /**找出入口文件 */
 async function computeEntries(config: ResolvedConfig) {
   let entries: string[] = [];
-  // 优先使用配置的入口文件
+  // 优先使用配置的入口文件,默认为undefined
   const explicitEntryPatterns = config.optimizeDeps.entries;
-  if (!explicitEntryPatterns) {
-    // TODO 依赖预构建未完成
-    entries = await globEntries("**/main.ts", config);
+
+  if (explicitEntryPatterns) {
+    entries = await globEntries(explicitEntryPatterns, config);
+  } else {
+    entries = await globEntries("**/*.html", config);
   }
   return entries;
 }
@@ -132,7 +137,7 @@ function globEntries(pattern: string | string[], config: ResolvedConfig) {
         : [`**/__tests__/**`, `**/coverage/**`]),
     ],
     absolute: true,
-    suppressErrors: true, // suppress EACCES errors
+    suppressErrors: true,
   });
 }
 
@@ -143,7 +148,6 @@ async function prepareEsbuildScanner(
   missing: Record<string, string>,
   _scanContext?: { cancelled: boolean }
 ): Promise<BuildContext | undefined> {
-  // TODO依赖预构建未完成
   const container = await createPluginContainer(config);
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);
   const { plugins = [], ...esbuildOptions } =

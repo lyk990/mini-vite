@@ -1,5 +1,5 @@
-import { HookHandler, PluginHookUtils } from "vite";
-import { ResolvedConfig } from "../config";
+import { HookHandler } from "vite";
+import { ResolvedConfig, PluginHookUtils } from "../config";
 // import { watchPackageDataPlugin } from "../package";
 import { Plugin } from "../plugin";
 // import { clientInjectionsPlugin } from "./clientInjections";
@@ -27,7 +27,6 @@ export function resolvePlugins(
 export function createPluginHookUtils(
   plugins: readonly Plugin[]
 ): PluginHookUtils {
-  // sort plugins per hook
   const sortedPluginsCache = new Map<keyof Plugin, Plugin[]>();
   function getSortedPlugins(hookName: keyof Plugin): Plugin[] {
     if (sortedPluginsCache.has(hookName))
@@ -45,8 +44,7 @@ export function createPluginHookUtils(
       .map((p) => {
         const hook = p[hookName]!;
         return typeof hook === "object" && "handler" in hook
-          ? // @ts-ignore
-            hook.handler
+          ? hook.handler
           : hook;
       })
       .filter(Boolean);
@@ -55,7 +53,7 @@ export function createPluginHookUtils(
   return {
     getSortedPlugins,
     getSortedPluginHooks,
-  } as any;
+  };
 }
 
 export function getSortedPluginsByHook(
@@ -69,12 +67,10 @@ export function getSortedPluginsByHook(
     const hook = plugin[hookName];
     if (hook) {
       if (typeof hook === "object") {
-        // @ts-ignore
         if (hook.order === "pre") {
           pre.push(plugin);
           continue;
         }
-        // @ts-ignore
         if (hook.order === "post") {
           post.push(plugin);
           continue;
