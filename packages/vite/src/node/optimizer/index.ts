@@ -6,7 +6,14 @@ import {
   transformWithEsbuild,
 } from "vite";
 import { ResolvedConfig, getDepOptimizationConfig } from "../config";
-import { createDebugger, flattenId, getHash, normalizePath } from "../utils";
+import {
+  createDebugger,
+  flattenId,
+  getHash,
+  lookupFile,
+  normalizePath,
+  tryStatSync,
+} from "../utils";
 import path from "node:path";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
@@ -35,34 +42,31 @@ export type ExportsData = {
 /**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig,
-  ssr: boolean,
+  ssr: boolean = false,
   force = config.optimizeDeps.force,
   asCommand = false
 ): Promise<DepOptimizationMetadata | undefined> {
-  const log = asCommand ? config.logger.info : debug;
+  const log = debug;
   const depsCacheDir = getDepsCacheDir(config, ssr);
-  if (!force) {
-    let cachedMetadata: DepOptimizationMetadata | undefined;
-    try {
-      const cachedMetadataPath = path.join(depsCacheDir, "_metadata.json");
-      cachedMetadata = parseDepsOptimizerMetadata(
-        await fsp.readFile(cachedMetadataPath, "utf-8"),
-        depsCacheDir
-      );
-    } catch (e) {}
-    // 比较hash是否一直来判断需不需要重复预构建依赖
-    if (cachedMetadata && cachedMetadata.hash === getDepHash(config, ssr)) {
-      log?.("Hash is consistent. Skipping. Use --force to override.");
-      return cachedMetadata;
-    }
-  } else {
-    config.logger.info("Forced re-optimization of dependencies");
+  let cachedMetadata: DepOptimizationMetadata | undefined;
+  try {
+    const cachedMetadataPath = path.join(depsCacheDir, "_metadata.json");
+    cachedMetadata = parseDepsOptimizerMetadata(
+      await fsp.readFile(cachedMetadataPath, "utf-8"),
+      depsCacheDir
+    );
+  } catch (e) {}
+  // 比较hash是否一直来判断需不需要重复预构建依赖
+  if (cachedMetadata && cachedMetadata.hash === getDepHash(config, ssr)) {
+    log?.("Hash is consistent. Skipping. Use --force to override.");
+    return cachedMetadata;
   }
+  // 删除文件和目录
   await fsp.rm(depsCacheDir, { recursive: true, force: true });
 }
 
 export function getDepsCacheDir(config: ResolvedConfig, ssr: boolean): string {
-  return normalizePath(path.resolve("node_modules/.-pre-mini-vite", "deps"));
+  return getDepsCacheDirPrefix(config) + getDepsCacheSuffix(config, ssr);
 }
 
 function parseDepsOptimizerMetadata(
@@ -122,9 +126,9 @@ export function addOptimizedDepInfo(
   return depInfo;
 }
 
-export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
-  return "false";
-}
+// export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
+//   return "false";
+// }
 /**查找node_modules中的依赖并放到deps中 */
 export function discoverProjectDependencies(config: ResolvedConfig): {
   cancel: () => Promise<void>;
@@ -815,4 +819,57 @@ function needsInterop(
 
 function isSingleDefaultExport(exports: readonly string[]) {
   return exports.length === 1 && exports[0] === "default";
+}
+
+const lockfileFormats = [
+  { name: "package-lock.json", checkPatches: true, manager: "npm" },
+  { name: "yarn.lock", checkPatches: true, manager: "yarn" }, // Included in lockfile for v2+
+  { name: "pnpm-lock.yaml", checkPatches: false, manager: "pnpm" }, // Included in lockfile
+  { name: "bun.lockb", checkPatches: true, manager: "bun" },
+].sort((_, { manager }) => {
+  return process.env.npm_config_user_agent?.startsWith(manager) ? 1 : -1;
+});
+const lockfileNames = lockfileFormats.map((l) => l.name);
+export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
+  const lockfilePath = lookupFile(config.root, lockfileNames);
+  let content = lockfilePath ? fs.readFileSync(lockfilePath, "utf-8") : "";
+  if (lockfilePath) {
+    const lockfileName = path.basename(lockfilePath);
+    const { checkPatches } = lockfileFormats.find(
+      (f) => f.name === lockfileName
+    )!;
+    if (checkPatches) {
+      const fullPath = path.join(path.dirname(lockfilePath), "patches");
+      const stat = tryStatSync(fullPath);
+      if (stat?.isDirectory()) {
+        content += stat.mtimeMs.toString();
+      }
+    }
+  }
+  const optimizeDeps = getDepOptimizationConfig(config, ssr);
+  content += JSON.stringify(
+    {
+      mode: process.env.NODE_ENV || config.mode,
+      root: config.root,
+      resolve: config.resolve,
+      buildTarget: config.build.target,
+      assetsInclude: config.assetsInclude,
+      plugins: config.plugins.map((p) => p.name),
+      optimizeDeps: {
+        include: optimizeDeps?.include,
+        exclude: optimizeDeps?.exclude,
+        esbuildOptions: {
+          ...optimizeDeps?.esbuildOptions,
+          plugins: optimizeDeps?.esbuildOptions?.plugins?.map((p) => p.name),
+        },
+      },
+    },
+    (_, value) => {
+      if (typeof value === "function" || value instanceof RegExp) {
+        return value.toString();
+      }
+      return value;
+    }
+  );
+  return getHash(content);
 }

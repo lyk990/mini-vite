@@ -19,6 +19,7 @@ import {
 import { createLogger } from "vite";
 import { resolveBuildOptions } from "./build";
 import {
+  DEFAULT_ASSETS_RE,
   DEFAULT_CONFIG_FILES,
   DEFAULT_EXTENSIONS,
   DEFAULT_MAIN_FIELDS,
@@ -31,6 +32,7 @@ import { ResolvedServerOptions, resolveServerOptions } from "./server";
 import {
   asyncFlatten,
   createDebugger,
+  createFilter,
   isBuiltin,
   isObject,
   lookupFile,
@@ -48,7 +50,6 @@ import aliasPlugin from "@rollup/plugin-alias";
 const debug = createDebugger("vite:config");
 
 export type AppType = "spa" | "mpa" | "custom";
-// TODO
 export type ResolvedConfig = Readonly<
   Omit<UserConfig, "plugins" | "assetsInclude" | "optimizeDeps" | "worker"> & {
     logger: Logger;
@@ -73,6 +74,7 @@ export type ResolvedConfig = Readonly<
     command: "build" | "serve";
     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
     isProduction: boolean;
+    assetsInclude: (file: string) => boolean;
   } & PluginHookUtils
 >;
 
@@ -237,6 +239,13 @@ export async function resolveConfig(
       ? path.join(pkgDir, `node_modules/.vite`)
       : path.join(resolvedRoot, `.vite`)
   );
+
+  const assetsFilter =
+    config.assetsInclude &&
+    (!Array.isArray(config.assetsInclude) || config.assetsInclude.length)
+      ? createFilter(config.assetsInclude)
+      : () => false;
+
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
@@ -255,6 +264,9 @@ export async function resolveConfig(
       MODE: mode,
       DEV: true,
       PROD: false,
+    },
+    assetsInclude(file: string) {
+      return DEFAULT_ASSETS_RE.test(file) || assetsFilter(file);
     },
     server,
     resolve: resolveOptions,

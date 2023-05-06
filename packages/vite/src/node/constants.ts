@@ -120,3 +120,7 @@ export const KNOWN_ASSET_TYPES = [
   "pdf",
   "txt",
 ];
+
+export const DEFAULT_ASSETS_RE = new RegExp(
+  `\\.(` + KNOWN_ASSET_TYPES.join("|") + `)(\\?.*)?$`
+);
