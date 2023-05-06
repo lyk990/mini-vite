@@ -4,7 +4,7 @@ import type { Connect } from "dep-types/connect";
 import { resolvePlugins } from "../plugins";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
 import { Plugin } from "../plugin";
-import { CLIENT_DIR, DEFAULT_DEV_PORT } from "../constants";
+import { CLIENT_DIR, DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
 import {
   InlineConfig,
   ServerOptions,
@@ -113,11 +113,13 @@ async function startServer(server: ViteDevServer, inlinePort?: number) {
     throw new Error("Cannot call server.listen in middleware mode.");
   }
   const port = inlinePort ?? DEFAULT_DEV_PORT;
-  // TODO 配置代理
+  // FEATURE HOST_NAME
+  let hostName = DEFAULT_HOST_NAME;
+  // 创建服务器
   await httpServerStart(httpServer, {
     port,
     strictPort: false,
-    host: "localhost",
+    host: hostName,
     logger: server.config.logger,
   });
 }
@@ -169,12 +171,13 @@ export async function _createServer(
   options: { ws: boolean }
 ): Promise<ViteDevServer> {
   const config = await resolveConfig(inlineConfig, "serve");
-  if (true) {
-    await initDepsOptimizer(config);
-  }
+
+  await initDepsOptimizer(config);
+
   const { root, server: serverConfig } = config;
   const { middlewareMode } = serverConfig;
   const middlewares = connect() as Connect.Server;
+
   const httpServer = await resolveHttpServer(middlewares);
   const httpsOptions = undefined;
   const ws = createWebSocketServer(httpServer, config, httpsOptions);
@@ -375,9 +378,9 @@ async function restartServer(server: ViteDevServer) {
 }
 
 export function resolveServerOptions(
-  root: string,
+  root: string, //REMOVE
   raw: ServerOptions | undefined,
-  logger: Logger
+  logger: Logger // REMOVE
 ): ResolvedServerOptions {
   const server: ResolvedServerOptions = {
     preTransformRequests: true,
@@ -390,7 +393,9 @@ export function resolveServerOptions(
     middlewareMode: !!raw?.middlewareMode,
   };
   const deny = [".env", ".env.*", "*.{crt,pem}"];
-  let allowDirs = ["C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite"];
+  let allowDirs = [
+    "C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite",
+  ];
 
   server.fs = {
     strict: server.fs?.strict ?? true,

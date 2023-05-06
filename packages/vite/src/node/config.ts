@@ -385,12 +385,14 @@ async function bundleConfigFile(
 
               const isIdESM = isESM || kind === "dynamic-import";
               // TODO
-              let idFsPath = tryNodeResolve(
-                id,
-                importer,
-                { ...options, isRequire: !isIdESM },
-                false
-              )?.id;
+              // let idFsPath = tryNodeResolve(
+              //   id,
+              //   importer,
+              //   { ...options, isRequire: !isIdESM },
+              //   false
+              // )?.id;
+              let idFsPath =
+                "C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite/node_modules/.pnpm/vite@4.2.1_@types+node@18.15.11/node_modules/vite/dist/node/index.js";
               if (idFsPath && isIdESM) {
                 // pathToFileURL 用来将文件路径转换成文件URL路径
                 idFsPath = pathToFileURL(idFsPath).href;

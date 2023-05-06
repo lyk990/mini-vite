@@ -1,4 +1,8 @@
-import type { DepOptimizationMetadata, ExportsData, OptimizedDepInfo } from "vite";
+import type {
+  DepOptimizationMetadata,
+  ExportsData,
+  OptimizedDepInfo,
+} from "vite";
 import { ResolvedConfig } from "../config";
 import { ViteDevServer } from "../server";
 import { createDebugger, normalizePath } from "../utils";
@@ -11,7 +15,7 @@ import { init } from "es-module-lexer";
 export { getDepsOptimizer } from "./optimizer";
 
 const debug = createDebugger("vite:deps");
-
+/*初始化预构建依赖 */
 export async function initDepsOptimizer(
   config: ResolvedConfig,
   server?: ViteDevServer

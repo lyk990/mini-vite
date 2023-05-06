@@ -2,6 +2,7 @@ import type { Logger } from "./logger";
 import type { Server as HttpServer } from "node:http";
 import type { Connect } from "dep-types/connect";
 
+/**创建http服务器 */
 export async function resolveHttpServer(
   app: Connect.Server
 ): Promise<HttpServer> {
@@ -20,7 +21,7 @@ export async function httpServerStart(
 ): Promise<number> {
   let { port, strictPort, host, logger } = serverOptions;
   return new Promise((resolve, reject) => {
-    // 创建http服务器报错时
+    // 创建http服务器异常处理
     const onError = (e: Error & { code?: string }) => {
       if (e.code === "EADDRINUSE") {
         if (strictPort) {
