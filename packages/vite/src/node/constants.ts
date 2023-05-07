@@ -2,6 +2,15 @@ import { readFileSync } from "node:fs";
 import path, { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+export const VITE_PACKAGE_DIR = resolve(
+  // import.meta.url is `dist/node/constants.js` after bundle
+  fileURLToPath(import.meta.url),
+  "../../.."
+);
+export const DEP_VERSION_RE = /[?&](v=[\w.-]+)\b/;
+export const OPTIMIZABLE_ENTRY_RE = /\.[cm]?[jt]s$/;
+export const ENV_ENTRY = resolve(VITE_PACKAGE_DIR, "dist/client/env.mjs");
+
 const { version } = JSON.parse(
   readFileSync(new URL("../../package.json", import.meta.url)).toString()
 );
@@ -19,11 +28,7 @@ export const ESBUILD_MODULES_TARGET = [
   "chrome87",
   "safari14",
 ];
-export const VITE_PACKAGE_DIR = resolve(
-  // import.meta.url is `dist/node/constants.js` after bundle
-  fileURLToPath(import.meta.url),
-  "../../.."
-);
+
 export const CLIENT_ENTRY = resolve(VITE_PACKAGE_DIR, "dist/client/client.mjs");
 export const CLIENT_DIR = path.dirname(CLIENT_ENTRY);
 

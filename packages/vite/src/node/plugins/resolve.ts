@@ -1,7 +1,50 @@
 import { DepsOptimizer, SSROptions } from "vite";
-import { PackageCache } from "../packages";
+import {
+  findNearestPackageData,
+  loadPackageData,
+  PackageCache,
+  PackageData,
+} from "../packages";
 import { Plugin } from "../plugin";
-import { createDebugger } from "../utils";
+import {
+  bareImportRE,
+  cleanUrl,
+  createDebugger,
+  deepImportRE,
+  fsPathFromId,
+  injectQuery,
+  isBuiltin,
+  isDataUrl,
+  isExternalUrl,
+  isInNodeModules,
+  isNonDriveRelativeAbsolutePath,
+  isObject,
+  isOptimizable,
+  isTsRequest,
+  isWindows,
+  normalizePath,
+  safeRealpathSync,
+  slash,
+  tryStatSync,
+} from "../utils";
+import path from "path";
+import { PartialResolvedId } from "rollup";
+import {
+  CLIENT_ENTRY,
+  DEFAULT_EXTENSIONS,
+  DEFAULT_MAIN_FIELDS,
+  DEP_VERSION_RE,
+  ENV_ENTRY,
+  FS_PREFIX,
+  OPTIMIZABLE_ENTRY_RE,
+  SPECIAL_QUERY_RE,
+} from "../constants";
+import colors from "picocolors";
+import { optimizedDepInfoFromFile, optimizedDepInfoFromId } from "../optimizer";
+import fs from "node:fs";
+import { findNearestMainPackageData, resolvePackageData } from "../package";
+import { exports, imports } from "resolve.exports";
+import { hasESMSyntax } from "mlly";
 
 export interface ResolveOptions {
   mainFields?: string[];
@@ -31,6 +74,7 @@ export interface InternalResolveOptions extends Required<ResolveOptions> {
   shouldExternalize?: (id: string) => boolean | undefined;
   idOnly?: boolean;
 }
+const startsWithWordCharRE = /^\w/;
 
 const debug = createDebugger("vite:resolve-details", {
   onlyWhenFocused: true,
@@ -63,7 +107,6 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
       if (
         id[0] === "\0" ||
         id.startsWith("virtual:") ||
-        // When injected directly in html/client code
         id.startsWith("/virtual:")
       ) {
         return;
@@ -336,7 +379,6 @@ export function tryNodeResolve(
 ): PartialResolvedId | undefined {
   const { root, dedupe, isBuild, preserveSymlinks, packageCache } = options;
 
-  // check for deep import, e.g. "my-lib/foo"
   const deepMatch = id.match(deepImportRE);
   const pkgId = deepMatch ? deepMatch[1] || deepMatch[2] : id;
 
@@ -346,7 +388,6 @@ export function tryNodeResolve(
   } else if (
     importer &&
     path.isAbsolute(importer) &&
-    // css processing appends `*` for importer
     (importer[importer.length - 1] === "*" || fs.existsSync(cleanUrl(importer)))
   ) {
     basedir = path.dirname(importer);
@@ -361,8 +402,6 @@ export function tryNodeResolve(
     packageCache
   );
   if (!pkg) {
-    // if import can't be found, check if it's an optional peer dep.
-    // if so, we can resolve to a special id that errors only when imported.
     if (
       basedir !== root && // root has no peer dep
       !isBuiltin(id) &&
@@ -411,12 +450,10 @@ export function tryNodeResolve(
     if (!externalize) {
       return resolved;
     }
-    // don't external symlink packages
     if (!allowLinkedExternal && !isInNodeModules(resolved.id)) {
       return resolved;
     }
     const resolvedExt = path.extname(resolved.id);
-    // don't external non-js imports
     if (
       resolvedExt &&
       resolvedExt !== ".js" &&
@@ -467,7 +504,7 @@ export function tryNodeResolve(
     exclude = options.ssrConfig?.optimizeDeps?.exclude;
     include = options.ssrConfig?.optimizeDeps?.include;
   }
-
+  //  REMOVE 有没有可能将这一段逻辑移除
   const skipOptimization =
     depsOptimizer?.options.noDiscovery ||
     !isJsType ||
@@ -506,8 +543,6 @@ export function tryNodeResolve(
   }
 
   if (!options.idOnly && !options.scan && isBuild) {
-    // Resolve package side effects for build so that rollup can better
-    // perform tree-shaking
     return {
       id: resolved,
       moduleSideEffects: pkg.hasSideEffects(resolved),
@@ -515,4 +550,577 @@ export function tryNodeResolve(
   } else {
     return { id: resolved! };
   }
+}
+const subpathImportsPrefix = "#";
+function resolveExportsOrImports(
+  pkg: PackageData["data"],
+  key: string,
+  options: InternalResolveOptionsWithOverrideConditions,
+  targetWeb: boolean,
+  type: "imports" | "exports"
+) {
+  const additionalConditions = new Set(
+    options.overrideConditions || [
+      "production",
+      "development",
+      "module",
+      ...options.conditions,
+    ]
+  );
+
+  const conditions = [...additionalConditions].filter((condition) => {
+    switch (condition) {
+      case "production":
+        return options.isProduction;
+      case "development":
+        return !options.isProduction;
+      case "module":
+        return !options.isRequire;
+    }
+    return true;
+  });
+
+  const fn = type === "imports" ? imports : exports;
+  const result = fn(pkg, key, {
+    browser: targetWeb && !additionalConditions.has("node"),
+    require: options.isRequire && !additionalConditions.has("import"),
+    conditions,
+  });
+
+  return result ? result[0] : undefined;
+}
+function resolveSubpathImports(
+  id: string,
+  importer: string | undefined,
+  options: InternalResolveOptions,
+  targetWeb: boolean
+) {
+  if (!importer || !id.startsWith(subpathImportsPrefix)) return;
+  const basedir = path.dirname(importer);
+  const pkgData = findNearestPackageData(basedir, options.packageCache);
+  if (!pkgData) return;
+
+  let importsPath = resolveExportsOrImports(
+    pkgData.data,
+    id,
+    options,
+    targetWeb,
+    "imports"
+  );
+
+  if (importsPath?.[0] === ".") {
+    importsPath = path.relative(basedir, path.join(pkgData.dir, importsPath));
+
+    if (importsPath[0] !== ".") {
+      importsPath = `./${importsPath}`;
+    }
+  }
+
+  return importsPath;
+}
+const normalizedClientEntry = normalizePath(CLIENT_ENTRY);
+const normalizedEnvEntry = normalizePath(ENV_ENTRY);
+function ensureVersionQuery(
+  resolved: string,
+  id: string,
+  options: InternalResolveOptions,
+  depsOptimizer?: DepsOptimizer
+): string {
+  if (
+    !options.isBuild &&
+    !options.scan &&
+    depsOptimizer &&
+    !(resolved === normalizedClientEntry || resolved === normalizedEnvEntry)
+  ) {
+    const isNodeModule = isInNodeModules(id) || isInNodeModules(resolved);
+
+    if (isNodeModule && !resolved.match(DEP_VERSION_RE)) {
+      const versionHash = depsOptimizer.metadata.browserHash;
+      if (versionHash && isOptimizable(resolved, depsOptimizer.options)) {
+        resolved = injectQuery(resolved, `v=${versionHash}`);
+      }
+    }
+  }
+  return resolved;
+}
+
+function splitFileAndPostfix(path: string) {
+  const file = cleanUrl(path);
+  return { file, postfix: path.slice(file.length) };
+}
+
+function tryFsResolve(
+  fsPath: string,
+  options: InternalResolveOptions,
+  tryIndex = true,
+  targetWeb = true,
+  skipPackageJson = false
+): string | undefined {
+  const hashIndex = fsPath.indexOf("#");
+  if (hashIndex >= 0 && isInNodeModules(fsPath)) {
+    const queryIndex = fsPath.indexOf("?");
+    if (queryIndex < 0 || queryIndex > hashIndex) {
+      const file =
+        queryIndex > hashIndex ? fsPath.slice(0, queryIndex) : fsPath;
+      const res = tryCleanFsResolve(
+        file,
+        options,
+        tryIndex,
+        targetWeb,
+        skipPackageJson
+      );
+      if (res) return res + fsPath.slice(file.length);
+    }
+  }
+
+  const { file, postfix } = splitFileAndPostfix(fsPath);
+  const res = tryCleanFsResolve(
+    file,
+    options,
+    tryIndex,
+    targetWeb,
+    skipPackageJson
+  );
+  if (res) return res + postfix;
+}
+
+function equalWithoutSuffix(path: string, key: string, suffix: string) {
+  return key.endsWith(suffix) && key.slice(0, -suffix.length) === path;
+}
+
+function mapWithBrowserField(
+  relativePathInPkgDir: string,
+  map: Record<string, string | false>
+): string | false | undefined {
+  const normalizedPath = path.posix.normalize(relativePathInPkgDir);
+
+  for (const key in map) {
+    const normalizedKey = path.posix.normalize(key);
+    if (
+      normalizedPath === normalizedKey ||
+      equalWithoutSuffix(normalizedPath, normalizedKey, ".js") ||
+      equalWithoutSuffix(normalizedPath, normalizedKey, "/index.js")
+    ) {
+      return map[key];
+    }
+  }
+}
+
+function tryResolveBrowserMapping(
+  id: string,
+  importer: string | undefined,
+  options: InternalResolveOptions,
+  isFilePath: boolean,
+  externalize?: boolean
+) {
+  let res: string | undefined;
+  const pkg =
+    importer &&
+    findNearestPackageData(path.dirname(importer), options.packageCache);
+  if (pkg && isObject(pkg.data.browser)) {
+    const mapId = isFilePath ? "./" + slash(path.relative(pkg.dir, id)) : id;
+    const browserMappedPath = mapWithBrowserField(mapId, pkg.data.browser);
+    if (browserMappedPath) {
+      if (
+        (res = bareImportRE.test(browserMappedPath)
+          ? tryNodeResolve(browserMappedPath, importer, options, true)?.id
+          : tryFsResolve(path.join(pkg.dir, browserMappedPath), options))
+      ) {
+        debug?.(`[browser mapped] ${colors.cyan(id)} -> ${colors.dim(res)}`);
+        let result: PartialResolvedId = { id: res };
+        if (options.idOnly) {
+          return result;
+        }
+        if (!options.scan && options.isBuild) {
+          const resPkg = findNearestPackageData(
+            path.dirname(res),
+            options.packageCache
+          );
+          if (resPkg) {
+            result = {
+              id: res,
+              moduleSideEffects: resPkg.hasSideEffects(res),
+            };
+          }
+        }
+        return externalize ? { ...result, external: true } : result;
+      }
+    } else if (browserMappedPath === false) {
+      return browserExternalId;
+    }
+  }
+}
+
+export async function tryOptimizedResolve(
+  depsOptimizer: DepsOptimizer,
+  id: string,
+  importer?: string,
+  preserveSymlinks?: boolean,
+  packageCache?: PackageCache
+): Promise<string | undefined> {
+  await depsOptimizer.scanProcessing;
+
+  const metadata = depsOptimizer.metadata;
+
+  const depInfo = optimizedDepInfoFromId(metadata, id);
+  if (depInfo) {
+    return depsOptimizer.getOptimizedDepId(depInfo);
+  }
+
+  if (!importer) return;
+
+  let idPkgDir: string | undefined;
+  const nestedIdMatch = `> ${id}`;
+
+  for (const optimizedData of metadata.depInfoList) {
+    if (!optimizedData.src) continue; // Ignore chunks
+
+    if (!optimizedData.id.endsWith(nestedIdMatch)) continue;
+
+    if (idPkgDir == null) {
+      idPkgDir = resolvePackageData(
+        id,
+        importer,
+        preserveSymlinks,
+        packageCache
+      )?.dir;
+      if (idPkgDir == null) break;
+      idPkgDir = normalizePath(idPkgDir);
+    }
+
+    if (optimizedData.src.startsWith(idPkgDir)) {
+      return depsOptimizer.getOptimizedDepId(optimizedData);
+    }
+  }
+}
+
+function resolveDeepImport(
+  id: string,
+  {
+    webResolvedImports,
+    setResolvedCache,
+    getResolvedCache,
+    dir,
+    data,
+  }: PackageData,
+  targetWeb: boolean,
+  options: InternalResolveOptions
+): string | undefined {
+  const cache = getResolvedCache(id, targetWeb);
+  if (cache) {
+    return cache;
+  }
+
+  let relativeId: string | undefined | void = id;
+  const { exports: exportsField, browser: browserField } = data;
+
+  // map relative based on exports data
+  if (exportsField) {
+    if (isObject(exportsField) && !Array.isArray(exportsField)) {
+      // resolve without postfix (see #7098)
+      const { file, postfix } = splitFileAndPostfix(relativeId);
+      const exportsId = resolveExportsOrImports(
+        data,
+        file,
+        options,
+        targetWeb,
+        "exports"
+      );
+      if (exportsId !== undefined) {
+        relativeId = exportsId + postfix;
+      } else {
+        relativeId = undefined;
+      }
+    } else {
+      // not exposed
+      relativeId = undefined;
+    }
+    if (!relativeId) {
+      throw new Error(
+        `Package subpath '${relativeId}' is not defined by "exports" in ` +
+          `${path.join(dir, "package.json")}.`
+      );
+    }
+  } else if (targetWeb && options.browserField && isObject(browserField)) {
+    // resolve without postfix (see #7098)
+    const { file, postfix } = splitFileAndPostfix(relativeId);
+    const mapped = mapWithBrowserField(file, browserField);
+    if (mapped) {
+      relativeId = mapped + postfix;
+    } else if (mapped === false) {
+      return (webResolvedImports[id] = browserExternalId);
+    }
+  }
+
+  if (relativeId) {
+    const resolved = tryFsResolve(
+      path.join(dir, relativeId),
+      options,
+      !exportsField, // try index only if no exports field
+      targetWeb
+    );
+    if (resolved) {
+      debug?.(
+        `[node/deep-import] ${colors.cyan(id)} -> ${colors.dim(resolved)}`
+      );
+      setResolvedCache(id, resolved, targetWeb);
+      return resolved;
+    }
+  }
+}
+
+export function resolvePackageEntry(
+  id: string,
+  { dir, data, setResolvedCache, getResolvedCache }: PackageData,
+  targetWeb: boolean,
+  options: InternalResolveOptions
+): string | undefined {
+  const cached = getResolvedCache(".", targetWeb);
+  if (cached) {
+    return cached;
+  }
+  try {
+    let entryPoint: string | undefined;
+
+    if (data.exports) {
+      entryPoint = resolveExportsOrImports(
+        data,
+        ".",
+        options,
+        targetWeb,
+        "exports"
+      );
+    }
+
+    const resolvedFromExports = !!entryPoint;
+
+    if (
+      targetWeb &&
+      options.browserField &&
+      (!entryPoint || entryPoint.endsWith(".mjs"))
+    ) {
+      const browserEntry =
+        typeof data.browser === "string"
+          ? data.browser
+          : isObject(data.browser) && data.browser["."];
+      if (browserEntry) {
+        if (
+          !options.isRequire &&
+          options.mainFields.includes("module") &&
+          typeof data.module === "string" &&
+          data.module !== browserEntry
+        ) {
+          const resolvedBrowserEntry = tryFsResolve(
+            path.join(dir, browserEntry),
+            options
+          );
+          if (resolvedBrowserEntry) {
+            const content = fs.readFileSync(resolvedBrowserEntry, "utf-8");
+            if (hasESMSyntax(content)) {
+              entryPoint = browserEntry;
+            } else {
+              entryPoint = data.module;
+            }
+          }
+        } else {
+          entryPoint = browserEntry;
+        }
+      }
+    }
+
+    if (!resolvedFromExports && (!entryPoint || entryPoint.endsWith(".mjs"))) {
+      for (const field of options.mainFields) {
+        if (field === "browser") continue;
+        if (typeof data[field] === "string") {
+          entryPoint = data[field];
+          break;
+        }
+      }
+    }
+    entryPoint ||= data.main;
+
+    const entryPoints = entryPoint
+      ? [entryPoint]
+      : ["index.js", "index.json", "index.node"];
+
+    for (let entry of entryPoints) {
+      let skipPackageJson = false;
+      if (
+        options.mainFields[0] === "sass" &&
+        !options.extensions.includes(path.extname(entry))
+      ) {
+        entry = "";
+        skipPackageJson = true;
+      } else {
+        // resolve object browser field in package.json
+        const { browser: browserField } = data;
+        if (targetWeb && options.browserField && isObject(browserField)) {
+          entry = mapWithBrowserField(entry, browserField) || entry;
+        }
+      }
+
+      const entryPointPath = path.join(dir, entry);
+      const resolvedEntryPoint = tryFsResolve(
+        entryPointPath,
+        options,
+        true,
+        true,
+        skipPackageJson
+      );
+      if (resolvedEntryPoint) {
+        debug?.(
+          `[package entry] ${colors.cyan(id)} -> ${colors.dim(
+            resolvedEntryPoint
+          )}`
+        );
+        setResolvedCache(".", resolvedEntryPoint, targetWeb);
+        return resolvedEntryPoint;
+      }
+    }
+  } catch (e) {
+    packageEntryFailure(id, e.message);
+  }
+  packageEntryFailure(id);
+}
+
+function packageEntryFailure(id: string, details?: string) {
+  throw new Error(
+    `Failed to resolve entry for package "${id}". ` +
+      `The package may have incorrect main/module/exports specified in its package.json` +
+      (details ? ": " + details : ".")
+  );
+}
+
+function getRealPath(resolved: string, preserveSymlinks?: boolean): string {
+  if (!preserveSymlinks && browserExternalId !== resolved) {
+    resolved = safeRealpathSync(resolved);
+  }
+  return normalizePath(resolved);
+}
+
+function tryResolveRealFileWithExtensions(
+  filePath: string,
+  extensions: string[],
+  preserveSymlinks: boolean
+): string | undefined {
+  for (const ext of extensions) {
+    const res = tryResolveRealFile(filePath + ext, preserveSymlinks);
+    if (res) return res;
+  }
+}
+
+const knownTsOutputRE = /\.(?:js|mjs|cjs|jsx)$/;
+const isPossibleTsOutput = (url: string): boolean => knownTsOutputRE.test(url);
+function tryCleanFsResolve(
+  file: string,
+  options: InternalResolveOptions,
+  tryIndex = true,
+  targetWeb = true,
+  skipPackageJson = false
+): string | undefined {
+  const { tryPrefix, extensions, preserveSymlinks } = options;
+
+  const fileStat = tryStatSync(file);
+
+  if (fileStat?.isFile()) return getRealPath(file, options.preserveSymlinks);
+
+  let res: string | undefined;
+
+  const possibleJsToTs = options.isFromTsImporter && isPossibleTsOutput(file);
+  if (possibleJsToTs || extensions.length || tryPrefix) {
+    const dirPath = path.dirname(file);
+    const dirStat = tryStatSync(dirPath);
+    if (dirStat?.isDirectory()) {
+      if (possibleJsToTs) {
+        const fileExt = path.extname(file);
+        const fileName = file.slice(0, -fileExt.length);
+        if (
+          (res = tryResolveRealFile(
+            fileName + fileExt.replace("js", "ts"),
+            preserveSymlinks
+          ))
+        )
+          return res;
+        // for .js, also try .tsx
+        if (
+          fileExt === ".js" &&
+          (res = tryResolveRealFile(fileName + ".tsx", preserveSymlinks))
+        )
+          return res;
+      }
+
+      if (
+        (res = tryResolveRealFileWithExtensions(
+          file,
+          extensions,
+          preserveSymlinks
+        ))
+      )
+        return res;
+
+      if (tryPrefix) {
+        const prefixed = `${dirPath}/${options.tryPrefix}${path.basename(
+          file
+        )}`;
+
+        if ((res = tryResolveRealFile(prefixed, preserveSymlinks))) return res;
+
+        if (
+          (res = tryResolveRealFileWithExtensions(
+            prefixed,
+            extensions,
+            preserveSymlinks
+          ))
+        )
+          return res;
+      }
+    }
+  }
+
+  if (tryIndex && fileStat) {
+    const dirPath = file;
+
+    if (!skipPackageJson) {
+      let pkgPath = `${dirPath}/package.json`;
+      try {
+        if (fs.existsSync(pkgPath)) {
+          if (!options.preserveSymlinks) {
+            pkgPath = safeRealpathSync(pkgPath);
+          }
+          const pkg = loadPackageData(pkgPath);
+          return resolvePackageEntry(dirPath, pkg, targetWeb, options);
+        }
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+      }
+    }
+
+    if (
+      (res = tryResolveRealFileWithExtensions(
+        `${dirPath}/index`,
+        extensions,
+        preserveSymlinks
+      ))
+    )
+      return res;
+
+    if (tryPrefix) {
+      if (
+        (res = tryResolveRealFileWithExtensions(
+          `${dirPath}/${options.tryPrefix}index`,
+          extensions,
+          preserveSymlinks
+        ))
+      )
+        return res;
+    }
+  }
+}
+
+function tryResolveRealFile(
+  file: string,
+  preserveSymlinks: boolean
+): string | undefined {
+  const stat = tryStatSync(file);
+  if (stat?.isFile()) return getRealPath(file, preserveSymlinks);
 }

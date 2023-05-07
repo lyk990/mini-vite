@@ -1,17 +1,18 @@
 import os from "os";
 import path from "node:path";
 import type { AddressInfo, Server } from "node:net";
-import type { CommonServerOptions } from "vite";
+import type { CommonServerOptions, DepOptimizationConfig } from "vite";
 import type { ResolvedConfig } from "./config";
 import type { ResolvedServerUrls, ViteDevServer } from "./server";
 import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
-import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
+import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, OPTIMIZABLE_ENTRY_RE, VALID_ID_PREFIX } from "./constants";
 // import colors from "picocolors";
 import { builtinModules, createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { createFilter as _createFilter } from "@rollup/pluginutils";
+import { exec } from "node:child_process";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -341,30 +342,6 @@ export function isInNodeModules(id: string): boolean {
   return id.includes("node_modules");
 }
 
-// export function prettifyUrl(url: string, root: string): string {
-//   url = removeTimestampQuery(url);
-//   const isAbsoluteFile = url.startsWith(root);
-//   if (isAbsoluteFile || url.startsWith(FS_PREFIX)) {
-//     const file = path.relative(root, isAbsoluteFile ? url : fsPathFromId(url));
-//     return colors.dim(file);
-//   } else {
-//     return colors.dim(url);
-//   }
-// }
-// const timestampRE = /\bt=\d{13}&?\b/;
-// const trailingSeparatorRE = /[?&]$/;
-// export function removeTimestampQuery(url: string): string {
-//   return url.replace(timestampRE, "").replace(trailingSeparatorRE, "");
-// }
-
-// export function stripBomTag(content: string): string {
-//   if (content.charCodeAt(0) === 0xfeff) {
-//     return content.slice(1);
-//   }
-
-//   return content;
-// }
-
 export function getShortName(file: string, root: string) {
   return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
 }
@@ -461,3 +438,76 @@ const _require = createRequire(import.meta.url);
 export const dynamicImport = usingDynamicImport
   ? new Function("file", "return import(file)")
   : _require;
+
+const knownTsRE = /\.(?:ts|mts|cts|tsx)(?:$|\?)/;
+export const isTsRequest = (url: string): boolean => knownTsRE.test(url);
+
+const windowsDrivePathPrefixRE = /^[A-Za-z]:[/\\]/;
+export const isNonDriveRelativeAbsolutePath = (p: string): boolean => {
+  if (!isWindows) return p[0] === "/";
+  return windowsDrivePathPrefixRE.test(p);
+};
+
+export const isDataUrl = (url: string): boolean => dataUrlRE.test(url);
+
+export const bareImportRE = /^[\w@](?!.*:\/\/)/;
+export const deepImportRE = /^([^@][^/]*)\/|^(@[^/]+\/[^/]+)\//;
+const parseNetUseRE = /^(\w+)? +(\w:) +([^ ]+)\s/;
+
+const windowsNetworkMap = new Map();
+function windowsMappedRealpathSync(path: string) {
+  const realPath = fs.realpathSync.native(path);
+  if (realPath.startsWith("\\\\")) {
+    for (const [network, volume] of windowsNetworkMap) {
+      if (realPath.startsWith(network))
+        return realPath.replace(network, volume);
+    }
+  }
+  return realPath;
+}
+
+function optimizeSafeRealPathSync() {
+  const nodeVersion = process.versions.node.split(".").map(Number);
+  if (nodeVersion[0] < 16 || (nodeVersion[0] === 16 && nodeVersion[1] < 18)) {
+    safeRealpathSync = fs.realpathSync;
+    return;
+  }
+
+  exec("net use", (error, stdout) => {
+    if (error) return;
+    const lines = stdout.split("\n");
+    for (const line of lines) {
+      const m = line.match(parseNetUseRE);
+      if (m) windowsNetworkMap.set(m[3], m[2]);
+    }
+    if (windowsNetworkMap.size === 0) {
+      safeRealpathSync = fs.realpathSync.native;
+    } else {
+      safeRealpathSync = windowsMappedRealpathSync;
+    }
+  });
+}
+
+let firstSafeRealPathSyncRun = false;
+function windowsSafeRealPathSync(path: string): string {
+  if (!firstSafeRealPathSyncRun) {
+    optimizeSafeRealPathSync();
+    firstSafeRealPathSyncRun = true;
+  }
+  return fs.realpathSync(path);
+}
+
+export let safeRealpathSync = isWindows
+  ? windowsSafeRealPathSync
+  : fs.realpathSync.native;
+
+export function isOptimizable(
+  id: string,
+  optimizeDeps: DepOptimizationConfig
+): boolean {
+  const { extensions } = optimizeDeps;
+  return (
+    OPTIMIZABLE_ENTRY_RE.test(id) ||
+    (extensions?.some((ext) => id.endsWith(ext)) ?? false)
+  );
+}
