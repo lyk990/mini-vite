@@ -506,6 +506,7 @@ export function tryNodeResolve(
   }
   //  REMOVE 有没有可能将这一段逻辑移除
   const skipOptimization =
+    // @ts-ignore
     depsOptimizer?.options.noDiscovery ||
     !isJsType ||
     (importer && isInNodeModules(importer)) ||
