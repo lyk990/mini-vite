@@ -4,6 +4,8 @@ import {
   ConfigEnv,
   DepOptimizationConfig,
   DepOptimizationOptions,
+  ESBuildOptions,
+  ExperimentalOptions,
   HookHandler,
   InlineConfig,
   InternalResolveOptions,
@@ -11,8 +13,11 @@ import {
   mergeConfig,
   resolveBaseUrl,
   ResolvedBuildOptions,
+  ResolvedPreviewOptions,
+  ResolvedSSROptions,
   ResolveFn,
   ResolveOptions,
+  ResolveWorkerOptions,
   UserConfig,
   UserConfigExport,
 } from "vite";
@@ -27,18 +32,20 @@ import {
 import { resolveEnvPrefix } from "./env";
 import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
-
+import { createRequire } from "node:module";
 import { ResolvedServerOptions, resolveServerOptions } from "./server";
 import {
   asyncFlatten,
   createDebugger,
   createFilter,
+  dynamicImport,
   isBuiltin,
   isObject,
   lookupFile,
   normalizePath,
 } from "./utils";
 import fs from "node:fs";
+import fsp from "node:fs/promises";
 import { build } from "esbuild";
 import { InternalResolveOptionsWithOverrideConditions } from "./plugins/resolve";
 import colors from "picocolors";
@@ -46,8 +53,15 @@ import { pathToFileURL } from "node:url";
 import { findNearestPackageData, PackageCache } from "./packages";
 import { PluginContainer, createPluginContainer } from "./pluginContainer";
 import aliasPlugin from "@rollup/plugin-alias";
+import { promisify } from "node:util";
+import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 
 const debug = createDebugger("vite:config");
+const promisifiedRealpath = promisify(fs.realpath);
+
+interface NodeModuleWithCompile extends NodeModule {
+  _compile(code: string, filename: string): any;
+}
 
 export type AppType = "spa" | "mpa" | "custom";
 export type ResolvedConfig = Readonly<
@@ -78,6 +92,46 @@ export type ResolvedConfig = Readonly<
   } & PluginHookUtils
 >;
 
+// export type ResolvedConfig = Readonly<
+//   Omit<UserConfig, "plugins" | "assetsInclude" | "optimizeDeps" | "worker"> & {
+//     configFile: string | undefined;
+//     configFileDependencies: string[];
+//     inlineConfig: InlineConfig;
+//     root: string;
+//     base: string;
+//     /** @internal */
+//     rawBase: string;
+//     publicDir: string;
+//     cacheDir: string;
+//     command: "build" | "serve";
+//     mode: string;
+//     isWorker: boolean;
+//     // in nested worker bundle to find the main config
+//     /** @internal */
+//     mainConfig: ResolvedConfig | null;
+//     isProduction: boolean;
+//     envDir: string;
+//     env: Record<string, any>;
+//     resolve: Required<ResolveOptions> & {
+//       alias: Alias[];
+//     };
+//     plugins: readonly Plugin[];
+//     esbuild: ESBuildOptions | false;
+//     server: ResolvedServerOptions;
+//     build: ResolvedBuildOptions;
+//     preview: ResolvedPreviewOptions;
+//     ssr: ResolvedSSROptions;
+//     assetsInclude: (file: string) => boolean;
+//     logger: Logger;
+//     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
+//     optimizeDeps: DepOptimizationOptions;
+//     /** @internal */
+//     packageCache: PackageCache;
+//     worker: ResolveWorkerOptions;
+//     appType: AppType;
+//     experimental: ExperimentalOptions;
+//   } & PluginHookUtils
+// >;
 export interface PluginHookUtils {
   getSortedPlugins: (hookName: keyof Plugin) => Plugin[];
   getSortedPluginHooks: <K extends keyof Plugin>(
@@ -207,7 +261,6 @@ export async function resolveConfig(
             ...resolved,
             plugins: [
               aliasPlugin({ entries: resolved.resolve.alias }),
-              // TODO
               resolvePlugin({
                 ...resolved.resolve,
                 root: resolvedRoot,
@@ -458,22 +511,17 @@ async function bundleConfigFile(
               ) {
                 return;
               }
-
-              // partial deno support as `npm:` does not work with esbuild
               if (id.startsWith("npm:")) {
                 return { external: true };
               }
 
               const isIdESM = isESM || kind === "dynamic-import";
-              // TODO
-              // let idFsPath = tryNodeResolve(
-              //   id,
-              //   importer,
-              //   { ...options, isRequire: !isIdESM },
-              //   false
-              // )?.id;
-              let idFsPath =
-                "C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite/node_modules/.pnpm/vite@4.2.1_@types+node@18.15.11/node_modules/vite/dist/node/index.js";
+              let idFsPath = tryNodeResolve(
+                id,
+                importer,
+                { ...options, isRequire: !isIdESM },
+                false
+              )?.id;
               if (idFsPath && isIdESM) {
                 // pathToFileURL 用来将文件路径转换成文件URL路径
                 idFsPath = pathToFileURL(idFsPath).href;
@@ -516,44 +564,41 @@ async function bundleConfigFile(
   };
 }
 
-// TODO
+const _require = createRequire(import.meta.url);
 async function loadConfigFromBundledFile(
   fileName: string,
   bundledCode: string,
   isESM: boolean
 ): Promise<UserConfigExport> {
-  // if (isESM) {
-  //   const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
-  //     .toString(16)
-  //     .slice(2)}`
-  //   const fileNameTmp = `${fileBase}.mjs`
-  //   const fileUrl = `${pathToFileURL(fileBase)}.mjs`
-  //   await fsp.writeFile(fileNameTmp, bundledCode)
-  //   try {
-  //     return (await dynamicImport(fileUrl)).default
-  //   } finally {
-  //     fs.unlink(fileNameTmp, () => {}) // Ignore errors
-  //   }
-  // }
-  // else {
-  //   const extension = path.extname(fileName)
-  //   const realFileName = await promisifiedRealpath(fileName)
-  //   const loaderExt = extension in _require.extensions ? extension : '.js'
-  //   const defaultLoader = _require.extensions[loaderExt]!
-  //   _require.extensions[loaderExt] = (module: NodeModule, filename: string) => {
-  //     if (filename === realFileName) {
-  //       ;(module as NodeModuleWithCompile)._compile(bundledCode, filename)
-  //     } else {
-  //       defaultLoader(module, filename)
-  //     }
-  //   }
-  //   // clear cache in case of server restart
-  //   delete _require.cache[_require.resolve(fileName)]
-  //   const raw = _require(fileName)
-  //   _require.extensions[loaderExt] = defaultLoader
-  //   return raw.__esModule ? raw.default : raw
-  // }
-  return {} as any;
+  if (isESM) {
+    const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}`;
+    const fileNameTmp = `${fileBase}.mjs`;
+    const fileUrl = `${pathToFileURL(fileBase)}.mjs`;
+    await fsp.writeFile(fileNameTmp, bundledCode);
+    try {
+      return (await dynamicImport(fileUrl)).default;
+    } finally {
+      fs.unlink(fileNameTmp, () => {}); // Ignore errors
+    }
+  } else {
+    const extension = path.extname(fileName);
+    const realFileName = await promisifiedRealpath(fileName);
+    const loaderExt = extension in _require.extensions ? extension : ".js";
+    const defaultLoader = _require.extensions[loaderExt]!;
+    _require.extensions[loaderExt] = (module: NodeModule, filename: string) => {
+      if (filename === realFileName) {
+        (module as NodeModuleWithCompile)._compile(bundledCode, filename);
+      } else {
+        defaultLoader(module, filename);
+      }
+    };
+    delete _require.cache[_require.resolve(fileName)];
+    const raw = _require(fileName);
+    _require.extensions[loaderExt] = defaultLoader;
+    return raw.__esModule ? raw.default : raw;
+  }
 }
 
 export function getDepOptimizationConfig(

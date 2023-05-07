@@ -9,7 +9,7 @@ import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
 import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, VALID_ID_PREFIX } from "./constants";
 // import colors from "picocolors";
-import { builtinModules } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { createFilter as _createFilter } from "@rollup/pluginutils";
 
@@ -454,3 +454,10 @@ export function moduleListContains(
 ): boolean | undefined {
   return moduleList?.some((m) => m === id || id.startsWith(m + "/"));
 }
+// @ts-expect-error jest only exists when running Jest
+export const usingDynamicImport = typeof jest === "undefined";
+
+const _require = createRequire(import.meta.url);
+export const dynamicImport = usingDynamicImport
+  ? new Function("file", "return import(file)")
+  : _require;
