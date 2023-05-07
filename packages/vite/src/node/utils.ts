@@ -602,3 +602,7 @@ export function combineSourcemaps(
 
   return map as RawSourceMap;
 }
+
+export const multilineCommentsRE = /\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g;
+export const singlelineCommentsRE = /\/\/.*/g;
+

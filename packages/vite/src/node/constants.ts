@@ -129,3 +129,6 @@ export const KNOWN_ASSET_TYPES = [
 export const DEFAULT_ASSETS_RE = new RegExp(
   `\\.(` + KNOWN_ASSET_TYPES.join("|") + `)(\\?.*)?$`
 );
+
+export const JS_TYPES_RE = /\.(?:j|t)sx?$|\.mjs$/;
+
