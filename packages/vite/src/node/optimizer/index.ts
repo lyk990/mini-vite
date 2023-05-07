@@ -1,10 +1,4 @@
-import {
-  DepOptimizationMetadata,
-  DepOptimizationProcessing,
-  DepOptimizationResult,
-  OptimizedDepInfo,
-  transformWithEsbuild,
-} from "vite";
+import { DepOptimizationProcessing, transformWithEsbuild } from "vite";
 import { ResolvedConfig, getDepOptimizationConfig } from "../config";
 import {
   createDebugger,
@@ -19,17 +13,91 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import { scanImports } from "./scan";
 import { init, parse } from "es-module-lexer";
-import type { BuildContext } from "esbuild";
 export { getDepsOptimizer } from "./optimizer";
 import { promisify } from "node:util";
 import esbuild, { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
 import { esbuildDepPlugin } from "./esbuildDepPlugin ";
+import type {
+  BuildContext,
+  BuildOptions as EsbuildBuildOptions,
+} from "esbuild";
 
 const debug = createDebugger("vite:deps");
 
 const jsExtensionRE = /\.js$/i;
 const jsMapExtensionRE = /\.js\.map$/i;
+
+export interface DepOptimizationResult {
+  metadata: DepOptimizationMetadata;
+  commit: () => Promise<void>;
+  cancel: () => void;
+}
+
+export interface DepOptimizationMetadata {
+  hash: string;
+  browserHash: string;
+  optimized: Record<string, OptimizedDepInfo>;
+  chunks: Record<string, OptimizedDepInfo>;
+  discovered: Record<string, OptimizedDepInfo>;
+  depInfoList: OptimizedDepInfo[];
+}
+
+export interface DepsOptimizer {
+  metadata: DepOptimizationMetadata;
+  scanProcessing?: Promise<void>;
+  registerMissingImport: (id: string, resolved: string) => OptimizedDepInfo;
+  run: () => void;
+  isOptimizedDepFile: (id: string) => boolean;
+  isOptimizedDepUrl: (url: string) => boolean;
+  getOptimizedDepId: (depInfo: OptimizedDepInfo) => string;
+  delayDepsOptimizerUntil: (id: string, done: () => Promise<any>) => void;
+  registerWorkersSource: (id: string) => void;
+  resetRegisteredIds: () => void;
+  ensureFirstRun: () => void;
+
+  close: () => Promise<void>;
+
+  options: DepOptimizationOptions;
+}
+
+export type DepOptimizationOptions = DepOptimizationConfig & {
+  entries?: string | string[];
+  force?: boolean;
+};
+
+export interface DepOptimizationConfig {
+  include?: string[];
+  exclude?: string[];
+  needsInterop?: string[];
+  esbuildOptions?: Omit<
+    EsbuildBuildOptions,
+    | "bundle"
+    | "entryPoints"
+    | "external"
+    | "write"
+    | "watch"
+    | "outdir"
+    | "outfile"
+    | "outbase"
+    | "outExtension"
+    | "metafile"
+  >;
+  extensions?: string[];
+  disabled?: boolean | "build" | "dev";
+  noDiscovery?: boolean;
+}
+
+export interface OptimizedDepInfo {
+  id: string;
+  file: string;
+  src?: string;
+  needsInterop?: boolean;
+  browserHash?: string;
+  fileHash?: string;
+  processing?: Promise<void>;
+  exportsData?: Promise<ExportsData>;
+}
 
 export type ExportsData = {
   hasImports: boolean;
@@ -476,9 +544,6 @@ async function prepareEsbuildOptimizerRun(
   }
 
   const plugins = [...pluginsFromConfig];
-  // if (external.length) {
-  //   plugins.push(esbuildCjsExternalPlugin(external, platform));
-  // }
   plugins.push(esbuildDepPlugin(flatIdDeps, external, config, ssr));
 
   const context = await esbuild.context({
@@ -767,4 +832,23 @@ export function optimizedDepInfoFromId(
   return (
     metadata.optimized[id] || metadata.discovered[id] || metadata.chunks[id]
   );
+}
+
+export async function optimizedDepNeedsInterop(
+  metadata: DepOptimizationMetadata,
+  file: string,
+  config: ResolvedConfig,
+  ssr: boolean
+): Promise<boolean | undefined> {
+  const depInfo = optimizedDepInfoFromFile(metadata, file);
+  if (depInfo?.src && depInfo.needsInterop === undefined) {
+    depInfo.exportsData ??= extractExportsData(depInfo.src, config, ssr);
+    depInfo.needsInterop = needsInterop(
+      config,
+      ssr,
+      depInfo.id,
+      await depInfo.exportsData
+    );
+  }
+  return depInfo?.needsInterop;
 }

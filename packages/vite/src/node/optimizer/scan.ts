@@ -1,9 +1,8 @@
 import type { BuildContext, Loader, OnLoadResult, Plugin } from "esbuild";
-import esbuild, { formatMessages, transform } from "esbuild";
+import esbuild, { transform } from "esbuild";
 import { ResolvedConfig } from "../config";
 import {
   CSS_LANGS_RE,
-  EXTERNAL_TYPES,
   JS_TYPES_RE,
   KNOWN_ASSET_TYPES,
   SPECIAL_QUERY_RE,
@@ -134,7 +133,7 @@ function esbuildScanPlugin(
     } else {
       transpiledContents = contents;
     }
-  
+
     return transpiledContents;
   };
 
@@ -435,7 +434,6 @@ async function prepareEsbuildScanner(
 }
 
 function extractImportPaths(code: string) {
-  // empty singleline & multiline comments to avoid matching comments
   code = code
     .replace(multilineCommentsRE, "/* */")
     .replace(singlelineCommentsRE, "");

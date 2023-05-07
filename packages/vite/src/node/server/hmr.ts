@@ -53,7 +53,6 @@ export async function handleHMRUpdate(
 
   debugHmr?.(`[file change] ${colors.dim(shortFile)}`);
 
-  // (dev only) the client itself cannot be hot updated.
   if (file.startsWith(normalizedClientDir)) {
     ws.send({
       type: "full-reload",
@@ -64,7 +63,6 @@ export async function handleHMRUpdate(
 
   const mods = moduleGraph.getModulesByFile(file);
 
-  // check if any plugin wants to perform custom HMR handling
   const timestamp = Date.now();
   const hmrContext: HmrContext = {
     file,
@@ -95,7 +93,6 @@ export async function handleHMRUpdate(
           : "/" + normalizePath(path.relative(config.root, file)),
       });
     } else {
-      // loaded but not in the module graph, probably not js
       debugHmr?.(`[no modules matched] ${colors.dim(shortFile)}`);
     }
     return;
@@ -103,6 +100,7 @@ export async function handleHMRUpdate(
 
   updateModules(shortFile, hmrContext.modules, timestamp, server);
 }
+
 /**给浏览器端推送消息 */
 export function updateModules(
   file: string,
@@ -222,9 +220,6 @@ function propagateUpdate(
   }
   traversedModules.add(node);
 
-  // #7561
-  // if the imports of `node` have not been analyzed, then `node` has not
-  // been loaded in the browser and we should stop propagation.
   if (node.id && node.isSelfAccepting === undefined) {
     debugHmr?.(
       `[propagate update] stop propagation because not analyzed: ${colors.dim(
@@ -237,8 +232,6 @@ function propagateUpdate(
   if (node.isSelfAccepting) {
     boundaries.push({ boundary: node, acceptedVia: node });
 
-    // additionally check for CSS importers, since a PostCSS plugin like
-    // Tailwind JIT may register any file as a dependency to a CSS file.
     for (const importer of node.importers) {
       if (isCSSRequest(importer.url) && !currentChain.includes(importer)) {
         propagateUpdate(
@@ -285,7 +278,6 @@ function propagateUpdate(
     }
 
     if (currentChain.includes(importer)) {
-      // circular deps is considered dead end
       return true;
     }
 
@@ -305,12 +297,12 @@ export function normalizeHmrUrl(url: string): string {
 
 function areAllImportsAccepted(
   importedBindings: Set<string>,
-  acceptedExports: Set<string>,
+  acceptedExports: Set<string>
 ) {
   for (const binding of importedBindings) {
     if (!acceptedExports.has(binding)) {
-      return false
+      return false;
     }
   }
-  return true
+  return true;
 }
