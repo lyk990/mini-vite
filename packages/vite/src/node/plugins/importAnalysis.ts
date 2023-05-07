@@ -8,11 +8,17 @@ import {
 import {
   cleanUrl,
   getShortName,
+  injectQuery,
+  isBuiltin,
+  isDataUrl,
   isExternalUrl,
   isJSRequest,
+  joinUrlSegments,
+  moduleListContains,
   normalizePath,
   stripBase,
   stripBomTag,
+  unwrapId,
   wrapId,
 } from "../utils";
 import path from "node:path";
@@ -25,6 +31,8 @@ import { normalizeHmrUrl } from "../server/hmr";
 import { isDirectCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
 import { getDepsOptimizer, optimizedDepNeedsInterop } from "../optimizer";
+import fs from 'node:fs'
+import { browserExternalId } from "./resolve";
 
 const skipRE = /\.(?:map|json)(?:$|\?)/;
 export const canSkipImportAnalysis = (id: string): boolean =>
