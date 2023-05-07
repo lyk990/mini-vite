@@ -92,46 +92,6 @@ export type ResolvedConfig = Readonly<
   } & PluginHookUtils
 >;
 
-// export type ResolvedConfig = Readonly<
-//   Omit<UserConfig, "plugins" | "assetsInclude" | "optimizeDeps" | "worker"> & {
-//     configFile: string | undefined;
-//     configFileDependencies: string[];
-//     inlineConfig: InlineConfig;
-//     root: string;
-//     base: string;
-//     /** @internal */
-//     rawBase: string;
-//     publicDir: string;
-//     cacheDir: string;
-//     command: "build" | "serve";
-//     mode: string;
-//     isWorker: boolean;
-//     // in nested worker bundle to find the main config
-//     /** @internal */
-//     mainConfig: ResolvedConfig | null;
-//     isProduction: boolean;
-//     envDir: string;
-//     env: Record<string, any>;
-//     resolve: Required<ResolveOptions> & {
-//       alias: Alias[];
-//     };
-//     plugins: readonly Plugin[];
-//     esbuild: ESBuildOptions | false;
-//     server: ResolvedServerOptions;
-//     build: ResolvedBuildOptions;
-//     preview: ResolvedPreviewOptions;
-//     ssr: ResolvedSSROptions;
-//     assetsInclude: (file: string) => boolean;
-//     logger: Logger;
-//     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
-//     optimizeDeps: DepOptimizationOptions;
-//     /** @internal */
-//     packageCache: PackageCache;
-//     worker: ResolveWorkerOptions;
-//     appType: AppType;
-//     experimental: ExperimentalOptions;
-//   } & PluginHookUtils
-// >;
 export interface PluginHookUtils {
   getSortedPlugins: (hookName: keyof Plugin) => Plugin[];
   getSortedPluginHooks: <K extends keyof Plugin>(
@@ -150,18 +110,12 @@ export async function resolveConfig(
   const configEnv = {
     mode,
     command,
-    // ssrBuild: !!config.build?.ssr,
     ssrBuild: false,
   };
   const packageCache: PackageCache = new Map();
 
   let { configFile } = config;
   if (configFile !== false) {
-    // loadResult = {
-    //   path: "C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite/mini-vite-example/vite.config.ts",
-    //   config: { plugins: [ vue() ], },
-    //   dependencies: [ "vite.config.ts",],
-    // }
     const loadResult = await loadConfigFromFile(
       configEnv,
       configFile,
@@ -169,14 +123,6 @@ export async function resolveConfig(
       config.logLevel
     );
     if (loadResult) {
-      // config = {
-      //   define: { _VUE_OPTIONS_API: true },
-      //   optimizeDeps: { force: undefined },
-      //   plugins: ["vite-plugin-vue"],
-      //   resolve: { dedupe: ["vue"] },
-      //   server: {},
-      //   ssr: { external: [] },
-      // };
       // 合并vite.config.ts中的配置（plugins、alias、noExternal等）
       config = mergeConfig(loadResult.config, config);
       configFile = loadResult.path;
@@ -194,11 +140,9 @@ export async function resolveConfig(
       return p.apply === command;
     }
   };
-  // rawUserPlugins = [vite-plugin-vue]
   const rawUserPlugins = (
     (await asyncFlatten(config.plugins || [])) as Plugin[]
   ).filter(filterPlugin);
-  //prePlugins = [], normalPlugins = 'vite-plugin-vue', postPlugins = []
   const [prePlugins, normalPlugins, postPlugins] =
     sortUserPlugins(rawUserPlugins);
   const userPlugins = [...prePlugins, ...normalPlugins, ...postPlugins];
@@ -251,7 +195,6 @@ export async function resolveConfig(
           aliasContainer ||
           (aliasContainer = await createPluginContainer({
             ...resolved,
-            // TODO
             plugins: [aliasPlugin({ entries: resolved.resolve.alias })],
           }));
       } else {
@@ -370,13 +313,6 @@ export function sortUserPlugins(
   return [prePlugins, normalPlugins, postPlugins];
 }
 
-// export function getDepOptimizationConfig(
-//   config: ResolvedConfig,
-//   ssr: boolean
-// ): DepOptimizationConfig {
-//   return ssr ? config?.ssr.optimizeDeps : config.optimizeDeps;
-// }
-
 /**根据相关目录获取配置文件 */
 export async function loadConfigFromFile(
   configEnv: ConfigEnv,
@@ -426,7 +362,7 @@ export async function loadConfigFromFile(
 
   try {
     // budled =
-    // code: '// vite.config.ts\nimport { defineConfig } from "file:///C:/Users/Administrator/Desktop/learn-Code/vite%E6%BA%90%E7%A0%81/mini-vite/node_modules/.pnpm/vite@4.2.1_@types+node@18.15.11/node_modules/vite/dist/node/index.js";\nimport vue from "file:///C:/Users/Administrator/Desktop/learn-Code/vite%E6%BA%90%E7%A0%81/mini-vite/node_modules/.pnpm/@vitejs+plugin-vue@4.1.0_vite@4.2.1_vue@3.2.47/node_modules/@vitejs/plugin-vue/dist/index.mjs";\nvar vite_config_default = defineConfig({\n  plugins: [vue()]\n});…lRTYlQkElOTAlRTclQTAlODEvbWluaS12aXRlL21pbmktdml0ZS1leGFtcGxlL3ZpdGUuY29uZmlnLnRzXCI7aW1wb3J0IHsgZGVmaW5lQ29uZmlnIH0gZnJvbSBcInZpdGVcIjtcbmltcG9ydCB2dWUgZnJvbSBcIkB2aXRlanMvcGx1Z2luLXZ1ZVwiO1xuXG4vLyBodHRwczovL3ZpdGVqcy5kZXYvY29uZmlnL1xuZXhwb3J0IGRlZmF1bHQgZGVmaW5lQ29uZmlnKHtcbiAgcGx1Z2luczogW3Z1ZSgpXSxcbn0pO1xuIl0sCiAgIm1hcHBpbmdzIjogIjtBQUFzYixTQUFTLG9CQUFvQjtBQUNuZCxPQUFPLFNBQVM7QUFHaEIsSUFBTyxzQkFBUSxhQUFhO0FBQUEsRUFDMUIsU0FBUyxDQUFDLElBQUksQ0FBQztBQUNqQixDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=\n'
+    // code: '// vite.config.ts\nimport { defineConfig } from "file:///C:/......'
     // dependencies: (1) ['vite.config.ts']
     const bundled = await bundleConfigFile(resolvedPath, isESM);
     // userConfig = { plugins: [ vite-plugin-vue ] }

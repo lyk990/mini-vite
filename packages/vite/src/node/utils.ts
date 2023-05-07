@@ -7,12 +7,19 @@ import type { ResolvedServerUrls, ViteDevServer } from "./server";
 import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
-import { FS_PREFIX, NULL_BYTE_PLACEHOLDER, OPTIMIZABLE_ENTRY_RE, VALID_ID_PREFIX } from "./constants";
+import {
+  FS_PREFIX,
+  NULL_BYTE_PLACEHOLDER,
+  OPTIMIZABLE_ENTRY_RE,
+  VALID_ID_PREFIX,
+} from "./constants";
 // import colors from "picocolors";
 import { builtinModules, createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { createFilter as _createFilter } from "@rollup/pluginutils";
 import { exec } from "node:child_process";
+import type { DecodedSourceMap, RawSourceMap } from "@ampproject/remapping";
+import remapping from "@ampproject/remapping";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -510,4 +517,88 @@ export function isOptimizable(
     OPTIMIZABLE_ENTRY_RE.test(id) ||
     (extensions?.some((ext) => id.endsWith(ext)) ?? false)
   );
+}
+
+const revertWindowsDriveRE = /^\/windows\/([A-Z])\//;
+function unescapeToLinuxLikePath(path: string) {
+  if (path.startsWith("/linux/")) {
+    return path.slice("/linux".length);
+  }
+  if (path.startsWith("/windows/")) {
+    return path.replace(revertWindowsDriveRE, "$1:/");
+  }
+  return path;
+}
+const windowsDriveRE = /^[A-Z]:/;
+const replaceWindowsDriveRE = /^([A-Z]):\//;
+const linuxAbsolutePathRE = /^\/[^/]/;
+function escapeToLinuxLikePath(path: string) {
+  if (windowsDriveRE.test(path)) {
+    return path.replace(replaceWindowsDriveRE, "/windows/$1/");
+  }
+  if (linuxAbsolutePathRE.test(path)) {
+    return `/linux${path}`;
+  }
+  return path;
+}
+const nullSourceMap: RawSourceMap = {
+  names: [],
+  sources: [],
+  mappings: "",
+  version: 3,
+};
+export function combineSourcemaps(
+  filename: string,
+  sourcemapList: Array<DecodedSourceMap | RawSourceMap>,
+  excludeContent = true
+): RawSourceMap {
+  if (
+    sourcemapList.length === 0 ||
+    sourcemapList.every((m) => m.sources.length === 0)
+  ) {
+    return { ...nullSourceMap };
+  }
+
+  sourcemapList = sourcemapList.map((sourcemap) => {
+    const newSourcemaps = { ...sourcemap };
+    newSourcemaps.sources = sourcemap.sources.map((source) =>
+      source ? escapeToLinuxLikePath(source) : null
+    );
+    if (sourcemap.sourceRoot) {
+      newSourcemaps.sourceRoot = escapeToLinuxLikePath(sourcemap.sourceRoot);
+    }
+    return newSourcemaps;
+  });
+  const escapedFilename = escapeToLinuxLikePath(filename);
+
+  let map; //: SourceMap
+  let mapIndex = 1;
+  const useArrayInterface =
+    sourcemapList.slice(0, -1).find((m) => m.sources.length !== 1) ===
+    undefined;
+  if (useArrayInterface) {
+    map = remapping(sourcemapList, () => null, excludeContent);
+  } else {
+    map = remapping(
+      sourcemapList[0],
+      function loader(sourcefile) {
+        if (sourcefile === escapedFilename && sourcemapList[mapIndex]) {
+          return sourcemapList[mapIndex++];
+        } else {
+          return null;
+        }
+      },
+      excludeContent
+    );
+  }
+  if (!map.file) {
+    delete map.file;
+  }
+
+  map.sources = map.sources.map((source) =>
+    source ? unescapeToLinuxLikePath(source) : source
+  );
+  map.file = filename;
+
+  return map as RawSourceMap;
 }

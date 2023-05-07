@@ -112,7 +112,7 @@ async function startServer(server: ViteDevServer, inlinePort?: number) {
     throw new Error("Cannot call server.listen in middleware mode.");
   }
   const port = inlinePort ?? DEFAULT_DEV_PORT;
-  // FEATURE HOST_NAME
+  // FEATURE
   let hostName = DEFAULT_HOST_NAME;
   // 创建服务器
   await httpServerStart(httpServer, {

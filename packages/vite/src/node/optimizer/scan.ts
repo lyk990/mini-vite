@@ -115,16 +115,16 @@ function orderedDependencies(deps: Record<string, string>) {
 }
 /**找出入口文件 */
 async function computeEntries(config: ResolvedConfig) {
-  let entries: string[] = [];
+  // let entries: string[] = [];
   // 优先使用配置的入口文件,默认为undefined
-  const explicitEntryPatterns = config.optimizeDeps.entries;
+  // const explicitEntryPatterns = config.optimizeDeps.entries;
 
-  if (explicitEntryPatterns) {
-    entries = await globEntries(explicitEntryPatterns, config);
-  } else {
-    entries = await globEntries("**/*.html", config);
-  }
-  return entries;
+  // if (explicitEntryPatterns) {
+  //   entries = await globEntries(explicitEntryPatterns, config);
+  // } else {
+  //   entries = await globEntries("**/*.html", config);
+  // }
+  return await globEntries("**/*.html", config);
 }
 function globEntries(pattern: string | string[], config: ResolvedConfig) {
   return glob(pattern, {
@@ -149,6 +149,7 @@ async function prepareEsbuildScanner(
   _scanContext?: { cancelled: boolean }
 ): Promise<BuildContext | undefined> {
   const container = await createPluginContainer(config);
+  //  TODO esbuildScanPlugin未完成
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);
   const { plugins = [], ...esbuildOptions } =
     config.optimizeDeps?.esbuildOptions ?? {};
