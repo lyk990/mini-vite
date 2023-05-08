@@ -20,6 +20,8 @@ import { createFilter as _createFilter } from "@rollup/pluginutils";
 import { exec } from "node:child_process";
 import type { DecodedSourceMap, RawSourceMap } from "@ampproject/remapping";
 import remapping from "@ampproject/remapping";
+import { TransformResult } from "rollup";
+import type MagicString from "magic-string";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -622,4 +624,22 @@ export function removeImportQuery(url: string): string {
 const timestampRE = /\bt=\d{13}&?\b/;
 export function removeTimestampQuery(url: string): string {
   return url.replace(timestampRE, "").replace(trailingSeparatorRE, "");
+}
+
+export function fsPathFromUrl(url: string): string {
+  return fsPathFromId(cleanUrl(url));
+}
+
+export function transformStableResult(
+  s: MagicString,
+  id: string,
+  config: ResolvedConfig
+): TransformResult {
+  return {
+    code: s.toString(),
+    map:
+      config.command === "build" && config.build.sourcemap
+        ? s.generateMap({ hires: true, source: id })
+        : null,
+  };
 }

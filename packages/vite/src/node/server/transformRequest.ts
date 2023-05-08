@@ -1,4 +1,4 @@
-import { TransformOptions, TransformResult } from "vite";
+import { TransformOptions } from "vite";
 import { ViteDevServer } from ".";
 import { blankReplacer, cleanUrl, ensureWatchedFile, isObject } from "../utils";
 import { promises as fs } from "node:fs";

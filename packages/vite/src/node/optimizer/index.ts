@@ -105,6 +105,17 @@ export type ExportsData = {
   jsxLoader?: boolean;
 };
 
+export interface OptimizedDepInfo {
+  id: string
+  file: string
+  src?: string
+  needsInterop?: boolean
+  browserHash?: string
+  fileHash?: string
+  processing?: Promise<void>
+  exportsData?: Promise<ExportsData>
+}
+
 /**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig,

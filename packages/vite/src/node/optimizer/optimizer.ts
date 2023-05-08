@@ -1,5 +1,4 @@
-// import { ServerStackItem } from "./../../types/connect.d";
-import { DepOptimizationMetadata, DepsOptimizer, OptimizedDepInfo } from "vite";
+import { DepsOptimizer } from "vite";
 import { ResolvedConfig } from "../config";
 import { ViteDevServer } from "../server";
 import { getHash } from "../utils";
@@ -12,20 +11,12 @@ import {
   depsFromOptimizedDepInfo,
   newDepOptimizationProcessing,
   extractExportsData,
+  addOptimizedDepInfo,
+  OptimizedDepInfo,
 } from "./index";
 
 const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
 const devSsrDepsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
-
-export function addOptimizedDepInfo(
-  metadata: DepOptimizationMetadata,
-  type: "optimized" | "discovered" | "chunks",
-  depInfo: OptimizedDepInfo
-): OptimizedDepInfo {
-  metadata[type][depInfo.id] = depInfo;
-  metadata.depInfoList.push(depInfo);
-  return depInfo;
-}
 
 export function getDepsOptimizer(
   config: ResolvedConfig,

@@ -1,12 +1,14 @@
 import { isCSSRequest } from "vite";
 import {
   BARE_IMPORT_RE,
+  CLIENT_DIR,
   CLIENT_PUBLIC_PATH,
   DEP_VERSION_RE,
   FS_PREFIX,
 } from "../constants";
 import {
   cleanUrl,
+  fsPathFromUrl,
   getShortName,
   injectQuery,
   isBuiltin,
@@ -16,10 +18,12 @@ import {
   joinUrlSegments,
   moduleListContains,
   normalizePath,
+  removeImportQuery,
   stripBase,
   stripBomTag,
   unwrapId,
   wrapId,
+  transformStableResult,
 } from "../utils";
 import path from "node:path";
 import { ViteDevServer } from "../server";
@@ -27,17 +31,40 @@ import { Plugin } from "../plugin";
 import { ExportSpecifier, ImportSpecifier } from "es-module-lexer";
 import MagicString from "magic-string";
 import { ResolvedConfig, getDepOptimizationConfig } from "../config";
-import { normalizeHmrUrl } from "../server/hmr";
+import {
+  handlePrunedModules,
+  lexAcceptedHmrDeps,
+  lexAcceptedHmrExports,
+  normalizeHmrUrl,
+} from "../server/hmr";
 import { isDirectCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
 import { getDepsOptimizer, optimizedDepNeedsInterop } from "../optimizer";
 import fs from "node:fs";
 import { browserExternalId } from "./resolve";
+import { parse as parseJS } from "acorn";
+import type { Node } from "estree";
+import colors from "picocolors";
+import { makeLegalIdentifier } from "@rollup/pluginutils";
+import { findStaticImports, parseStaticImport } from "mlly";
+import { ERR_OUTDATED_OPTIMIZED_DEP } from "./optimizedDeps";
 
+const optimizedDepChunkRE = /\/chunk-[A-Z\d]{8}\.js/;
+const clientDir = normalizePath(CLIENT_DIR);
+const cleanUpRawUrlRE = /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm;
+const urlIsStringRE = /^(?:'.*'|".*"|`.*`)$/;
 const hasImportInQueryParamsRE = /[?&]import=?\b/;
+
 const skipRE = /\.(?:map|json)(?:$|\?)/;
 export const canSkipImportAnalysis = (id: string): boolean =>
   skipRE.test(id) || isDirectCSSRequest(id);
+type ImportNameSpecifier = { importedName: string; localName: string };
+
+interface UrlPosition {
+  url: string;
+  start: number;
+  end: number;
+}
 
 // TODO 未完成
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
@@ -275,21 +302,20 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             if (isExternalUrl(specifier) || isDataUrl(specifier)) {
               return;
             }
-            if (ssr) {
-              if (config.legacy?.buildSsrCjsExternalHeuristics) {
-                if (
-                  cjsShouldExternalizeForSSR(specifier, server._ssrExternals)
-                ) {
-                  return;
-                }
-              } else if (shouldExternalizeForSSR(specifier, config)) {
-                return;
-              }
-              if (isBuiltin(specifier)) {
-                return;
-              }
-            }
-            // skip client
+            // if (ssr) {
+            //   if (config.legacy?.buildSsrCjsExternalHeuristics) {
+            //     if (
+            //       cjsShouldExternalizeForSSR(specifier, server._ssrExternals)
+            //     ) {
+            //       return;
+            //     }
+            //   } else if (shouldExternalizeForSSR(specifier, config)) {
+            //     return;
+            //   }
+            //   if (isBuiltin(specifier)) {
+            //     return;
+            //   }
+            // }
             if (specifier === clientPublicPath) {
               return;
             }
@@ -386,10 +412,8 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               const url = removeImportQuery(hmrUrl);
               server.transformRequest(url, { ssr }).catch((e) => {
                 if (e?.code === ERR_OUTDATED_OPTIMIZED_DEP) {
-                  // This are expected errors
                   return;
                 }
-                // Unexpected error, log the issue but avoid an unhandled exception
                 config.logger.error(e.message);
               });
             }
@@ -505,4 +529,201 @@ function markExplicitImport(url: string) {
     return injectQuery(url, "import");
   }
   return url;
+}
+
+export function interopNamedImports(
+  str: MagicString,
+  importSpecifier: ImportSpecifier,
+  rewrittenUrl: string,
+  importIndex: number,
+  importer: string,
+  config: ResolvedConfig
+): void {
+  const source = str.original;
+  const {
+    s: start,
+    e: end,
+    ss: expStart,
+    se: expEnd,
+    d: dynamicIndex,
+  } = importSpecifier;
+  if (dynamicIndex > -1) {
+    // rewrite `import('package')` to expose the default directly
+    str.overwrite(
+      expStart,
+      expEnd,
+      `import('${rewrittenUrl}').then(m => m.default && m.default.__esModule ? m.default : ({ ...m.default, default: m.default }))`,
+      { contentOnly: true }
+    );
+  } else {
+    const exp = source.slice(expStart, expEnd);
+    const rawUrl = source.slice(start, end);
+    const rewritten = transformCjsImport(
+      exp,
+      rewrittenUrl,
+      rawUrl,
+      importIndex,
+      importer,
+      config
+    );
+    if (rewritten) {
+      str.overwrite(expStart, expEnd, rewritten, { contentOnly: true });
+    } else {
+      // #1439 export * from '...'
+      str.overwrite(start, end, rewrittenUrl, { contentOnly: true });
+    }
+  }
+}
+
+export function transformCjsImport(
+  importExp: string,
+  url: string,
+  rawUrl: string,
+  importIndex: number,
+  importer: string,
+  config: ResolvedConfig
+): string | undefined {
+  const node = (
+    parseJS(importExp, {
+      ecmaVersion: "latest",
+      sourceType: "module",
+    }) as any
+  ).body[0] as Node;
+
+  if (
+    config.command === "serve" &&
+    node.type === "ExportAllDeclaration" &&
+    !node.exported
+  ) {
+    config.logger.warn(
+      colors.yellow(
+        `\nUnable to interop \`${importExp}\` in ${importer}, this may lose module 
+        exports. Please export "${rawUrl}" as ESM or use named exports instead, e.g. 
+        \`export { A, B } from "${rawUrl}"\``
+      )
+    );
+  } else if (
+    node.type === "ImportDeclaration" ||
+    node.type === "ExportNamedDeclaration"
+  ) {
+    if (!node.specifiers.length) {
+      return `import "${url}"`;
+    }
+
+    const importNames: ImportNameSpecifier[] = [];
+    const exportNames: string[] = [];
+    let defaultExports: string = "";
+    for (const spec of node.specifiers) {
+      if (
+        spec.type === "ImportSpecifier" &&
+        spec.imported.type === "Identifier"
+      ) {
+        const importedName = spec.imported.name;
+        const localName = spec.local.name;
+        importNames.push({ importedName, localName });
+      } else if (spec.type === "ImportDefaultSpecifier") {
+        importNames.push({
+          importedName: "default",
+          localName: spec.local.name,
+        });
+      } else if (spec.type === "ImportNamespaceSpecifier") {
+        importNames.push({ importedName: "*", localName: spec.local.name });
+      } else if (
+        spec.type === "ExportSpecifier" &&
+        spec.exported.type === "Identifier"
+      ) {
+        const importedName = spec.local.name;
+        const exportedName = spec.exported.name;
+        if (exportedName === "default") {
+          defaultExports = makeLegalIdentifier(
+            `__vite__cjsExportDefault_${importIndex}`
+          );
+          importNames.push({ importedName, localName: defaultExports });
+        } else {
+          const localName = makeLegalIdentifier(
+            `__vite__cjsExport_${exportedName}`
+          );
+          importNames.push({ importedName, localName });
+          exportNames.push(`${localName} as ${exportedName}`);
+        }
+      }
+    }
+
+    // If there is multiple import for same id in one file,
+    // importIndex will prevent the cjsModuleName to be duplicate
+    const cjsModuleName = makeLegalIdentifier(
+      `__vite__cjsImport${importIndex}_${rawUrl}`
+    );
+    const lines: string[] = [`import ${cjsModuleName} from "${url}"`];
+    importNames.forEach(({ importedName, localName }) => {
+      if (importedName === "*") {
+        lines.push(`const ${localName} = ${cjsModuleName}`);
+      } else if (importedName === "default") {
+        lines.push(
+          `const ${localName} = ${cjsModuleName}.__esModule ? ${cjsModuleName}.default : ${cjsModuleName}`
+        );
+      } else {
+        lines.push(`const ${localName} = ${cjsModuleName}["${importedName}"]`);
+      }
+    });
+    if (defaultExports) {
+      lines.push(`export default ${defaultExports}`);
+    }
+    if (exportNames.length) {
+      lines.push(`export { ${exportNames.join(", ")} }`);
+    }
+
+    return lines.join("; ");
+  }
+}
+
+function extractImportedBindings(
+  id: string,
+  source: string,
+  importSpec: ImportSpecifier,
+  importedBindings: Map<string, Set<string>>
+) {
+  let bindings = importedBindings.get(id);
+  if (!bindings) {
+    bindings = new Set<string>();
+    importedBindings.set(id, bindings);
+  }
+
+  const isDynamic = importSpec.d > -1;
+  const isMeta = importSpec.d === -2;
+  if (isDynamic || isMeta) {
+    // this basically means the module will be impacted by any change in its dep
+    bindings.add("*");
+    return;
+  }
+
+  const exp = source.slice(importSpec.ss, importSpec.se);
+  const [match0] = findStaticImports(exp);
+  if (!match0) {
+    return;
+  }
+  const parsed = parseStaticImport(match0);
+  if (!parsed) {
+    return;
+  }
+  if (parsed.namespacedImport) {
+    bindings.add("*");
+  }
+  if (parsed.defaultImport) {
+    bindings.add("default");
+  }
+  if (parsed.namedImports) {
+    for (const name of Object.keys(parsed.namedImports)) {
+      bindings.add(name);
+    }
+  }
+}
+
+function mergeAcceptedUrls<T>(orderedUrls: Array<Set<T> | undefined>) {
+  const acceptedUrls = new Set<T>();
+  for (const urls of orderedUrls) {
+    if (!urls) continue;
+    for (const url of urls) acceptedUrls.add(url);
+  }
+  return acceptedUrls;
 }

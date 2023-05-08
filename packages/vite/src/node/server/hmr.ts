@@ -8,6 +8,7 @@ import fsp from "node:fs/promises";
 import type { Update } from "types/hmrPayload";
 import { isExplicitImportRequired } from "../plugins/importAnalysis";
 import { getAffectedGlobModules } from "../plugins/importMetaGlob";
+import type { RollupError } from "rollup";
 
 export function getShortName(file: string, root: string): string {
   return file.startsWith(root + "/") ? path.posix.relative(root, file) : file;
@@ -305,4 +306,150 @@ function areAllImportsAccepted(
     }
   }
   return true;
+}
+
+function error(pos: number) {
+  const err = new Error(
+    `import.meta.hot.accept() can only accept string literals or an ` +
+      `Array of string literals.`
+  ) as RollupError;
+  err.pos = pos;
+  throw err;
+}
+
+export function lexAcceptedHmrExports(
+  code: string,
+  start: number,
+  exportNames: Set<string>
+): boolean {
+  const urls = new Set<{ url: string; start: number; end: number }>();
+  lexAcceptedHmrDeps(code, start, urls);
+  for (const { url } of urls) {
+    exportNames.add(url);
+  }
+  return urls.size > 0;
+}
+const enum LexerState {
+  inCall,
+  inSingleQuoteString,
+  inDoubleQuoteString,
+  inTemplateString,
+  inArray,
+}
+const whitespaceRE = /\s/;
+
+export function lexAcceptedHmrDeps(
+  code: string,
+  start: number,
+  urls: Set<{ url: string; start: number; end: number }>
+): boolean {
+  let state: LexerState = LexerState.inCall;
+  // the state can only be 2 levels deep so no need for a stack
+  let prevState: LexerState = LexerState.inCall;
+  let currentDep: string = "";
+
+  function addDep(index: number) {
+    urls.add({
+      url: currentDep,
+      start: index - currentDep.length - 1,
+      end: index + 1,
+    });
+    currentDep = "";
+  }
+
+  for (let i = start; i < code.length; i++) {
+    const char = code.charAt(i);
+    switch (state) {
+      case LexerState.inCall:
+      case LexerState.inArray:
+        if (char === `'`) {
+          prevState = state;
+          state = LexerState.inSingleQuoteString;
+        } else if (char === `"`) {
+          prevState = state;
+          state = LexerState.inDoubleQuoteString;
+        } else if (char === "`") {
+          prevState = state;
+          state = LexerState.inTemplateString;
+        } else if (whitespaceRE.test(char)) {
+          continue;
+        } else {
+          if (state === LexerState.inCall) {
+            if (char === `[`) {
+              state = LexerState.inArray;
+            } else {
+              return true;
+            }
+          } else if (state === LexerState.inArray) {
+            if (char === `]`) {
+              return false;
+            } else if (char === ",") {
+              continue;
+            } else {
+              error(i);
+            }
+          }
+        }
+        break;
+      case LexerState.inSingleQuoteString:
+        if (char === `'`) {
+          addDep(i);
+          if (prevState === LexerState.inCall) {
+            // accept('foo', ...)
+            return false;
+          } else {
+            state = prevState;
+          }
+        } else {
+          currentDep += char;
+        }
+        break;
+      case LexerState.inDoubleQuoteString:
+        if (char === `"`) {
+          addDep(i);
+          if (prevState === LexerState.inCall) {
+            // accept('foo', ...)
+            return false;
+          } else {
+            state = prevState;
+          }
+        } else {
+          currentDep += char;
+        }
+        break;
+      case LexerState.inTemplateString:
+        if (char === "`") {
+          addDep(i);
+          if (prevState === LexerState.inCall) {
+            // accept('foo', ...)
+            return false;
+          } else {
+            state = prevState;
+          }
+        } else if (char === "$" && code.charAt(i + 1) === "{") {
+          error(i);
+        } else {
+          currentDep += char;
+        }
+        break;
+      default:
+        throw new Error("unknown import.meta.hot lexer state");
+    }
+  }
+  return false;
+}
+
+export function handlePrunedModules(
+  mods: Set<ModuleNode>,
+  { ws }: ViteDevServer
+): void {
+  const t = Date.now();
+  mods.forEach((mod) => {
+    mod.lastHMRTimestamp = t;
+    debugHmr?.(`[dispose] ${colors.dim(mod.file)}`);
+  });
+  ws.send({
+    type: "prune",
+    paths: [...mods].map((m) => m.url),
+  });
 }
