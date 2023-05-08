@@ -9,12 +9,11 @@ import {
   InlineConfig,
   ServerOptions,
   FileSystemServeOptions,
-  ModuleGraph,
   TransformResult,
   mergeConfig,
   TransformOptions,
-  searchForWorkspaceRoot,
 } from "vite";
+import { ModuleGraph } from "./moduleGraph";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
@@ -47,15 +46,6 @@ export interface ResolvedServerUrls {
   network: string[];
 }
 
-export interface ServerContext {
-  root: string;
-  pluginContainer: PluginContainer;
-  app: connect.Server;
-  plugins: Plugin[];
-  moduleGraph: ModuleGraph;
-  ws: { send: (data: any) => void; close: () => void };
-  watcher: FSWatcher;
-}
 export interface ResolvedServerOptions extends ServerOptions {
   fs: Required<FileSystemServeOptions>;
   middlewareMode: boolean;

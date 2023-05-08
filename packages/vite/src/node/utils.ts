@@ -613,3 +613,13 @@ export function stripBomTag(content: string): string {
 
   return content;
 }
+const importQueryRE = /(\?|&)import=?(?:&|$)/;
+const trailingSeparatorRE = /[?&]$/;
+
+export function removeImportQuery(url: string): string {
+  return url.replace(importQueryRE, "$1").replace(trailingSeparatorRE, "");
+}
+const timestampRE = /\bt=\d{13}&?\b/;
+export function removeTimestampQuery(url: string): string {
+  return url.replace(timestampRE, "").replace(trailingSeparatorRE, "");
+}

@@ -3,9 +3,17 @@ import { ViteDevServer } from ".";
 import { blankReplacer, cleanUrl, ensureWatchedFile, isObject } from "../utils";
 import { promises as fs } from "node:fs";
 import convertSourceMap from "convert-source-map";
-import { SourceDescription } from "rollup";
 import getEtag from "etag";
 import { getDepsOptimizer } from "../optimizer/optimizer";
+import type { SourceDescription, SourceMap } from "rollup";
+
+export interface TransformResult {
+  code: string;
+  map: SourceMap | null;
+  etag?: string;
+  deps?: string[];
+  dynamicDeps?: string[];
+}
 
 export function transformRequest(
   url: string,

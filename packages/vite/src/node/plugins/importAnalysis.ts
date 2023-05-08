@@ -22,22 +22,23 @@ import {
   wrapId,
 } from "../utils";
 import path from "node:path";
-import { ServerContext, ViteDevServer } from "../server";
+import { ViteDevServer } from "../server";
 import { Plugin } from "../plugin";
 import { ExportSpecifier, ImportSpecifier } from "es-module-lexer";
 import MagicString from "magic-string";
-import { ResolvedConfig } from "../config";
+import { ResolvedConfig, getDepOptimizationConfig } from "../config";
 import { normalizeHmrUrl } from "../server/hmr";
 import { isDirectCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
 import { getDepsOptimizer, optimizedDepNeedsInterop } from "../optimizer";
-import fs from 'node:fs'
+import fs from "node:fs";
 import { browserExternalId } from "./resolve";
 
+const hasImportInQueryParamsRE = /[?&]import=?\b/;
 const skipRE = /\.(?:map|json)(?:$|\?)/;
 export const canSkipImportAnalysis = (id: string): boolean =>
   skipRE.test(id) || isDirectCSSRequest(id);
-  
+
 // TODO 未完成
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
   const { root, base } = config;
@@ -96,14 +97,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
 
       const { moduleGraph } = server;
       const importerModule = moduleGraph.getModuleById(importer)!;
-      if (!importerModule && depsOptimizer?.isOptimizedDepFile(importer)) {
-        throwOutdatedRequest(importer);
-      }
-
-      if (!imports.length && !(this as any)._addedImports) {
-        importerModule.isSelfAccepting = false;
-        return source;
-      }
 
       let hasHMR = false;
       let isSelfAccepting = false;
@@ -301,18 +294,18 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               return;
             }
 
-            if (
-              specifier[0] === "/" &&
-              !config.assetsInclude(cleanUrl(specifier)) &&
-              !specifier.endsWith(".json") &&
-              checkPublicFile(specifier, config)
-            ) {
-              throw new Error(
-                `Cannot import non-asset file ${specifier} which is inside /public.` +
-                  `JS/CSS files inside /public are copied as-is on build and ` +
-                  `can only be referenced via <script src> or <link href> in html.`
-              );
-            }
+            // if (
+            //   specifier[0] === "/" &&
+            //   !config.assetsInclude(cleanUrl(specifier)) &&
+            //   !specifier.endsWith(".json") &&
+            //   checkPublicFile(specifier, config)
+            // ) {
+            //   throw new Error(
+            //     `Cannot import non-asset file ${specifier} which is inside /public.` +
+            //       `JS/CSS files inside /public are copied as-is on build and ` +
+            //       `can only be referenced via <script src> or <link href> in html.`
+            //   );
+            // }
 
             // normalize
             const [url, resolvedId] = await normalizeUrl(specifier, start);
@@ -505,4 +498,11 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
 
 export function isExplicitImportRequired(url: string): boolean {
   return !isJSRequest(cleanUrl(url)) && !isCSSRequest(url);
+}
+
+function markExplicitImport(url: string) {
+  if (isExplicitImportRequired(url)) {
+    return injectQuery(url, "import");
+  }
+  return url;
 }
