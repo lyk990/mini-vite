@@ -106,14 +106,14 @@ export type ExportsData = {
 };
 
 export interface OptimizedDepInfo {
-  id: string
-  file: string
-  src?: string
-  needsInterop?: boolean
-  browserHash?: string
-  fileHash?: string
-  processing?: Promise<void>
-  exportsData?: Promise<ExportsData>
+  id: string;
+  file: string;
+  src?: string;
+  needsInterop?: boolean;
+  browserHash?: string;
+  fileHash?: string;
+  processing?: Promise<void>;
+  exportsData?: Promise<ExportsData>;
 }
 
 /**查看预构建依赖缓存 */
@@ -332,14 +332,10 @@ export function runOptimizeDeps(
           const { exportsData, ...info } = depsInfo[id];
           addOptimizedDepInfo(metadata, "optimized", {
             ...info,
-            // We only need to hash the output.imports in to check for stability, but adding the hash
-            // and file path gives us a unique hash that may be useful for other things in the future
             fileHash: getHash(
               metadata.hash + depsInfo[id].file + JSON.stringify(output.imports)
             ),
             browserHash: metadata.browserHash,
-            // After bundling we have more information and can warn the user about legacy packages
-            // that require manual configuration
             needsInterop: needsInterop(
               config,
               ssr,
@@ -381,8 +377,6 @@ export function runOptimizeDeps(
 
       .catch((e) => {
         if (e.errors && e.message.includes("The build was canceled")) {
-          // esbuild logs an error when cancelling, but this is expected so
-          // return an empty result instead
           return cancelledResult;
         }
         throw e;
@@ -421,7 +415,6 @@ function getDepsCacheDirPrefix(config: ResolvedConfig): string {
 function getDepsCacheSuffix(config: ResolvedConfig, ssr: boolean): string {
   let suffix = "";
   if (config.command === "build") {
-    // Differentiate build caches depending on outDir to allow parallel builds
     const { outDir } = config.build;
     const buildId =
       outDir.length > 8 || outDir.includes("/") ? getHash(outDir) : outDir;
@@ -760,7 +753,6 @@ function needsInterop(
     return true;
   }
   const { hasImports, exports } = exportsData;
-  // entry has no ESM syntax - likely CJS or UMD
   if (!exports.length && !hasImports) {
     return true;
   }

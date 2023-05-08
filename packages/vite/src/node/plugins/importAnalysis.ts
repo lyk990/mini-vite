@@ -66,7 +66,6 @@ interface UrlPosition {
   end: number;
 }
 
-// TODO 未完成
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
   const { root, base } = config;
   const clientPublicPath = path.posix.join(base, CLIENT_PUBLIC_PATH);

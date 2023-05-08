@@ -16,7 +16,6 @@ import {
   ResolvedPreviewOptions,
   ResolvedSSROptions,
   ResolveFn,
-  ResolveOptions,
   ResolveWorkerOptions,
   UserConfig,
   UserConfigExport,
@@ -63,6 +62,15 @@ interface NodeModuleWithCompile extends NodeModule {
   _compile(code: string, filename: string): any;
 }
 
+export interface ResolveOptions {
+  mainFields?: string[];
+  browserField?: boolean;
+  conditions?: string[];
+  extensions?: string[];
+  dedupe?: string[];
+  preserveSymlinks?: boolean;
+}
+
 export type AppType = "spa" | "mpa" | "custom";
 export type ResolvedConfig = Readonly<
   Omit<UserConfig, "plugins" | "assetsInclude" | "optimizeDeps" | "worker"> & {
@@ -89,6 +97,7 @@ export type ResolvedConfig = Readonly<
     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
     isProduction: boolean;
     assetsInclude: (file: string) => boolean;
+    packageCache: PackageCache;
   } & PluginHookUtils
 >;
 
@@ -215,7 +224,7 @@ export async function resolveConfig(
                 tryIndex: true,
                 ...options,
                 idOnly: true,
-              }),
+              } as any), // TODO ts类型不正确
             ],
           }));
       }
@@ -279,6 +288,7 @@ export async function resolveConfig(
     plugins: userPlugins,
     getSortedPluginHooks: undefined!,
     getSortedPlugins: undefined!,
+    packageCache,
   };
   const resolved: ResolvedConfig = {
     ...config,
@@ -339,7 +349,6 @@ export async function loadConfigFromFile(
       break;
     }
   }
-  // resolvedPath = "C:\\Users\\Administrator\\Desktop\\learn-Code\\vite源码\\mini-vite\\mini-vite-example\\vite.config.ts"
   if (!resolvedPath) {
     debug?.("no config file found.");
     return null;
@@ -353,7 +362,6 @@ export async function loadConfigFromFile(
   } else {
     // entry point
     try {
-      // configRoot = 'C:\\Users\\Administrator\\Desktop\\learn-Code\\vite源码\\mini-vite\\mini-vite-example'
       const pkg = lookupFile(configRoot, ["package.json"]);
       isESM =
         !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
@@ -361,11 +369,7 @@ export async function loadConfigFromFile(
   }
 
   try {
-    // budled =
-    // code: '// vite.config.ts\nimport { defineConfig } from "file:///C:/......'
-    // dependencies: (1) ['vite.config.ts']
     const bundled = await bundleConfigFile(resolvedPath, isESM);
-    // userConfig = { plugins: [ vite-plugin-vue ] }
     const userConfig = await loadConfigFromBundledFile(
       resolvedPath,
       bundled.code,
@@ -374,7 +378,6 @@ export async function loadConfigFromFile(
     const config = await (typeof userConfig === "function"
       ? userConfig(configEnv)
       : userConfig);
-    // config = { plugins: [ vite-plugin-vue, ] }
     if (!isObject(config)) {
       throw new Error(`config must export or return an object.`);
     }

@@ -1,4 +1,3 @@
-import { DepsOptimizer } from "vite";
 import { ResolvedConfig } from "../config";
 import { ViteDevServer } from "../server";
 import { getHash } from "../utils";
@@ -13,6 +12,7 @@ import {
   extractExportsData,
   addOptimizedDepInfo,
   OptimizedDepInfo,
+  DepsOptimizer,
 } from "./index";
 
 const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();

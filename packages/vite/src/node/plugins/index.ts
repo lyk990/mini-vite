@@ -6,22 +6,34 @@ import { Plugin } from "../plugin";
 import { cssPlugin } from "./css";
 import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
+import { getDepsOptimizer } from "../optimizer/optimizer";
 
+// TODO 插件开发
 export function resolvePlugins(
-  config?: ResolvedConfig,
+  config: ResolvedConfig,
   prePlugins?: Plugin[],
   normalPlugins?: Plugin[],
   postPlugins?: Plugin[]
 ): Plugin[] {
   return [
-    resolvePlugin(),
+    resolvePlugin({
+      ...config.resolve,
+      root: config.root,
+      isProduction: false,
+      isBuild: false,
+      packageCache: config.packageCache,
+      ssrConfig: config.ssr,
+      asSrc: true,
+      getDepsOptimizer: (ssr: boolean) => getDepsOptimizer(config, ssr),
+      shouldExternalize: undefined,
+    }),
     // esbuildPlugin(),
-    importAnalysisPlugin(),
+    importAnalysisPlugin(config as any),
     cssPlugin(),
     // watchPackageDataPlugin()
     // assetPlugin(),
     // clientInjectionsPlugin(config),
-  ];
+  ].filter(Boolean) as Plugin[]; // NOTE
 }
 
 export function createPluginHookUtils(
@@ -39,10 +51,10 @@ export function createPluginHookUtils(
     hookName: K
   ): NonNullable<HookHandler<Plugin[K]>>[] {
     const plugins = getSortedPlugins(hookName);
-    // @ts-ignore
     return plugins
       .map((p) => {
         const hook = p[hookName]!;
+        // @ts-ignore
         return typeof hook === "object" && "handler" in hook
           ? hook.handler
           : hook;

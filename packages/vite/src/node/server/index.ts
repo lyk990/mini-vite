@@ -60,7 +60,6 @@ export interface ViteDevServer {
   middlewares: connect.Server;
   httpServer: http.Server | null;
   pluginContainer: PluginContainer;
-  plugins: Plugin[];
   config: ResolvedConfig;
   resolvedUrls: ResolvedServerUrls | null;
   printUrls(): void;
@@ -102,9 +101,8 @@ async function startServer(server: ViteDevServer, inlinePort?: number) {
     throw new Error("Cannot call server.listen in middleware mode.");
   }
   const port = inlinePort ?? DEFAULT_DEV_PORT;
-  // FEATURE
+  // FEATURE 本地服务器
   let hostName = DEFAULT_HOST_NAME;
-  // 创建服务器
   await httpServerStart(httpServer, {
     port,
     strictPort: false,
@@ -160,7 +158,6 @@ export async function _createServer(
   options: { ws: boolean }
 ): Promise<ViteDevServer> {
   const config = await resolveConfig(inlineConfig, "serve");
-
   await initDepsOptimizer(config);
 
   const { root, server: serverConfig } = config;
@@ -170,7 +167,7 @@ export async function _createServer(
   const httpServer = await resolveHttpServer(middlewares);
   const httpsOptions = undefined; // REMOVE
   const ws = createWebSocketServer(httpServer, config, httpsOptions);
-  const plugins = await resolvePlugins();
+
   const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>
     container.resolveId(url, undefined, { ssr })
   );
@@ -217,7 +214,6 @@ export async function _createServer(
     middlewares,
     httpServer,
     pluginContainer: container,
-    plugins,
     config,
     moduleGraph,
     resolvedUrls: null,

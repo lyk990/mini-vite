@@ -1,4 +1,4 @@
-import { DepsOptimizer, SSROptions } from "vite";
+import { SSROptions } from "vite";
 import {
   findNearestPackageData,
   loadPackageData,
@@ -45,6 +45,7 @@ import fs from "node:fs";
 import { findNearestMainPackageData, resolvePackageData } from "../package";
 import { exports, imports } from "resolve.exports";
 import { hasESMSyntax } from "mlly";
+import type { DepsOptimizer } from "../optimizer";
 
 export interface ResolveOptions {
   mainFields?: string[];
