@@ -24,7 +24,7 @@
     "@rollup/plugin-json": "^6.0.0",
     "@rollup/plugin-node-resolve": "^15.0.2",
     "@rollup/plugin-typescript": "^11.1.0",
-    "@types/sass": "^1.45.0",
+    "@types/sass": "~1.43.1",
     "convert-source-map": "^2.0.0",
     "fast-glob": "^3.2.12",
     "fs-extra": "^11.1.1",
