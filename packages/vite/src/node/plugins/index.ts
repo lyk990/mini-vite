@@ -29,7 +29,7 @@ export function resolvePlugins(
     }),
     // esbuildPlugin(),
     importAnalysisPlugin(config as any),
-    cssPlugin(),
+    cssPlugin(config),
     // watchPackageDataPlugin()
     // assetPlugin(),
     // clientInjectionsPlugin(config),
@@ -53,8 +53,7 @@ export function createPluginHookUtils(
     const plugins = getSortedPlugins(hookName);
     return plugins
       .map((p) => {
-        const hook = p[hookName]!;
-        // @ts-ignore
+        const hook: any = p[hookName]!;
         return typeof hook === "object" && "handler" in hook
           ? hook.handler
           : hook;

@@ -15,7 +15,6 @@ import {
   ResolvedBuildOptions,
   ResolvedPreviewOptions,
   ResolvedSSROptions,
-  ResolveFn,
   ResolveWorkerOptions,
   UserConfig,
   UserConfigExport,
@@ -57,6 +56,13 @@ import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 
 const debug = createDebugger("vite:config");
 const promisifiedRealpath = promisify(fs.realpath);
+
+export type ResolveFn = (
+  id: string,
+  importer?: string,
+  aliasOnly?: boolean,
+  ssr?: boolean
+) => Promise<string | undefined>;
 
 interface NodeModuleWithCompile extends NodeModule {
   _compile(code: string, filename: string): any;

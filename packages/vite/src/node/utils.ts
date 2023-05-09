@@ -643,3 +643,14 @@ export function transformStableResult(
         : null,
   };
 }
+
+export function removeLeadingSlash(str: string): string {
+  return str[0] === "/" ? str.slice(1) : str;
+}
+
+const directRequestRE = /(\?|&)direct=?(?:&|$)/;
+
+export function removeDirectQuery(url: string): string {
+  return url.replace(directRequestRE, "$1").replace(trailingSeparatorRE, "");
+}
+
