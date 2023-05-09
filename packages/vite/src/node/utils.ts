@@ -22,6 +22,8 @@ import type { DecodedSourceMap, RawSourceMap } from "@ampproject/remapping";
 import remapping from "@ampproject/remapping";
 import { TransformResult } from "rollup";
 import type MagicString from "magic-string";
+import { resolvePackageData } from "./package";
+import { fileURLToPath } from "node:url";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -654,3 +656,46 @@ export function removeDirectQuery(url: string): string {
   return url.replace(directRequestRE, "$1").replace(trailingSeparatorRE, "");
 }
 
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
+export const requireResolveFromRootWithFallback = (
+  root: string,
+  id: string
+): string => {
+  const found =
+    resolvePackageData(id, root) || resolvePackageData(id, _dirname);
+  if (!found) {
+    const error = new Error(`${JSON.stringify(id)} not found.`);
+    (error as any).code = "MODULE_NOT_FOUND";
+    throw error;
+  }
+  return _require.resolve(id, { paths: [root, _dirname] });
+};
+
+export async function asyncReplace(
+  input: string,
+  re: RegExp,
+  replacer: (match: RegExpExecArray) => string | Promise<string>
+): Promise<string> {
+  let match: RegExpExecArray | null;
+  let remaining = input;
+  let rewritten = "";
+  while ((match = re.exec(remaining))) {
+    rewritten += remaining.slice(0, match.index);
+    rewritten += await replacer(match);
+    remaining = remaining.slice(match.index + match[0].length);
+  }
+  rewritten += remaining;
+  return rewritten;
+}
+
+export function processSrcSet(
+  srcs: string,
+  replacer: (arg: ImageCandidate) => Promise<string>
+): Promise<string> {
+  return Promise.all(
+    splitSrcSetDescriptor(srcs).map(async ({ url, descriptor }) => ({
+      url: await replacer({ url, descriptor }),
+      descriptor,
+    }))
+  ).then((ret) => reduceSrcset(ret));
+}

@@ -13,13 +13,19 @@ import type {
 } from "rollup";
 import { checkPublicFile, publicFileToBuiltUrl, fileToUrl } from "./asset";
 import {
+  asyncReplace,
   cleanUrl,
+  combineSourcemaps,
   generateCodeFrame,
   getHash,
+  isDataUrl,
+  isExternalUrl,
   isObject,
   joinUrlSegments,
   normalizePath,
+  processSrcSet,
   removeDirectQuery,
+  requireResolveFromRootWithFallback,
   stripBase,
 } from "../utils";
 import { ModuleNode } from "../server/moduleGraph";
@@ -34,6 +40,8 @@ import glob from "fast-glob";
 import type { RawSourceMap } from "@ampproject/remapping";
 import type { Alias } from "dep-types/alias";
 import MagicString from "magic-string";
+import { createRequire } from "node:module";
+import fsp from "node:fs/promises";
 
 export interface StylePreprocessorResults {
   code: string;
@@ -44,6 +52,17 @@ export interface StylePreprocessorResults {
 }
 // NOTE  Sass.Options  peerDependenciesMeta
 type SassStylePreprocessorOptions = StylePreprocessorOptions & Sass.Options;
+
+type StylusStylePreprocessorOptions = StylePreprocessorOptions & {
+  define?: Record<string, any>;
+};
+
+type StylusStylePreprocessor = (
+  source: string,
+  root: string,
+  options: StylusStylePreprocessorOptions,
+  resolvers: CSSAtImportResolvers
+) => StylePreprocessorResults | Promise<StylePreprocessorResults>;
 
 type SassStylePreprocessor = (
   source: string,
@@ -94,6 +113,10 @@ const enum PostCssDialectLang {
   sss = "sugarss",
 }
 
+const loadedPreprocessors: Partial<
+  Record<PreprocessLang | PostCssDialectLang, any>
+> = {};
+
 type CssLang =
   | keyof typeof PureCssLang
   | keyof typeof PreprocessLang
@@ -115,8 +138,11 @@ export const cssUrlRE =
 export const cssDataUriRE =
   /(?<=^|[^\w\-\u0080-\uffff])data-uri\((\s*('[^']+'|"[^"]+")\s*|[^'")]+)\)/;
 export const importCssRE = /@import ('[^']+\.css'|"[^"]+\.css"|[^'")]+\.css)/;
+
 const cssImageSetRE =
   /(?<=image-set\()((?:[\w\-]{1,256}\([^)]*\)|[^)])*)(?=\))/;
+const postcssReturnsVirtualFilesRE = /^<.+>$/;
+const cssNotProcessedRE = /(?:gradient|element|cross-fade|image)\(/;
 
 interface PostCSSConfigResult {
   options: PostCSS.ProcessOptions;
@@ -819,7 +845,7 @@ const styl: StylusStylePreprocessor = async (source, root, options) => {
     const result = ref.render();
 
     const deps = [...ref.deps(), ...importsDeps];
-
+    // @ts-expect-error sourcemap exists
     const map: ExistingRawSourceMap | undefined = ref.sourcemap;
 
     return {
@@ -853,8 +879,6 @@ function combineSourcemapsIfExists(
 ): ExistingRawSourceMap | undefined {
   return map1 && map2
     ? (combineSourcemaps(filename, [
-        // type of version property of ExistingRawSourceMap is number
-        // but it is always 3
         map1 as RawSourceMap,
         map2 as RawSourceMap,
       ]) as ExistingRawSourceMap)
@@ -928,6 +952,7 @@ const UrlRewritePostcssPlugin: PostCSS.PluginCreator<{
 };
 
 UrlRewritePostcssPlugin.postcss = true;
+const _require = createRequire(import.meta.url);
 
 function getCssResolversKeys(
   resolvers: CSSAtImportResolvers
@@ -971,11 +996,6 @@ function loadPreprocessor(
   }
 }
 
-const postcssMap = await formatPostcssSourceMap(
-  rawPostcssMap as Omit<RawSourceMap, "version"> as ExistingRawSourceMap,
-  cleanUrl(id)
-);
-
 export async function formatPostcssSourceMap(
   rawMap: ExistingRawSourceMap,
   file: string
@@ -1002,6 +1022,7 @@ export async function formatPostcssSourceMap(
   };
 }
 
+let ViteLessManager: any;
 function createViteLessPlugin(
   less: typeof Less,
   rootFile: string,
@@ -1106,4 +1127,199 @@ async function getSource(
     content: ms.toString(),
     map,
   };
+}
+
+function cleanScssBugUrl(url: string) {
+  if (
+    typeof window !== "undefined" &&
+    typeof location !== "undefined" &&
+    typeof location?.href === "string"
+  ) {
+    const prefix = location.href.replace(/\/$/, "");
+    return url.replace(prefix, "");
+  } else {
+    return url;
+  }
+}
+
+async function rebaseUrls(
+  file: string,
+  rootFile: string,
+  alias: Alias[],
+  variablePrefix: string
+): Promise<Sass.ImporterReturnType> {
+  file = path.resolve(file); 
+  const fileDir = path.dirname(file);
+  const rootDir = path.dirname(rootFile);
+  if (fileDir === rootDir) {
+    return { file };
+  }
+
+  const content = await fsp.readFile(file, "utf-8");
+  const hasUrls = cssUrlRE.test(content);
+  const hasDataUris = cssDataUriRE.test(content);
+  const hasImportCss = importCssRE.test(content);
+
+  if (!hasUrls && !hasDataUris && !hasImportCss) {
+    return { file };
+  }
+
+  let rebased;
+  const rebaseFn = (url: string) => {
+    if (url[0] === "/") return url;
+    if (url.startsWith(variablePrefix)) return url;
+    for (const { find } of alias) {
+      const matches =
+        typeof find === "string" ? url.startsWith(find) : find.test(url);
+      if (matches) {
+        return url;
+      }
+    }
+    const absolute = path.resolve(fileDir, url);
+    const relative = path.relative(rootDir, absolute);
+    return normalizePath(relative);
+  };
+  if (hasImportCss) {
+    rebased = await rewriteImportCss(content, rebaseFn);
+  }
+  if (hasUrls) {
+    rebased = await rewriteCssUrls(rebased || content, rebaseFn);
+  }
+  if (hasDataUris) {
+    rebased = await rewriteCssDataUris(rebased || content, rebaseFn);
+  }
+  return {
+    file,
+    contents: rebased,
+  };
+}
+
+function fixScssBugImportValue(
+  data: Sass.ImporterReturnType
+): Sass.ImporterReturnType {
+  if (
+    typeof window !== "undefined" &&
+    typeof location !== "undefined" &&
+    data &&
+    "file" in data &&
+    // @ts-ignore
+    (!("contents" in data) || data.contents == null)
+  ) {
+    // @ts-expect-error we need to preserve file property for HMR
+    data.contents = fs.readFileSync(data.file, "utf-8");
+  }
+  return data;
+}
+
+function formatStylusSourceMap(
+  mapBefore: ExistingRawSourceMap | undefined,
+  root: string
+): ExistingRawSourceMap | undefined {
+  if (!mapBefore) return undefined;
+  const map = { ...mapBefore };
+
+  const resolveFromRoot = (p: string) => normalizePath(path.resolve(root, p));
+
+  if (map.file) {
+    map.file = resolveFromRoot(map.file);
+  }
+  map.sources = map.sources.map(resolveFromRoot);
+
+  return map;
+}
+
+async function rewriteCssImageSet(
+  css: string,
+  replacer: CssUrlReplacer
+): Promise<string> {
+  return await asyncReplace(css, cssImageSetRE, async (match) => {
+    const [, rawUrl] = match;
+    const url = await processSrcSet(rawUrl, async ({ url }) => {
+      if (cssUrlRE.test(url)) {
+        return await rewriteCssUrls(url, replacer);
+      }
+      if (!cssNotProcessedRE.test(url)) {
+        return await doUrlReplace(url, url, replacer);
+      }
+      return url;
+    });
+    return url;
+  });
+}
+
+function rewriteCssUrls(
+  css: string,
+  replacer: CssUrlReplacer
+): Promise<string> {
+  return asyncReplace(css, cssUrlRE, async (match) => {
+    const [matched, rawUrl] = match;
+    return await doUrlReplace(rawUrl.trim(), matched, replacer);
+  });
+}
+
+function rewriteImportCss(
+  css: string,
+  replacer: CssUrlReplacer
+): Promise<string> {
+  return asyncReplace(css, importCssRE, async (match) => {
+    const [matched, rawUrl] = match;
+    return await doImportCSSReplace(rawUrl, matched, replacer);
+  });
+}
+
+function rewriteCssDataUris(
+  css: string,
+  replacer: CssUrlReplacer
+): Promise<string> {
+  return asyncReplace(css, cssDataUriRE, async (match) => {
+    const [matched, rawUrl] = match;
+    return await doUrlReplace(rawUrl.trim(), matched, replacer, "data-uri");
+  });
+}
+
+async function doUrlReplace(
+  rawUrl: string,
+  matched: string,
+  replacer: CssUrlReplacer,
+  funcName: string = "url"
+) {
+  let wrap = "";
+  const first = rawUrl[0];
+  if (first === `"` || first === `'`) {
+    wrap = first;
+    rawUrl = rawUrl.slice(1, -1);
+  }
+
+  if (
+    isExternalUrl(rawUrl) ||
+    isDataUrl(rawUrl) ||
+    rawUrl[0] === "#" ||
+    varRE.test(rawUrl)
+  ) {
+    return matched;
+  }
+
+  const newUrl = await replacer(rawUrl);
+  if (wrap === "" && newUrl !== encodeURI(newUrl)) {
+    wrap = "'";
+  }
+  return `${funcName}(${wrap}${newUrl}${wrap})`;
+}
+
+async function doImportCSSReplace(
+  rawUrl: string,
+  matched: string,
+  replacer: CssUrlReplacer
+) {
+  let wrap = "";
+  const first = rawUrl[0];
+  if (first === `"` || first === `'`) {
+    wrap = first;
+    rawUrl = rawUrl.slice(1, -1);
+  }
+  if (isExternalUrl(rawUrl) || isDataUrl(rawUrl) || rawUrl[0] === "#") {
+    return matched;
+  }
+
+  return `@import ${wrap}${await replacer(rawUrl)}${wrap}`;
 }
