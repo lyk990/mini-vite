@@ -31,9 +31,10 @@ export function resolvePlugins(
     importAnalysisPlugin(config as any),
     cssPlugin(config),
     // watchPackageDataPlugin()
-    // assetPlugin(),
-    // clientInjectionsPlugin(config),
-  ].filter(Boolean) as Plugin[]; // NOTE
+    assetPlugin(),
+    clientInjectionsPlugin(config),
+    htmlInlineProxyPlugin(config),
+  ].filter(Boolean) as Plugin[]; // NOTE Boolean的写法
 }
 
 export function createPluginHookUtils(

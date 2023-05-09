@@ -40,6 +40,12 @@ import {
   indexHtmlMiddleware,
 } from "./middlewares/indexHtml";
 import colors from "picocolors";
+import {
+  serveRawFsMiddleware,
+  serveStaticMiddleware,
+} from "./middlewares/static";
+import picomatch from "picomatch";
+import type { Matcher } from "picomatch";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -92,6 +98,7 @@ export interface ViteDevServer {
     url: string,
     options?: TransformOptions
   ): Promise<TransformResult | null>;
+  _fsDenyGlob: Matcher;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -289,10 +296,12 @@ export async function _createServer(
     _importGlobMap: new Map(),
     _forceOptimizeOnRestart: false,
     _pendingRequests: new Map(),
-    // _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
+    _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
     _shortcutsOptions: undefined,
   };
   middlewares.use(transformMiddleware(server));
+  middlewares.use(serveRawFsMiddleware(server));
+  middlewares.use(serveStaticMiddleware(root, server));
   server.transformIndexHtml = createDevHtmlTransformFn(server);
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(indexHtmlMiddleware(server));

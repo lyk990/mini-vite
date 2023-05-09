@@ -8,6 +8,9 @@ import debug from "debug";
 import type { FSWatcher } from "chokidar";
 import fs from "node:fs";
 import {
+  CLIENT_ENTRY,
+  CLIENT_PUBLIC_PATH,
+  ENV_PUBLIC_PATH,
   FS_PREFIX,
   NULL_BYTE_PLACEHOLDER,
   OPTIMIZABLE_ENTRY_RE,
@@ -698,4 +701,54 @@ export function processSrcSet(
       descriptor,
     }))
   ).then((ret) => reduceSrcset(ret));
+}
+
+const internalPrefixes = [
+  FS_PREFIX,
+  VALID_ID_PREFIX,
+  CLIENT_PUBLIC_PATH,
+  ENV_PUBLIC_PATH,
+];
+const InternalPrefixRE = new RegExp(`^(?:${internalPrefixes.join("|")})`);
+export const isInternalRequest = (url: string): boolean =>
+  InternalPrefixRE.test(url);
+
+export function isFileReadable(filename: string): boolean {
+  try {
+    // The "throwIfNoEntry" is a performance optimization for cases where the file does not exist
+    if (!fs.statSync(filename, { throwIfNoEntry: false })) {
+      return false;
+    }
+
+    // Check if current process has read permission to the file
+    fs.accessSync(filename, fs.constants.R_OK);
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+export const isCaseInsensitiveFS = testCaseInsensitiveFS();
+function testCaseInsensitiveFS() {
+  if (!CLIENT_ENTRY.endsWith("client.mjs")) {
+    throw new Error(
+      `cannot test case insensitive FS, CLIENT_ENTRY const doesn't contain client.mjs`
+    );
+  }
+  if (!fs.existsSync(CLIENT_ENTRY)) {
+    throw new Error(
+      "cannot test case insensitive FS, CLIENT_ENTRY does not point to an existing file: " +
+        CLIENT_ENTRY
+    );
+  }
+  return fs.existsSync(CLIENT_ENTRY.replace("client.mjs", "cLiEnT.mjs"));
+}
+export function isParentDirectory(dir: string, file: string): boolean {
+  if (dir[dir.length - 1] !== "/") {
+    dir = `${dir}/`;
+  }
+  return (
+    file.startsWith(dir) ||
+    (isCaseInsensitiveFS && file.toLowerCase().startsWith(dir.toLowerCase()))
+  );
 }

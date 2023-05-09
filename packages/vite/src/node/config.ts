@@ -53,6 +53,7 @@ import { PluginContainer, createPluginContainer } from "./pluginContainer";
 import aliasPlugin from "@rollup/plugin-alias";
 import { promisify } from "node:util";
 import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
+import { createPluginHookUtils, resolvePlugins } from "./plugins";
 
 const debug = createDebugger("vite:config");
 const promisifiedRealpath = promisify(fs.realpath);
@@ -300,6 +301,13 @@ export async function resolveConfig(
     ...config,
     ...resolvedConfig,
   };
+  (resolved.plugins as Plugin[]) = await resolvePlugins(
+    resolved,
+    prePlugins,
+    normalPlugins,
+    postPlugins
+  );
+  // Object.assign(resolved, createPluginHookUtils(resolved.plugins));
   return resolved;
 }
 

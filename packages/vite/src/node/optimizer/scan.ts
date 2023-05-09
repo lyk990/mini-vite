@@ -63,6 +63,7 @@ export function scanImports(config: ResolvedConfig): {
     if (!context || scanContext?.cancelled) {
       return { deps: {}, missing: {} };
     }
+    // 依赖打包
     return context.rebuild().then(() => {
       return {
         deps: orderedDependencies(deps),

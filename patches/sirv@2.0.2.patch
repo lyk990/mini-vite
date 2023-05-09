@@ -1,0 +1,13 @@
+diff --git a/sirv.d.ts b/sirv.d.ts
+index c05040fc6ec504a1828a7badd39f669981acd0ee..e9597e8b5bf24613a09565f0e13024ae3ca8fa5e 100644
+--- a/sirv.d.ts
++++ b/sirv.d.ts
+@@ -19,6 +19,8 @@ declare module 'sirv' {
+ 		gzip?: boolean;
+ 		onNoMatch?: (req: IncomingMessage, res: ServerResponse) => void;
+ 		setHeaders?: (res: ServerResponse, pathname: string, stats: Stats) => void;
++		/** patched */
++		shouldServe?: (absoluteFilePath: string) => void;
+ 	}
+ 
+ 	export default function(dir?: string, opts?: Options): RequestHandler;
