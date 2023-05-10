@@ -26,7 +26,7 @@ import {
 } from "../utils";
 import { Logger, printServerUrls } from "../logger";
 import { transformMiddleware } from "./middlewares/transform";
-import { FSWatcher } from "chokidar";
+import { FSWatcher, WatchOptions } from "chokidar";
 import chokidar from "chokidar";
 import { createWebSocketServer, WebSocketServer } from "./ws";
 import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
@@ -47,6 +47,8 @@ import {
 import picomatch from "picomatch";
 import type { Matcher } from "picomatch";
 import { proxyMiddleware } from "./middlewares/proxy";
+import path from "node:path";
+import { resolveChokidarOptions } from "../watch";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -172,6 +174,11 @@ export async function _createServer(
   const { middlewareMode } = serverConfig;
   const middlewares = connect() as Connect.Server;
 
+  const resolvedWatchOptions = resolveChokidarOptions(config, {
+    disableGlobbing: true,
+    ...serverConfig.watch,
+  });
+
   const httpServer = await resolveHttpServer(middlewares);
   const httpsOptions = undefined; // REMOVE
   const ws = createWebSocketServer(httpServer, config, httpsOptions);
@@ -182,10 +189,10 @@ export async function _createServer(
   const container = await createPluginContainer(config);
   const closeHttpServer = createServerCloseFn(httpServer);
 
-  const watcher = chokidar.watch(root, {
-    ignored: ["**/node_modules/**", "**/.git/**"],
-    ignoreInitial: true,
-  }) as FSWatcher;
+  const watcher = chokidar.watch(
+    [root, ...config.configFileDependencies, path.join(config.envDir, ".env*")],
+    resolvedWatchOptions
+  ) as FSWatcher;
 
   const onHMRUpdate = async (file: string, configOnly: boolean) => {
     if (serverConfig.hmr !== false) {

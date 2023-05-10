@@ -11,17 +11,8 @@ import type { CommonServerOptions, ResolvedConfig } from "../..";
 const debug = createDebugger("vite:proxy");
 
 export interface ProxyOptions extends HttpProxy.ServerOptions {
-  /**
-   * rewrite path
-   */
   rewrite?: (path: string) => string;
-  /**
-   * configure the proxy server (e.g. listen to events)
-   */
   configure?: (proxy: HttpProxy.Server, options: ProxyOptions) => void;
-  /**
-   * webpack-dev-server style bypass function
-   */
   bypass?: (
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -34,7 +25,6 @@ export function proxyMiddleware(
   options: NonNullable<CommonServerOptions["proxy"]>,
   config: ResolvedConfig
 ): Connect.NextHandleFunction {
-  // lazy require only when proxy is used
   const proxies: Record<string, [HttpProxy.Server, ProxyOptions]> = {};
 
   Object.keys(options).forEach((context) => {
@@ -52,7 +42,6 @@ export function proxyMiddleware(
     }
 
     proxy.on("error", (err, req, originalRes) => {
-      // When it is ws proxy, res is net.Socket
       const res = originalRes as http.ServerResponse | net.Socket;
       if ("req" in res) {
         config.logger.error(
@@ -79,7 +68,6 @@ export function proxyMiddleware(
         res.end();
       }
     });
-    // clone before saving because http-proxy mutates the options
     proxies[context] = [proxy, { ...opts }];
   });
 
@@ -107,7 +95,6 @@ export function proxyMiddleware(
     });
   }
 
-  // Keep the named function. The name is visible in debug logs via `DEBUG=connect:dispatcher ...`
   return function viteProxyMiddleware(req, res, next) {
     const url = req.url!;
     for (const context in proxies) {

@@ -64,7 +64,7 @@ import type {
 const debug = createDebugger("vite:config");
 const promisifiedRealpath = promisify(fs.realpath);
 
-export type CorsOrigin = boolean | string | RegExp | (string | RegExp)[]
+export type CorsOrigin = boolean | string | RegExp | (string | RegExp)[];
 
 export interface CorsOptions {
   origin?:
@@ -140,6 +140,7 @@ export type ResolvedConfig = Readonly<
     isProduction: boolean;
     assetsInclude: (file: string) => boolean;
     packageCache: PackageCache;
+    envDir: string;
   } & PluginHookUtils
 >;
 
@@ -221,6 +222,9 @@ export async function resolveConfig(
     logger,
     resolvedRoot
   );
+  const envDir = config.envDir
+    ? normalizePath(path.resolve(resolvedRoot, config.envDir))
+    : resolvedRoot;
 
   const middlewareMode = config?.server?.middlewareMode;
 
@@ -298,6 +302,7 @@ export async function resolveConfig(
     configFileDependencies: configFileDependencies.map((name) =>
       normalizePath(path.resolve(name))
     ),
+    envDir,
     isProduction: false,
     inlineConfig,
     logger,
