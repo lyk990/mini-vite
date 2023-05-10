@@ -1,5 +1,14 @@
+import path from "node:path";
 import { Plugin } from "./../plugin";
 import { ResolvedConfig } from "../config";
+import { isObject, normalizePath, resolveHostname } from "../utils";
+import { CLIENT_ENTRY, ENV_ENTRY } from "../constants";
+
+const process_env_NODE_ENV_RE =
+  /(\bglobal(This)?\.)?\bprocess\.env\.NODE_ENV\b/g;
+
+const normalizedClientEntry = normalizePath(CLIENT_ENTRY);
+const normalizedEnvEntry = normalizePath(ENV_ENTRY);
 
 export function clientInjectionsPlugin(config: ResolvedConfig): Plugin {
   let injectConfigValues: (code: string) => string;
@@ -22,8 +31,6 @@ export function clientInjectionsPlugin(config: ResolvedConfig): Plugin {
       const overlay = hmrConfig?.overlay !== false;
       const isHmrServerSpecified = !!hmrConfig?.server;
 
-      // hmr.clientPort -> hmr.port
-      // -> (24678 if middleware mode and HMR server is not specified) -> new URL(import.meta.url).port
       let port = hmrConfig?.clientPort || hmrConfig?.port || null;
       if (config.server.middlewareMode && !isHmrServerSpecified) {
         port ||= 24678;
@@ -71,9 +78,6 @@ export function clientInjectionsPlugin(config: ResolvedConfig): Plugin {
       if (id === normalizedClientEntry || id === normalizedEnvEntry) {
         return injectConfigValues(code);
       } else if (!options?.ssr && code.includes("process.env.NODE_ENV")) {
-        // replace process.env.NODE_ENV instead of defining a global
-        // for it to avoid shimming a `process` object during dev,
-        // avoiding inconsistencies between dev and build
         return code.replace(
           process_env_NODE_ENV_RE,
           config.define?.["process.env.NODE_ENV"] ||
@@ -82,4 +86,20 @@ export function clientInjectionsPlugin(config: ResolvedConfig): Plugin {
       }
     },
   };
+}
+
+function escapeReplacement(value: string | number | boolean | null) {
+  const jsonValue = JSON.stringify(value);
+  return () => jsonValue;
+}
+
+function serializeDefine(define: Record<string, any>): string {
+  let res = `{`;
+  for (const key in define) {
+    const val = define[key];
+    res += `${JSON.stringify(key)}: ${
+      typeof val === "string" ? `(${val})` : JSON.stringify(val)
+    }, `;
+  }
+  return res + `}`;
 }

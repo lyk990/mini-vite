@@ -1,6 +1,5 @@
 import { isCSSRequest } from "vite";
 import {
-  BARE_IMPORT_RE,
   CLIENT_DIR,
   CLIENT_PUBLIC_PATH,
   DEP_VERSION_RE,
@@ -9,9 +8,7 @@ import {
 import {
   cleanUrl,
   fsPathFromUrl,
-  getShortName,
   injectQuery,
-  isBuiltin,
   isDataUrl,
   isExternalUrl,
   isJSRequest,

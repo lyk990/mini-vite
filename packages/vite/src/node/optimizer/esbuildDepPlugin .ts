@@ -1,4 +1,4 @@
-import { ResolvedConfig, getDepOptimizationConfig } from "../config";
+import { ResolvedConfig } from "../config";
 import type { ImportKind, Plugin } from "esbuild";
 import { CSS_LANGS_RE, KNOWN_ASSET_TYPES } from "../constants";
 import { PackageCache } from "../packages";
@@ -43,7 +43,6 @@ export function esbuildDepPlugin(
   config: ResolvedConfig,
   ssr: boolean
 ): Plugin {
-  // const { extensions } = getDepOptimizationConfig(config, ssr);
 
   const allExternalTypes = externalTypes;
 
@@ -56,7 +55,6 @@ export function esbuildDepPlugin(
     packageCache: esmPackageCache,
   });
 
-  // cjs resolver that prefers Node
   const _resolveRequire = config.createResolver({
     asSrc: false,
     isRequire: true,
@@ -147,7 +145,6 @@ export function esbuildDepPlugin(
       build.onLoad(
         { filter: /./, namespace: externalWithConversionNamespace },
         (args) => {
-          // import itself with prefix (this is the actual part of require-import conversion)
           const modulePath = `"${convertedExternalPrefix}${args.path}"`;
           return {
             contents: CSS_LANGS_RE.test(args.path)
@@ -197,7 +194,6 @@ export function esbuildDepPlugin(
       build.onLoad(
         { filter: /.*/, namespace: "browser-external" },
         ({ path }) => {
-          // 如果是生产环境
           if (config.isProduction) {
             return {
               contents: "module.exports = {}",

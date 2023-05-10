@@ -22,7 +22,6 @@ export function getDepsOptimizer(
   config: ResolvedConfig,
   ssr?: boolean
 ): DepsOptimizer | undefined {
-  // Workers compilation shares the DepsOptimizer from the main build
   const isDevSsr = false;
   return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(config);
 }
@@ -39,8 +38,6 @@ async function createDepsOptimizer(
   config: ResolvedConfig,
   server?: ViteDevServer
 ): Promise<void> {
-  // const isBuild = false;
-  // const { logger } = config;
   const sessionTimestamp = Date.now().toString();
   let ssr = false;
   // 查找预构建依赖内容

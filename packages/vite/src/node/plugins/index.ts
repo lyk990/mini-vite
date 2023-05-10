@@ -2,15 +2,15 @@ import { HookHandler } from "vite";
 import { ResolvedConfig, PluginHookUtils } from "../config";
 import { watchPackageDataPlugin } from "../package";
 import { Plugin } from "../plugin";
-// import { clientInjectionsPlugin } from "./clientInjections";
+import { clientInjectionsPlugin } from "./clientInjections";
 import { cssPlugin } from "./css";
 import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
 import { getDepsOptimizer } from "../optimizer/optimizer";
 import { esbuildPlugin } from "./esbuild";
-import { assetPlugin } from './asset'
+import { assetPlugin } from "./asset";
+import { htmlInlineProxyPlugin } from "./html";
 
-// TODO 插件开发
 export function resolvePlugins(
   config: ResolvedConfig,
   prePlugins?: Plugin[],

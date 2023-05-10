@@ -5,7 +5,7 @@ import {
 } from "vite";
 import { ResolvedConfig } from "../config";
 import { Plugin } from "../plugin";
-import { generateCodeFrame, normalizePath } from "../utils";
+import { cleanUrl, generateCodeFrame, normalizePath } from "../utils";
 import path from "node:path";
 import colors from "picocolors";
 import { resolveEnvPrefix } from "../env";
@@ -27,10 +27,6 @@ const doctypePrependInjectRE = /<!doctype html>/i;
 const unaryTags = new Set(["link", "meta", "base"]);
 
 const htmlProxyRE = /\?html-proxy=?(?:&inline-css)?&index=(\d+)\.(js|css)$/;
-const inlineCSSRE = /__VITE_INLINE_CSS__([a-z\d]{8}_\d+)__/g;
-const inlineImportRE =
-  /(?<!(?<!\.\.)\.)\bimport\s*\(("(?:[^"]|(?<=\\)")*"|'(?:[^']|(?<=\\)')*')\)/g;
-const htmlLangRE = /\.(?:html|htm)$/;
 
 const importMapRE =
   /[ \t]*<script[^>]*type\s*=\s*(?:"importmap"|'importmap'|importmap)[^>]*>.*?<\/script>/is;
@@ -500,4 +496,32 @@ export const assetAttrsConfig: Record<string, string[]> = {
 
 export function getAttrKey(attr: Token.Attribute): string {
   return attr.prefix === undefined ? attr.name : `${attr.prefix}:${attr.name}`;
+}
+
+export function htmlInlineProxyPlugin(config: ResolvedConfig): Plugin {
+  htmlProxyMap.set(config, new Map());
+  return {
+    name: "vite:html-inline-proxy",
+
+    resolveId(id) {
+      if (htmlProxyRE.test(id)) {
+        return id;
+      }
+    },
+
+    load(id) {
+      const proxyMatch = id.match(htmlProxyRE);
+      if (proxyMatch) {
+        const index = Number(proxyMatch[1]);
+        const file = cleanUrl(id);
+        const url = file.replace(normalizePath(config.root), "");
+        const result = htmlProxyMap.get(config)!.get(url)![index];
+        if (result) {
+          return result;
+        } else {
+          throw new Error(`No matching HTML proxy module found from ${id}`);
+        }
+      }
+    },
+  };
 }

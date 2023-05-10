@@ -158,7 +158,7 @@ async function fileToBuiltUrl(
     const originalName = normalizePath(path.relative(config.root, file));
     generatedAssets.get(config)!.set(referenceId, { originalName });
 
-    url = `__VITE_ASSET__${referenceId}__${postfix ? `$_${postfix}__` : ``}`; // TODO_BASE
+    url = `__VITE_ASSET__${referenceId}__${postfix ? `$_${postfix}__` : ``}`;
   }
 
   cache.set(id, url);
@@ -197,7 +197,6 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
         return;
       }
 
-      // raw requests, read from disk
       if (rawRE.test(id)) {
         const file = checkPublicFile(id, config) || cleanUrl(id);
         return `export default ${JSON.stringify(

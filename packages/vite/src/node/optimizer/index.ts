@@ -316,7 +316,6 @@ export function runOptimizeDeps(
       .then((result) => {
         const meta = result.metafile!;
 
-        // the paths in `meta.outputs` are relative to `process.cwd()`
         const processingCacheDirOutputPath = path.relative(
           process.cwd(),
           processingCacheDir
@@ -777,8 +776,8 @@ function isSingleDefaultExport(exports: readonly string[]) {
 
 const lockfileFormats = [
   { name: "package-lock.json", checkPatches: true, manager: "npm" },
-  { name: "yarn.lock", checkPatches: true, manager: "yarn" }, // Included in lockfile for v2+
-  { name: "pnpm-lock.yaml", checkPatches: false, manager: "pnpm" }, // Included in lockfile
+  { name: "yarn.lock", checkPatches: true, manager: "yarn" },
+  { name: "pnpm-lock.yaml", checkPatches: false, manager: "pnpm" },
   { name: "bun.lockb", checkPatches: true, manager: "bun" },
 ].sort((_, { manager }) => {
   return process.env.npm_config_user_agent?.startsWith(manager) ? 1 : -1;

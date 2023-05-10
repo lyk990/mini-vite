@@ -5,8 +5,6 @@ import type * as PostCSS from "postcss";
 import path from "node:path";
 import type {
   ExistingRawSourceMap,
-  NormalizedOutputOptions,
-  OutputChunk,
   RenderedChunk,
   RollupError,
   SourceMapInput,
@@ -169,8 +167,6 @@ const directRequestRE = /(?:\?|&)direct\b/;
 const htmlProxyRE = /(?:\?|&)html-proxy\b/;
 const commonjsProxyRE = /\?commonjs-proxy/;
 const inlineRE = /(?:\?|&)inline\b/;
-const inlineCSSRE = /(?:\?|&)inline-css\b/;
-const usedRE = /(?:\?|&)used\b/;
 const varRE = /^var\(/i;
 
 type CssUrlReplacer = (
@@ -250,7 +246,6 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
         moduleCache.set(id, modules);
       }
 
-      // track deps for build watch mode
       if (config.command === "build" && config.build.watch && deps) {
         for (const file of deps) {
           this.addWatchFile(file);
@@ -332,7 +327,7 @@ async function resolvePostcssConfig(
           const { name, message, stack } = e;
           e.name = "Failed to load PostCSS config";
           e.message = `Failed to load PostCSS config (searchPath: ${searchPath}): [${name}] ${message}\n${stack}`;
-          e.stack = ""; // add stack to message to retain stack
+          e.stack = ""; 
           throw e;
         } else {
           throw new Error(`Failed to load PostCSS config: ${e}`);
@@ -340,7 +335,6 @@ async function resolvePostcssConfig(
       }
       return null;
     });
-    // replace cached promise to result object when finished
     result.then((resolved) => {
       postcssConfigCache.set(config, resolved);
     });
@@ -377,7 +371,6 @@ async function compileCSS(
   const lang = id.match(CSS_LANGS_RE)?.[1] as CssLang | undefined;
   const postcssConfig = await resolvePostcssConfig(config);
 
-  // 1. plain css that needs no processing
   if (
     lang === "css" &&
     !postcssConfig &&
@@ -398,11 +391,9 @@ async function compileCSS(
     configToAtImportResolvers.set(config, atImportResolvers);
   }
 
-  // 2. pre-processors: sass etc.
   if (isPreProcessor(lang)) {
     const preProcessor = preProcessors[lang];
     let opts = (preprocessorOptions && preprocessorOptions[lang]) || {};
-    // support @import from node dependencies by default
     switch (lang) {
       case PreprocessLang.scss:
       case PreprocessLang.sass:
@@ -421,7 +412,6 @@ async function compileCSS(
           ...opts,
         };
     }
-    // important: set this for relative import resolving
     opts.filename = cleanUrl(id);
     opts.enableSourcemap = devSourcemap ?? false;
 
@@ -542,7 +532,6 @@ async function compileCSS(
   try {
     const source = removeDirectQuery(id);
     const postcss = await importPostcss();
-    // postcss is an unbundled dep and should be lazy imported
     postcssResult = await postcss.default(postcssPlugins).process(code, {
       ...postcssOptions,
       parser:
@@ -807,7 +796,6 @@ const scss: SassStylePreprocessor = async (
       deps,
     };
   } catch (e) {
-    // normalize SASS error
     e.message = `[sass] ${e.message}`;
     e.id = e.file;
     e.frame = e.formatted;

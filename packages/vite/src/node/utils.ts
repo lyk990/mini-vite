@@ -15,6 +15,7 @@ import {
   NULL_BYTE_PLACEHOLDER,
   OPTIMIZABLE_ENTRY_RE,
   VALID_ID_PREFIX,
+  wildcardHosts,
 } from "./constants";
 import colors from "picocolors";
 import { builtinModules, createRequire } from "node:module";
@@ -27,6 +28,7 @@ import { TransformResult } from "rollup";
 import type MagicString from "magic-string";
 import { resolvePackageData } from "./package";
 import { fileURLToPath } from "node:url";
+import { promises as dns } from 'node:dns'
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -763,4 +765,46 @@ export function timeFrom(start: number, subtract = 0): string {
   } else {
     return colors.red(timeString);
   }
+}
+
+export interface Hostname {
+  host: string | undefined;
+  name: string;
+}
+
+export async function resolveHostname(
+  optionsHost: string | boolean | undefined
+): Promise<Hostname> {
+  let host: string | undefined;
+  if (optionsHost === undefined || optionsHost === false) {
+    host = "localhost";
+  } else if (optionsHost === true) {
+    host = undefined;
+  } else {
+    host = optionsHost;
+  }
+
+  let name = host === undefined || wildcardHosts.has(host) ? "localhost" : host;
+
+  if (host === "localhost") {
+    const localhostAddr = await getLocalhostAddressIfDiffersFromDNS();
+    if (localhostAddr) {
+      name = localhostAddr;
+    }
+  }
+
+  return { host, name };
+}
+
+export async function getLocalhostAddressIfDiffersFromDNS(): Promise<
+  string | undefined
+> {
+  const [nodeResult, dnsResult] = await Promise.all([
+    dns.lookup("localhost"),
+    dns.lookup("localhost", { verbatim: true }),
+  ]);
+  const isSame =
+    nodeResult.family === dnsResult.family &&
+    nodeResult.address === dnsResult.address;
+  return isSame ? undefined : nodeResult.address;
 }

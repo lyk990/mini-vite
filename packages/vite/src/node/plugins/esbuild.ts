@@ -20,18 +20,13 @@ import {
 import { ViteDevServer } from "../server";
 import { searchForWorkspaceRoot } from "../server/searchRoot";
 import type { TSConfckParseOptions } from "tsconfck";
-import type { InternalModuleFormat, SourceMap } from "rollup";
+import type { SourceMap } from "rollup";
 import { TSConfckParseError, findAll, parse } from "tsconfck";
 import { transform } from "esbuild";
 import type { RawSourceMap } from "@ampproject/remapping";
 import type { FSWatcher } from "chokidar";
 
 const debug = createDebugger("vite:esbuild");
-
-const INJECT_HELPERS_IIFE_RE =
-  /^(.*?)((?:const|var)\s+\S+\s*=\s*function\s*\([^)]*\)\s*\{.*?"use strict";)/s;
-const INJECT_HELPERS_UMD_RE =
-  /^(.*?)(\(function\([^)]*\)\s*\{.+?amd.+?function\([^)]*\)\s*\{.*?"use strict";)/s;
 
 const validExtensionRE = /\.\w+$/;
 const jsxExtensionsRE = /\.(?:j|t)sx\b/;

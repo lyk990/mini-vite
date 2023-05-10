@@ -9,13 +9,9 @@ import {
   HookHandler,
   InlineConfig,
   InternalResolveOptions,
-  loadEnv,
   mergeConfig,
   resolveBaseUrl,
   ResolvedBuildOptions,
-  ResolvedPreviewOptions,
-  ResolvedSSROptions,
-  ResolveWorkerOptions,
   UserConfig,
   UserConfigExport,
 } from "vite";
@@ -27,7 +23,6 @@ import {
   DEFAULT_EXTENSIONS,
   DEFAULT_MAIN_FIELDS,
 } from "./constants";
-import { resolveEnvPrefix } from "./env";
 import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
 import { createRequire } from "node:module";
@@ -53,13 +48,10 @@ import { PluginContainer, createPluginContainer } from "./pluginContainer";
 import aliasPlugin from "@rollup/plugin-alias";
 import { promisify } from "node:util";
 import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
-import { createPluginHookUtils, resolvePlugins } from "./plugins";
+import { resolvePlugins } from "./plugins";
 import type { ServerOptions as HttpsServerOptions } from "node:https";
 import type { ProxyOptions } from "./server/middlewares/proxy";
-import type {
-  Server as HttpServer,
-  OutgoingHttpHeaders as HttpServerHeaders,
-} from "node:http";
+import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
 
 const debug = createDebugger("vite:config");
 const promisifiedRealpath = promisify(fs.realpath);
@@ -140,6 +132,8 @@ export type ResolvedConfig = Readonly<
     envDir: string;
     // isWorker: boolean TODO worker打包
     experimental: ExperimentalOptions;
+    mode: string;
+    esbuild: ESBuildOptions | false;
   } & PluginHookUtils
 >;
 
@@ -293,12 +287,20 @@ export async function resolveConfig(
     (!Array.isArray(config.assetsInclude) || config.assetsInclude.length)
       ? createFilter(config.assetsInclude)
       : () => false;
-
+  const isProduction = process.env.NODE_ENV === "production";
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
       normalizePath(path.resolve(name))
     ),
+    esbuild:
+      config.esbuild === false
+        ? false
+        : {
+            jsxDev: !isProduction,
+            ...config.esbuild,
+          },
+    mode,
     envDir,
     isProduction: false,
     inlineConfig,

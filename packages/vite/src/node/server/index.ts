@@ -1,10 +1,7 @@
 import connect from "connect";
 import type { Connect } from "dep-types/connect";
-// import { optimize } from "../optimizer/index";
-import { resolvePlugins } from "../plugins";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
-import { Plugin } from "../plugin";
-import { CLIENT_DIR, DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
+import { DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
 import {
   InlineConfig,
   ServerOptions,
@@ -26,7 +23,7 @@ import {
 } from "../utils";
 import { Logger, printServerUrls } from "../logger";
 import { transformMiddleware } from "./middlewares/transform";
-import { FSWatcher, WatchOptions } from "chokidar";
+import { FSWatcher } from "chokidar";
 import chokidar from "chokidar";
 import { createWebSocketServer, WebSocketServer } from "./ws";
 import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
@@ -39,7 +36,6 @@ import {
   createDevHtmlTransformFn,
   indexHtmlMiddleware,
 } from "./middlewares/indexHtml";
-import colors from "picocolors";
 import {
   serveRawFsMiddleware,
   serveStaticMiddleware,

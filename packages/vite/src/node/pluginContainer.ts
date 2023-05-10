@@ -5,9 +5,6 @@ import type {
   PluginContext as RollupPluginContext,
   ResolvedId,
   CustomPluginOptions,
-  AsyncPluginHooks,
-  ParallelPluginHooks,
-  FunctionPluginHooks,
   InputOptions,
   ModuleInfo,
   MinimalPluginContext,
@@ -19,11 +16,10 @@ import type {
 import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
 import type { FSWatcher } from "chokidar";
-import { createPluginHookUtils, resolvePlugins } from "./plugins";
+import { createPluginHookUtils } from "./plugins";
 import { join } from "path";
 import { VERSION as rollupVersion } from "rollup";
 import { Plugin } from "./plugin";
-import { any } from "micromatch";
 import {
   cleanUrl,
   combineSourcemaps,

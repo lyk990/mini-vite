@@ -102,12 +102,10 @@ function setupWebSocket(
     { once: true }
   );
 
-  // Listen for messages
   socket.addEventListener("message", async ({ data }) => {
     handleMessage(JSON.parse(data));
   });
 
-  // ping server
   socket.addEventListener("close", async ({ wasClean }) => {
     if (wasClean) return;
 
@@ -256,7 +254,6 @@ async function waitForSuccessfulPing(
   }
   await wait(ms);
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     if (document.visibilityState === "visible") {
       if (await ping()) {
@@ -401,14 +398,11 @@ export function createHotContext(ownerPath: string): ViteHotContext {
     dataMap.set(ownerPath, {});
   }
 
-  // when a file is hot updated, a new context is created
-  // clear its stale callbacks
   const mod = hotModulesMap.get(ownerPath);
   if (mod) {
     mod.callbacks = [];
   }
 
-  // clear stale custom event listeners
   const staleListeners = ctxToListenersMap.get(ownerPath);
   if (staleListeners) {
     for (const [event, staleFns] of staleListeners) {
@@ -454,8 +448,6 @@ export function createHotContext(ownerPath: string): ViteHotContext {
       }
     },
 
-    // export names (first arg) are irrelevant on the client side, they're
-    // extracted in the server for propagation
     acceptExports(_, callback) {
       acceptDeps([ownerPath], ([mod]) => callback?.(mod));
     },
@@ -468,12 +460,9 @@ export function createHotContext(ownerPath: string): ViteHotContext {
       pruneMap.set(ownerPath, cb);
     },
 
-    // Kept for backward compatibility (#11036)
     // @ts-expect-error untyped
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     decline() {},
 
-    // tell the server to re-perform hmr propagation from this module as root
     invalidate(message) {
       notifyListeners("vite:invalidate", { path: ownerPath, message });
       this.send("vite:invalidate", { path: ownerPath, message });
@@ -482,7 +471,6 @@ export function createHotContext(ownerPath: string): ViteHotContext {
       );
     },
 
-    // custom events
     on(event, cb) {
       const addToMap = (map: Map<string, any[]>) => {
         const existing = map.get(event) || [];
@@ -503,7 +491,6 @@ export function createHotContext(ownerPath: string): ViteHotContext {
 }
 let lastInsertedStyle: HTMLStyleElement | undefined
 const sheetsMap = new Map<string, HTMLStyleElement>()
-// TODO
 export function updateStyle(id: string, content: string): void {
   let style = sheetsMap.get(id);
   if (!style) {
@@ -514,9 +501,6 @@ export function updateStyle(id: string, content: string): void {
 
     if (!lastInsertedStyle) {
       document.head.appendChild(style);
-
-      // reset lastInsertedStyle after async
-      // because dynamically imported css will be splitted into a different file
       setTimeout(() => {
         lastInsertedStyle = undefined;
       }, 0);
@@ -530,7 +514,6 @@ export function updateStyle(id: string, content: string): void {
   sheetsMap.set(id, style);
 }
 
-// TODO
 export function removeStyle(id: string): void {
   const style = sheetsMap.get(id)
   if (style) {

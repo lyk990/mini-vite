@@ -13,7 +13,6 @@ const context = (() => {
   }
 })()
 
-// assign defines
 const defines = __DEFINES__
 Object.keys(defines).forEach((key) => {
   const segments = key.split('.')
