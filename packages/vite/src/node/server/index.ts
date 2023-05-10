@@ -213,7 +213,6 @@ export async function _createServer(
   };
   watcher.on("change", async (file) => {
     file = normalizePath(file);
-    // invalidate module graph cache on file change
     moduleGraph.onFileChange(file);
 
     await onHMRUpdate(file, false);

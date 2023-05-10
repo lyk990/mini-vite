@@ -192,8 +192,6 @@ async function handleMessage(payload: HMRPayload) {
     case "full-reload":
       notifyListeners("vite:beforeFullReload", payload);
       if (payload.path && payload.path.endsWith(".html")) {
-        // if html file is edited, only reload the page if the browser is
-        // currently on that page.
         const pagePath = decodeURI(location.pathname);
         const payloadPath = base + payload.path.slice(1);
         if (
@@ -446,10 +444,8 @@ export function createHotContext(ownerPath: string): ViteHotContext {
 
     accept(deps?: any, callback?: any) {
       if (typeof deps === "function" || !deps) {
-        // self-accept: hot.accept(() => {})
         acceptDeps([ownerPath], ([mod]) => deps?.(mod));
       } else if (typeof deps === "string") {
-        // explicit deps
         acceptDeps([deps], ([mod]) => callback?.(mod));
       } else if (Array.isArray(deps)) {
         acceptDeps(deps, callback);

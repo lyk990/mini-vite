@@ -84,9 +84,6 @@ export interface CommonServerOptions {
   strictPort?: boolean;
   host?: string | boolean;
   https?: boolean | HttpsServerOptions;
-  /**
-   * Open browser window on startup
-   */
   open?: boolean | string;
   proxy?: Record<string, string | ProxyOptions>;
   cors?: CorsOptions | boolean;
@@ -121,7 +118,7 @@ export type ResolvedConfig = Readonly<
     root: string;
     optimizeDeps: DepOptimizationOptions;
     resolve: Required<ResolveOptions> & {
-      alias: Alias[]; // REMOVE
+      alias: Alias[];
     };
     build: ResolvedBuildOptions;
     configFile: string | undefined;
@@ -141,6 +138,8 @@ export type ResolvedConfig = Readonly<
     assetsInclude: (file: string) => boolean;
     packageCache: PackageCache;
     envDir: string;
+    // isWorker: boolean TODO worker打包
+    experimental: ExperimentalOptions;
   } & PluginHookUtils
 >;
 
@@ -205,8 +204,6 @@ export async function resolveConfig(
   const resolvedRoot = normalizePath(
     config.root ? path.resolve(config.root) : process.cwd()
   );
-  // 从cli.ts文件中传入的参数,默认为
-  // config.optimizeDeps = {force: undefined}
   const optimizeDeps = config.optimizeDeps || {};
   const resolveOptions: ResolvedConfig["resolve"] = {
     mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS, // = undefined
@@ -336,6 +333,11 @@ export async function resolveConfig(
     getSortedPluginHooks: undefined!,
     getSortedPlugins: undefined!,
     packageCache,
+    experimental: {
+      importGlobRestoreExtension: false,
+      hmrPartialAccept: false,
+      ...config.experimental,
+    },
   };
   const resolved: ResolvedConfig = {
     ...config,

@@ -81,7 +81,6 @@ export async function handleHMRUpdate(
   }
 
   if (!hmrContext.modules.length) {
-    // html file cannot be hot updated
     if (file.endsWith(".html")) {
       config.logger.info(colors.green(`page reload `) + colors.dim(shortFile), {
         clear: true,

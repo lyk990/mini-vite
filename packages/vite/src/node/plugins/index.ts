@@ -1,12 +1,14 @@
 import { HookHandler } from "vite";
 import { ResolvedConfig, PluginHookUtils } from "../config";
-// import { watchPackageDataPlugin } from "../package";
+import { watchPackageDataPlugin } from "../package";
 import { Plugin } from "../plugin";
 // import { clientInjectionsPlugin } from "./clientInjections";
 import { cssPlugin } from "./css";
 import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
 import { getDepsOptimizer } from "../optimizer/optimizer";
+import { esbuildPlugin } from "./esbuild";
+import { assetPlugin } from './asset'
 
 // TODO 插件开发
 export function resolvePlugins(
@@ -27,11 +29,11 @@ export function resolvePlugins(
       getDepsOptimizer: (ssr: boolean) => getDepsOptimizer(config, ssr),
       shouldExternalize: undefined,
     }),
-    // esbuildPlugin(),
+    esbuildPlugin(config),
     importAnalysisPlugin(config as any),
     cssPlugin(config),
-    // watchPackageDataPlugin()
-    assetPlugin(),
+    watchPackageDataPlugin(config.packageCache),
+    assetPlugin(config),
     clientInjectionsPlugin(config),
     htmlInlineProxyPlugin(config),
   ].filter(Boolean) as Plugin[]; // NOTE Boolean的写法

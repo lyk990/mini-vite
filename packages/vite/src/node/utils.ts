@@ -16,7 +16,7 @@ import {
   OPTIMIZABLE_ENTRY_RE,
   VALID_ID_PREFIX,
 } from "./constants";
-// import colors from "picocolors";
+import colors from "picocolors";
 import { builtinModules, createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { createFilter as _createFilter } from "@rollup/pluginutils";
@@ -751,4 +751,16 @@ export function isParentDirectory(dir: string, file: string): boolean {
     file.startsWith(dir) ||
     (isCaseInsensitiveFS && file.toLowerCase().startsWith(dir.toLowerCase()))
   );
+}
+
+export function timeFrom(start: number, subtract = 0): string {
+  const time: number | string = performance.now() - start - subtract;
+  const timeString = (time.toFixed(2) + `ms`).padEnd(5, " ");
+  if (time < 10) {
+    return colors.green(timeString);
+  } else if (time < 50) {
+    return colors.yellow(timeString);
+  } else {
+    return colors.red(timeString);
+  }
 }

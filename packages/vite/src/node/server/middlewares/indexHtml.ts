@@ -167,7 +167,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
 
     const modulePath = `${proxyModuleUrl}?html-proxy&index=${inlineModuleIndex}.${ext}`;
 
-    // invalidate the module so the newly cached contents will be served
     const module = server?.moduleGraph.getModuleById(modulePath);
     if (module) {
       server?.moduleGraph.invalidateModule(module);
@@ -185,7 +184,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
       return;
     }
 
-    // script tags
     if (node.nodeName === "script") {
       const { src, sourceCodeLocation, isModule } = getScriptInfo(node);
 
@@ -213,7 +211,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
       });
     }
 
-    // elements with [href/src] attrs
     const assetAttrs = assetAttrsConfig[node.nodeName];
     if (assetAttrs) {
       for (const p of node.attrs) {
