@@ -56,9 +56,6 @@ export interface PluginContainer {
       custom?: CustomPluginOptions;
       skip?: Set<Plugin>;
       ssr?: boolean;
-      /**
-       * @internal
-       */
       scan?: boolean;
       isEntry?: boolean;
     }
@@ -187,7 +184,6 @@ export async function createPluginContainer(
         resolveDependencies?: boolean;
       } & Partial<PartialNull<ModuleOptions>>
     ): Promise<ModuleInfo> {
-      // We may not have added this to our module graph yet, so ensure it exists
       await moduleGraph?.ensureEntryFromUrl(options.id);
       updateModuleInfo(options.id, options);
 

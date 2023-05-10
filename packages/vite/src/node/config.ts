@@ -54,9 +54,44 @@ import aliasPlugin from "@rollup/plugin-alias";
 import { promisify } from "node:util";
 import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 import { createPluginHookUtils, resolvePlugins } from "./plugins";
+import type { ServerOptions as HttpsServerOptions } from "node:https";
+import type { ProxyOptions } from "./server/middlewares/proxy";
+import type {
+  Server as HttpServer,
+  OutgoingHttpHeaders as HttpServerHeaders,
+} from "node:http";
 
 const debug = createDebugger("vite:config");
 const promisifiedRealpath = promisify(fs.realpath);
+
+export type CorsOrigin = boolean | string | RegExp | (string | RegExp)[]
+
+export interface CorsOptions {
+  origin?:
+    | CorsOrigin
+    | ((origin: string, cb: (err: Error, origins: CorsOrigin) => void) => void);
+  methods?: string | string[];
+  allowedHeaders?: string | string[];
+  exposedHeaders?: string | string[];
+  credentials?: boolean;
+  maxAge?: number;
+  preflightContinue?: boolean;
+  optionsSuccessStatus?: number;
+}
+
+export interface CommonServerOptions {
+  port?: number;
+  strictPort?: boolean;
+  host?: string | boolean;
+  https?: boolean | HttpsServerOptions;
+  /**
+   * Open browser window on startup
+   */
+  open?: boolean | string;
+  proxy?: Record<string, string | ProxyOptions>;
+  cors?: CorsOptions | boolean;
+  headers?: HttpServerHeaders;
+}
 
 export type ResolveFn = (
   id: string,

@@ -46,6 +46,7 @@ import {
 } from "./middlewares/static";
 import picomatch from "picomatch";
 import type { Matcher } from "picomatch";
+import { proxyMiddleware } from "./middlewares/proxy";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -299,6 +300,10 @@ export async function _createServer(
     _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
     _shortcutsOptions: undefined,
   };
+  const { proxy } = serverConfig;
+  if (proxy) {
+    middlewares.use(proxyMiddleware(httpServer, proxy, config));
+  }
   middlewares.use(transformMiddleware(server));
   middlewares.use(serveRawFsMiddleware(server));
   middlewares.use(serveStaticMiddleware(root, server));
