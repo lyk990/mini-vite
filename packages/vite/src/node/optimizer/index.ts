@@ -783,6 +783,7 @@ const lockfileFormats = [
   return process.env.npm_config_user_agent?.startsWith(manager) ? 1 : -1;
 });
 const lockfileNames = lockfileFormats.map((l) => l.name);
+
 export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
   const lockfilePath = lookupFile(config.root, lockfileNames);
   let content = lockfilePath ? fs.readFileSync(lockfilePath, "utf-8") : "";
@@ -799,6 +800,7 @@ export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
       }
     }
   }
+  
   const optimizeDeps = getDepOptimizationConfig(config, ssr);
   content += JSON.stringify(
     {
