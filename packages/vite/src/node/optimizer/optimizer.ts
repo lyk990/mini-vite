@@ -71,7 +71,7 @@ async function createDepsOptimizer(
         depsFromOptimizedDepInfo(metadata.discovered)
       ),
       processing: depOptimizationProcessing.promise,
-      exportsData: extractExportsData(resolved, config, ssr) as any, // TODO typescript类型不正确
+      exportsData: extractExportsData(resolved, config, ssr),
     });
   }
 

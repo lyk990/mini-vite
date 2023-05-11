@@ -91,17 +91,12 @@ function createNodePlugins(
       declarationDir: declarationDir !== false ? declarationDir : undefined,
     }),
 
-    // Some deps have try...catch require of optional deps, but rollup will
-    // generate code that force require them upfront for side effects.
-    // Shim them with eval() so rollup can skip these calls.
     isProduction &&
       shimDepsPlugin({
-        // chokidar -> fsevents
         'fsevents-handler.js': {
           src: `require('fsevents')`,
           replacement: `__require('fsevents')`,
         },
-        // postcss-import -> sugarss
         'process-content.js': {
           src: 'require("sugarss")',
           replacement: `__require('sugarss')`,
@@ -110,7 +105,6 @@ function createNodePlugins(
           pattern: /: require,/g,
           replacement: `: __require,`,
         },
-        // postcss-load-config calls require after register ts-node
         'postcss-load-config/src/index.js': {
           pattern: /require(?=\((configFile|'ts-node')\))/g,
           replacement: `__require`,
@@ -123,18 +117,9 @@ function createNodePlugins(
 
     commonjs({
       extensions: ['.js'],
-      // Optional peer deps of ws. Native deps that are mostly for performance.
-      // Since ws is not that perf critical for us, just ignore these deps.
       ignore: ['bufferutil', 'utf-8-validate'],
     }),
     json(),
-    // TODO  production license, Not need it for now
-    // isProduction &&
-    //   licensePlugin(
-    //     path.resolve(__dirname, 'LICENSE.md'),
-    //     'Vite core license',
-    //     'Vite',
-    //   ),
     cjsPatchPlugin(),
   ]
 }
@@ -159,8 +144,6 @@ function createNodeConfig(isProduction: boolean) {
     plugins: createNodePlugins(
       isProduction,
       !isProduction,
-      // in production we use api-extractor for dts generation
-      // in development we need to rely on the rollup ts plugin
       isProduction ? false : './dist/node',
     ),
   })
@@ -202,8 +185,6 @@ export default (commandLineArgs: any): RollupOptions[] => {
     createCjsConfig(isProduction),
   ])
 }
-
-// #region ======== Plugins ========
 
 interface ShimOptions {
   src?: string
@@ -271,9 +252,6 @@ function shimDepsPlugin(deps: Record<string, ShimOptions>): Plugin {
   }
 }
 
-/**
- * Inject CJS Context for each deps chunk
- */
 function cjsPatchPlugin(): Plugin {
   const cjsPatch = `
 import { fileURLToPath as __cjs_fileURLToPath } from 'node:url';
@@ -294,7 +272,6 @@ const __require = require;
       const match = code.match(/^(?:import[\s\S]*?;\s*)+/)
       const index = match ? match.index! + match[0].length : 0
       const s = new MagicString(code)
-      // inject after the last `import`
       s.appendRight(index, cjsPatch)
       console.log('patched cjs context: ' + chunk.fileName)
 
@@ -306,11 +283,6 @@ const __require = require;
   }
 }
 
-/**
- * Guard the bundle size
- *
- * @param limit size in KB
- */
 function bundleSizeLimit(limit: number): Plugin {
   return {
     name: 'bundle-limit',
@@ -332,5 +304,3 @@ function bundleSizeLimit(limit: number): Plugin {
     },
   }
 }
-
-// #endregion

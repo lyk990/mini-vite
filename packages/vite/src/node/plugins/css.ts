@@ -308,7 +308,6 @@ async function resolvePostcssConfig(
     return await result;
   }
 
-  // TODO ts类型
   const inlineOptions = config.css?.postcss as any;
   if (isObject(inlineOptions)) {
     const options = { ...inlineOptions };
@@ -327,7 +326,7 @@ async function resolvePostcssConfig(
           const { name, message, stack } = e;
           e.name = "Failed to load PostCSS config";
           e.message = `Failed to load PostCSS config (searchPath: ${searchPath}): [${name}] ${message}\n${stack}`;
-          e.stack = ""; 
+          e.stack = "";
           throw e;
         } else {
           throw new Error(`Failed to load PostCSS config: ${e}`);
@@ -434,7 +433,6 @@ async function compileCSS(
     );
 
     if (preprocessResult.deps) {
-      // TODO ts
       preprocessResult.deps.forEach((dep) => {
         if (normalizePath(dep) !== normalizePath(opts.filename)) {
           deps.add(dep);
@@ -1136,7 +1134,7 @@ async function rebaseUrls(
   alias: Alias[],
   variablePrefix: string
 ): Promise<Sass.ImporterReturnType> {
-  file = path.resolve(file); 
+  file = path.resolve(file);
   const fileDir = path.dirname(file);
   const rootDir = path.dirname(rootFile);
   if (fileDir === rootDir) {

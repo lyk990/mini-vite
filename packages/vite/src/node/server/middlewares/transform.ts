@@ -21,12 +21,8 @@ export function transformMiddleware(
     });
     if (result) {
       const type = isDirectCSSRequest(url) ? "css" : "js";
-      //TODO
-      // const isDep =
-      //   DEP_VERSION_RE.test(url) || depsOptimizer?.isOptimizedDepUrl(url);
       return send(req, res, result.code, type, {
         etag: result.etag,
-        // allow browser to cache npm deps!
         cacheControl: true ? "max-age=31536000,immutable" : "no-cache",
         headers: server.config.server.headers,
         map: result.map,

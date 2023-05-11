@@ -130,7 +130,7 @@ export type ResolvedConfig = Readonly<
     assetsInclude: (file: string) => boolean;
     packageCache: PackageCache;
     envDir: string;
-    // isWorker: boolean TODO worker打包
+    // isWorker: boolean FEATURE worker打包
     experimental: ExperimentalOptions;
     mode: string;
     esbuild: ESBuildOptions | false;
