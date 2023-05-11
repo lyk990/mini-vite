@@ -2,47 +2,7 @@ import cac from "cac";
 import colors from "picocolors";
 import { performance } from "node:perf_hooks";
 import { VERSION } from "./constants";
-// import type { LogLevel } from "./logger";
 import { createLogger } from "vite";
-
-// interface GlobalCLIOptions {
-//   "--"?: string[];
-//   c?: boolean | string;
-//   config?: string;
-//   base?: string;
-//   l?: LogLevel;
-//   logLevel?: LogLevel;
-//   clearScreen?: boolean;
-//   d?: boolean | string;
-//   debug?: boolean | string;
-//   f?: string;
-//   filter?: string;
-//   m?: string;
-//   mode?: string;
-//   force?: boolean;
-// }
-/**
- * removing global flags before passing as command specific sub-configs
- */
-// function cleanOptions<Options extends GlobalCLIOptions>(
-//   options: Options
-// ): Omit<Options, keyof GlobalCLIOptions> {
-//   const ret = { ...options };
-//   delete ret["--"];
-//   delete ret.c;
-//   delete ret.config;
-//   delete ret.base;
-//   delete ret.l;
-//   delete ret.logLevel;
-//   delete ret.clearScreen;
-//   delete ret.d;
-//   delete ret.debug;
-//   delete ret.f;
-//   delete ret.filter;
-//   delete ret.m;
-//   delete ret.mode;
-//   return ret;
-// }
 
 const cli = cac("mini-vite");
 // dev
@@ -62,13 +22,13 @@ cli
         logLevel: options.logLevel,
         clearScreen: options.clearScreen,
         optimizeDeps: { force: options.force },
-        // server: cleanOptions(options),
-        server: {}
+        server: {},
       });
       if (!server.httpServer) {
         throw new Error("HTTP server not available");
       }
       await server.listen();
+      // shell窗口展示信息 -> MINI-VITE v0.0.1  ready in 936 ms
       const info = server.config.logger.info;
       const viteStartTime = global.__vite_start_time ?? false;
       const startupDurationString = viteStartTime
@@ -84,6 +44,9 @@ cli
         )}  ${startupDurationString}\n`,
         { clear: !server.config.logger.hasWarned }
       );
+      // 打印服务地址
+      // Local:   http://localhost:5173/
+      // Network: ipv4地址
       server.printUrls();
     } catch (e) {
       const logger = createLogger(options.logLevel);
@@ -94,16 +57,5 @@ cli
     }
   });
 
-// optimize
-// cli
-//   .command('optimize [root]', 'pre-bundle dependencies')
-//   .option(
-//     '--force',
-//     `[boolean] force the optimizer to ignore the cache and re-bundle`,
-//   ).action(async () => {
-//     console.log('optimize pre-bundle dependencies')
-//   })
-
 cli.help();
-// 启动
 cli.parse();
