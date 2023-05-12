@@ -40,7 +40,6 @@ async function createDepsOptimizer(
 ): Promise<void> {
   const sessionTimestamp = Date.now().toString();
   let ssr = false;
-  // 查找预构建依赖内容
   const cachedMetadata = await loadCachedDepOptimizationMetadata(config, false);
   let metadata =
     cachedMetadata ||

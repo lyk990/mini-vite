@@ -127,6 +127,9 @@ export async function loadCachedDepOptimizationMetadata(
   const depsCacheDir = getDepsCacheDir(config, ssr);
   let cachedMetadata: DepOptimizationMetadata | undefined;
   try {
+    // entry point
+    // 首次进行依赖预构建时并没有_metadata.json文件，所以会报错，这里捕获错误
+    // 但不进行处理，因为这是正常的,直接走下面的逻辑
     const cachedMetadataPath = path.join(depsCacheDir, "_metadata.json");
     cachedMetadata = parseDepsOptimizerMetadata(
       await fsp.readFile(cachedMetadataPath, "utf-8"),
@@ -145,7 +148,7 @@ export async function loadCachedDepOptimizationMetadata(
 export function getDepsCacheDir(config: ResolvedConfig, ssr: boolean): string {
   return getDepsCacheDirPrefix(config) + getDepsCacheSuffix(config, ssr);
 }
-
+/**解析_metadat.json内容 */
 function parseDepsOptimizerMetadata(
   jsonMetadata: string,
   depsCacheDir: string
@@ -800,7 +803,7 @@ export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
       }
     }
   }
-  
+
   const optimizeDeps = getDepOptimizationConfig(config, ssr);
   content += JSON.stringify(
     {
