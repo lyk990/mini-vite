@@ -37,7 +37,7 @@ export const importsRE =
 const contextRE = /\bcontext\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s'">]+))/i;
 
 type ResolveIdOptions = Parameters<PluginContainer["resolveId"]>[2];
-
+/**扫描并引入依赖 */
 export function scanImports(config: ResolvedConfig): {
   cancel: () => Promise<void>;
   result: Promise<{
@@ -58,12 +58,12 @@ export function scanImports(config: ResolvedConfig): {
     return prepareEsbuildScanner(config, entries, deps, missing, scanContext);
   });
 
+  // 依赖打包
   const result = esbuildContext.then((context) => {
     //  如果没有扫描到入口文件，直接返回
     if (!context || scanContext?.cancelled) {
       return { deps: {}, missing: {} };
     }
-    // 依赖打包
     return context.rebuild().then(() => {
       return {
         deps: orderedDependencies(deps),
@@ -406,13 +406,13 @@ function globEntries(pattern: string | string[], config: ResolvedConfig) {
     suppressErrors: true,
   });
 }
-
+/**esbuild依赖预构建核心方法*/
 async function prepareEsbuildScanner(
   config: ResolvedConfig,
   entries: string[],
   deps: Record<string, string>,
   missing: Record<string, string>,
-  _scanContext?: { cancelled: boolean }
+  _scanContext?: { cancelled: boolean } // REMOVE
 ): Promise<BuildContext | undefined> {
   const container = await createPluginContainer(config);
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);

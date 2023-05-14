@@ -158,7 +158,7 @@ function createServerCloseFn(server: http.Server | null) {
       }
     });
 }
-/** 创建server监听端口、解析vite配置、解析http配置、解析chokidar配置 */
+
 export async function _createServer(
   inlineConfig: InlineConfig = {},
   options: { ws: boolean }

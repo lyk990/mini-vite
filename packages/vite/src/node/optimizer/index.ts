@@ -127,7 +127,6 @@ export async function loadCachedDepOptimizationMetadata(
   const depsCacheDir = getDepsCacheDir(config, ssr);
   let cachedMetadata: DepOptimizationMetadata | undefined;
   try {
-    // entry point
     // 首次进行依赖预构建时并没有_metadata.json文件，所以会报错，这里捕获错误
     // 但不进行处理，因为这是正常的,直接走下面的逻辑
     const cachedMetadataPath = path.join(depsCacheDir, "_metadata.json");
@@ -135,13 +134,16 @@ export async function loadCachedDepOptimizationMetadata(
       await fsp.readFile(cachedMetadataPath, "utf-8"),
       depsCacheDir
     );
-  } catch (e) {}
+  } catch (e) {
+    // entry point
+    // error
+  }
   // 比较hash是否一直来判断需不需要重复预构建依赖
   if (cachedMetadata && cachedMetadata.hash === getDepHash(config, ssr)) {
     log?.("Hash is consistent. Skipping. Use --force to override.");
     return cachedMetadata;
   }
-  // 删除预构建依赖文件和目录
+  // 删除预构建依赖文件(deps)和目录
   await fsp.rm(depsCacheDir, { recursive: true, force: true });
 }
 
@@ -203,7 +205,7 @@ export function addOptimizedDepInfo(
   return depInfo;
 }
 
-/**查找node_modules中的依赖并放到deps中 */
+/**查找node_modules中的依赖 */
 export function discoverProjectDependencies(config: ResolvedConfig): {
   cancel: () => Promise<void>;
   result: Promise<Record<string, string>>;
@@ -227,7 +229,7 @@ export function optimizedDepInfoFromFile(
 ): OptimizedDepInfo | undefined {
   return metadata.depInfoList.find((depInfo) => depInfo.file === file);
 }
-
+/**将扫描后的依赖放入node_moudles/.vite中 */
 export function runOptimizeDeps(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,

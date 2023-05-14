@@ -26,7 +26,7 @@ export function getDepsOptimizer(
   return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(config);
 }
 
-/**预构建依赖 */
+/**初始化预构建依赖 */
 export async function initDepsOptimizer(
   config: ResolvedConfig,
   server?: ViteDevServer
