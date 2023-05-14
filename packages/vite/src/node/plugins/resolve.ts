@@ -954,7 +954,6 @@ export function resolvePackageEntry(
         entry = "";
         skipPackageJson = true;
       } else {
-        // resolve object browser field in package.json
         const { browser: browserField } = data;
         if (targetWeb && options.browserField && isObject(browserField)) {
           entry = mapWithBrowserField(entry, browserField) || entry;

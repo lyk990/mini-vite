@@ -21,6 +21,7 @@ import { join } from "path";
 import { VERSION as rollupVersion } from "rollup";
 import { Plugin } from "./plugin";
 import {
+  arraify,
   cleanUrl,
   combineSourcemaps,
   createDebugger,
@@ -30,6 +31,7 @@ import {
 } from "./utils";
 import { FS_PREFIX } from "./constants";
 import MagicString from "magic-string";
+import * as acorn from "acorn";
 
 type PluginContext = Omit<RollupPluginContext, "cache" | "moduleIds">;
 const debugResolve = createDebugger("vite:resolve");
@@ -37,6 +39,7 @@ const debugSourcemapCombine = createDebugger("vite:sourcemap-combine", {
   onlyWhenFocused: true,
 });
 import type { RawSourceMap } from "@ampproject/remapping";
+export let parser = acorn.Parser;
 
 const debugSourcemapCombineFilter =
   process.env.DEBUG_VITE_SOURCEMAP_COMBINE_FILTER;
@@ -78,8 +81,13 @@ export async function createPluginContainer(
   moduleGraph?: ModuleGraph,
   watcher?: FSWatcher
 ): Promise<PluginContainer> {
-  const { plugins, root } = config;
-  const { getSortedPlugins } = createPluginHookUtils(plugins);
+  const {
+    plugins,
+    root,
+    build: { rollupOptions },
+  } = config;
+  const { getSortedPlugins, getSortedPluginHooks } =
+    createPluginHookUtils(plugins);
 
   const seenResolves: Record<string, true | undefined> = {};
 
@@ -296,7 +304,20 @@ export async function createPluginContainer(
 
   const container: PluginContainer = {
     options: await (async () => {
-      return {};
+      let options = rollupOptions;
+      for (const optionsHook of getSortedPluginHooks("options")) {
+        options = (await optionsHook.call(minimalContext, options)) || options;
+      }
+      if (options.acornInjectPlugins) {
+        parser = acorn.Parser.extend(
+          ...(arraify(options.acornInjectPlugins) as any)
+        );
+      }
+      return {
+        acorn,
+        acornInjectPlugins: [],
+        ...options,
+      };
     })(),
 
     getModuleInfo,

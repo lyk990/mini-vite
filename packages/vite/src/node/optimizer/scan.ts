@@ -406,7 +406,7 @@ function globEntries(pattern: string | string[], config: ResolvedConfig) {
     suppressErrors: true,
   });
 }
-/**esbuild依赖预构建核心方法*/
+/**esbuild依赖预构建初始化配置*/
 async function prepareEsbuildScanner(
   config: ResolvedConfig,
   entries: string[],

@@ -146,7 +146,7 @@ export async function loadCachedDepOptimizationMetadata(
   // 删除预构建依赖文件(deps)和目录
   await fsp.rm(depsCacheDir, { recursive: true, force: true });
 }
-
+/**获取deps文件的路径 */
 export function getDepsCacheDir(config: ResolvedConfig, ssr: boolean): string {
   return getDepsCacheDirPrefix(config) + getDepsCacheSuffix(config, ssr);
 }
@@ -229,7 +229,7 @@ export function optimizedDepInfoFromFile(
 ): OptimizedDepInfo | undefined {
   return metadata.depInfoList.find((depInfo) => depInfo.file === file);
 }
-/**将扫描后的依赖放入node_moudles/.vite中 */
+/**将esbuild扫描后的依赖放入node_moudles/.vite中 */
 export function runOptimizeDeps(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
@@ -319,6 +319,7 @@ export function runOptimizeDeps(
     return context
       .rebuild()
       .then((result) => {
+        // TODO 扫描依赖BUG
         const meta = result.metafile!;
 
         const processingCacheDirOutputPath = path.relative(
@@ -477,7 +478,7 @@ function stringifyDepsOptimizerMetadata(
     2
   );
 }
-
+/**esbuild打包初始化 */
 async function prepareEsbuildOptimizerRun(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
@@ -532,25 +533,6 @@ async function prepareEsbuildOptimizerRun(
     ssr && config.ssr?.target !== "webworker" ? "node" : "browser";
 
   const external = [...(optimizeDeps?.exclude ?? [])];
-
-  if (isBuild) {
-    let rollupOptionsExternal = config?.build?.rollupOptions?.external;
-    if (rollupOptionsExternal) {
-      if (typeof rollupOptionsExternal === "string") {
-        rollupOptionsExternal = [rollupOptionsExternal];
-      }
-      if (
-        !Array.isArray(rollupOptionsExternal) ||
-        rollupOptionsExternal.some((ext) => typeof ext !== "string")
-      ) {
-        throw new Error(
-          `[vite] 'build.rollupOptions.external' can only be an array of strings or a string when using esbuild optimization at build time.`
-        );
-      }
-      external.push(...(rollupOptionsExternal as string[]));
-    }
-  }
-
   const plugins = [...pluginsFromConfig];
   plugins.push(esbuildDepPlugin(flatIdDeps, external, config, ssr));
 
