@@ -448,6 +448,8 @@ async function compileCSS(
 
   if (needInlineImport) {
     postcssPlugins.unshift(
+      // TODO ts类型不正确
+      // @ts-ignore
       (await importPostcssImport()).default({
         async resolve(id, basedir) {
           const publicFile = checkPublicFile(id, config);
