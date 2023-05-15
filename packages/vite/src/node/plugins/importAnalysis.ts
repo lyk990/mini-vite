@@ -21,6 +21,11 @@ import {
   unwrapId,
   wrapId,
   transformStableResult,
+  generateCodeFrame,
+  createDebugger,
+  isInNodeModules,
+  timeFrom,
+  prettifyUrl,
 } from "../utils";
 import path from "node:path";
 import { ViteDevServer } from "../server";
@@ -29,12 +34,13 @@ import { ExportSpecifier, ImportSpecifier } from "es-module-lexer";
 import MagicString from "magic-string";
 import { ResolvedConfig, getDepOptimizationConfig } from "../config";
 import {
+  debugHmr,
   handlePrunedModules,
   lexAcceptedHmrDeps,
   lexAcceptedHmrExports,
   normalizeHmrUrl,
 } from "../server/hmr";
-import { isDirectCSSRequest } from "./css";
+import { isDirectCSSRequest, isModuleCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
 import { getDepsOptimizer, optimizedDepNeedsInterop } from "../optimizer";
 import fs from "node:fs";
@@ -51,6 +57,10 @@ const clientDir = normalizePath(CLIENT_DIR);
 const cleanUpRawUrlRE = /\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm;
 const urlIsStringRE = /^(?:'.*'|".*"|`.*`)$/;
 const hasImportInQueryParamsRE = /[?&]import=?\b/;
+const optimizedDepDynamicRE = /-[A-Z\d]{8}\.js/;
+const hasViteIgnoreRE = /\/\*\s*@vite-ignore\s*\*\//;
+
+const debug = createDebugger("vite:import-analysis");
 
 const skipRE = /\.(?:map|json)(?:$|\?)/;
 export const canSkipImportAnalysis = (id: string): boolean =>
@@ -100,12 +110,15 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         return null;
       }
 
-      const ssr = false;
+      const ssr = options?.ssr === true;
+      const prettyImporter = prettifyUrl(importer, root);
 
       if (canSkipImportAnalysis(importer)) {
+        debug?.(colors.dim(`[skipped] ${prettyImporter}`));
         return null;
       }
 
+      const start = performance.now();
       await init;
       let imports!: readonly ImportSpecifier[];
       let exports!: readonly ExportSpecifier[];
@@ -113,13 +126,45 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       try {
         [imports, exports] = parseImports(source);
       } catch (e: any) {
-        console.log(e);
+        const isVue = importer.endsWith(".vue");
+        const isJsx = importer.endsWith(".jsx") || importer.endsWith(".tsx");
+        const maybeJSX = !isVue && isJSRequest(importer);
+
+        const msg = isVue
+          ? `Install @vitejs/plugin-vue to handle .vue files.`
+          : maybeJSX
+          ? isJsx
+            ? `If you use tsconfig.json, make sure to not set jsx to preserve.`
+            : `If you are using JSX, make sure to name the file with the .jsx or .tsx extension.`
+          : `You may need to install appropriate plugins to handle the ${path.extname(
+              importer
+            )} file format, or if it's an asset, add "**/*${path.extname(
+              importer
+            )}" to \`assetsInclude\` in your configuration.`;
+
+        this.error(
+          `Failed to parse source for import analysis because the content ` +
+            `contains invalid JS syntax. ` +
+            msg,
+          e.idx
+        );
       }
 
       const depsOptimizer = getDepsOptimizer(config, ssr);
 
       const { moduleGraph } = server;
       const importerModule = moduleGraph.getModuleById(importer)!;
+      if (!importerModule && depsOptimizer?.isOptimizedDepFile(importer)) {
+        console.log("timeout === 504");
+      }
+
+      if (!imports.length && !(this as any)._addedImports) {
+        importerModule.isSelfAccepting = false;
+        debug?.(
+          `${timeFrom(start)} ${colors.dim(`[no imports] ${prettyImporter}`)}`
+        );
+        return source;
+      }
 
       let hasHMR = false;
       let isSelfAccepting = false;
@@ -303,34 +348,65 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             //     if (
             //       cjsShouldExternalizeForSSR(specifier, server._ssrExternals)
             //     ) {
-            //       return;
+            //       return
             //     }
             //   } else if (shouldExternalizeForSSR(specifier, config)) {
-            //     return;
+            //     return
             //   }
             //   if (isBuiltin(specifier)) {
-            //     return;
+            //     return
             //   }
             // }
+            // skip client
             if (specifier === clientPublicPath) {
               return;
             }
 
+            // warn imports to non-asset /public files
             // if (
-            //   specifier[0] === "/" &&
+            //   specifier[0] === '/' &&
             //   !config.assetsInclude(cleanUrl(specifier)) &&
-            //   !specifier.endsWith(".json") &&
+            //   !specifier.endsWith('.json') &&
             //   checkPublicFile(specifier, config)
             // ) {
             //   throw new Error(
             //     `Cannot import non-asset file ${specifier} which is inside /public.` +
             //       `JS/CSS files inside /public are copied as-is on build and ` +
-            //       `can only be referenced via <script src> or <link href> in html.`
-            //   );
+            //       `can only be referenced via <script src> or <link href> in html.`,
+            //   )
             // }
 
             // normalize
             const [url, resolvedId] = await normalizeUrl(specifier, start);
+
+            if (
+              !isDynamicImport &&
+              specifier &&
+              !specifier.includes("?") &&
+              isCSSRequest(resolvedId) &&
+              !isModuleCSSRequest(resolvedId)
+            ) {
+              const sourceExp = source.slice(expStart, start);
+              if (
+                sourceExp.includes("from") &&
+                !sourceExp.includes("__vite_glob_")
+              ) {
+                const newImport =
+                  sourceExp + specifier + `?inline` + source.slice(end, expEnd);
+                this.warn(
+                  `\n` +
+                    colors.cyan(importerModule.file) +
+                    `\n` +
+                    colors.reset(generateCodeFrame(source, start)) +
+                    `\n` +
+                    colors.yellow(
+                      `Default and named imports from CSS files are deprecated. ` +
+                        `Use the ?inline query instead. ` +
+                        `For example: ${newImport}`
+                    )
+                );
+              }
+            }
 
             server?.moduleGraph.safeModulesPath.add(fsPathFromUrl(url));
 
@@ -350,7 +426,15 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 );
 
                 if (needsInterop === undefined) {
+                  if (!file.match(optimizedDepDynamicRE)) {
+                    config.logger.error(
+                      colors.red(
+                        `Vite Error, ${url} optimized info should be defined`
+                      )
+                    );
+                  }
                 } else if (needsInterop) {
+                  debug?.(`${url} needs interop`);
                   interopNamedImports(
                     str(),
                     importSpecifier,
@@ -414,6 +498,29 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               });
             }
           } else if (!importer.startsWith(clientDir)) {
+            if (!isInNodeModules(importer)) {
+              const hasViteIgnore = hasViteIgnoreRE.test(
+                source.slice(dynamicIndex + 1, end)
+              );
+              if (!hasViteIgnore) {
+                this.warn(
+                  `\n` +
+                    colors.cyan(importerModule.file) +
+                    `\n` +
+                    colors.reset(generateCodeFrame(source, start)) +
+                    colors.yellow(
+                      `\nThe above dynamic import cannot be analyzed by Vite.\n` +
+                        `See ${colors.blue(
+                          `https://github.com/rollup/plugins/tree/master/packages/dynamic-import-vars#limitations`
+                        )} ` +
+                        `for supported dynamic import formats. ` +
+                        `If this is intended to be left as-is, you can use the ` +
+                        `/* @vite-ignore */ comment inside the import() call to suppress this warning.\n`
+                    )
+                );
+              }
+            }
+
             if (!ssr) {
               const url = rawUrl.replace(cleanUpRawUrlRE, "").trim();
               if (
@@ -442,6 +549,17 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       }
 
       if (hasHMR && !ssr) {
+        debugHmr?.(
+          `${
+            isSelfAccepting
+              ? `[self-accepts]`
+              : isPartiallySelfAccepting
+              ? `[accepts-exports]`
+              : acceptedUrls.size
+              ? `[accepts-deps]`
+              : `[detected api usage]`
+          } ${prettyImporter}`
+        );
         // inject hot context
         str().prepend(
           `import { createHotContext as __vite__createHotContext } from "${clientPublicPath}";` +
@@ -506,6 +624,12 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
           handlePrunedModules(prunedImports, server);
         }
       }
+
+      debug?.(
+        `${timeFrom(start)} ${colors.dim(
+          `[${importedUrls.size} imports rewritten] ${prettyImporter}`
+        )}`
+      );
 
       if (s) {
         return transformStableResult(s, importer, config);

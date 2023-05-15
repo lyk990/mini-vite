@@ -12,3 +12,8 @@ declare module "postcss-import" {
   }) => Plugin;
   export = plugin;
 }
+
+declare module "connect-history-api-fallback" {
+  const plugin: any;
+  export = plugin;
+}

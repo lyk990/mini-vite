@@ -28,7 +28,7 @@ import { TransformResult } from "rollup";
 import type MagicString from "magic-string";
 import { resolvePackageData } from "./package";
 import { fileURLToPath } from "node:url";
-import { promises as dns } from 'node:dns'
+import { promises as dns } from "node:dns";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -807,4 +807,31 @@ export async function getLocalhostAddressIfDiffersFromDNS(): Promise<
     nodeResult.family === dnsResult.family &&
     nodeResult.address === dnsResult.address;
   return isSame ? undefined : nodeResult.address;
+}
+
+export const isImportRequest = (url: string): boolean =>
+  importQueryRE.test(url);
+
+export function prettifyUrl(url: string, root: string): string {
+  url = removeTimestampQuery(url);
+  const isAbsoluteFile = url.startsWith(root);
+  if (isAbsoluteFile || url.startsWith(FS_PREFIX)) {
+    const file = path.relative(root, isAbsoluteFile ? url : fsPathFromId(url));
+    return colors.dim(file);
+  } else {
+    return colors.dim(url);
+  }
+}
+
+export function pad(source: string, n = 2): string {
+  const lines = source.split(splitRE);
+  return lines.map((l) => ` `.repeat(n) + l).join(`\n`);
+}
+
+export function evalValue<T = any>(rawValue: string): T {
+  const fn = new Function(`
+    var console, exports, global, module, process, require
+    return (\n${rawValue}\n)
+  `);
+  return fn();
 }

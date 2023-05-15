@@ -1,7 +1,7 @@
 import connect from "connect";
 import type { Connect } from "dep-types/connect";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
-import { DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
+import { CLIENT_DIR, DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
 import {
   InlineConfig,
   ServerOptions,
@@ -18,6 +18,7 @@ import { ResolvedConfig } from "../config";
 import {
   diffDnsOrderChange,
   isInNodeModules,
+  isParentDirectory,
   normalizePath,
   resolveServerUrls,
 } from "../utils";
@@ -45,6 +46,10 @@ import type { Matcher } from "picomatch";
 import { proxyMiddleware } from "./middlewares/proxy";
 import path from "node:path";
 import { resolveChokidarOptions } from "../watch";
+import { htmlFallbackMiddleware } from "./middlewares/htmlFallback";
+import { errorMiddleware } from "./middlewares/error";
+import colors from "picocolors";
+import { searchForWorkspaceRoot } from "./searchRoot";
 
 export interface ResolvedServerUrls {
   local: string[];
@@ -54,7 +59,7 @@ export interface ResolvedServerUrls {
 export interface ResolvedServerOptions extends ServerOptions {
   fs: Required<FileSystemServeOptions>;
   middlewareMode: boolean;
-  sourcemapIgnoreList?: Exclude<
+  sourcemapIgnoreList: Exclude<
     ServerOptions["sourcemapIgnoreList"],
     false | undefined
   >;
@@ -310,9 +315,19 @@ export async function _createServer(
   middlewares.use(serveRawFsMiddleware(server));
   middlewares.use(serveStaticMiddleware(root, server));
   server.transformIndexHtml = createDevHtmlTransformFn(server);
+
+  if (config.appType === "spa" || config.appType === "mpa") {
+    middlewares.use(htmlFallbackMiddleware(root, config.appType === "spa"));
+  }
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(indexHtmlMiddleware(server));
+
+    middlewares.use(function vite404Middleware(_, res) {
+      res.statusCode = 404;
+      res.end();
+    });
   }
+  middlewares.use(errorMiddleware(server, middlewareMode));
   return server;
 }
 
@@ -379,29 +394,53 @@ async function restartServer(server: ViteDevServer) {
 }
 
 export function resolveServerOptions(
-  root: string, //REMOVE
+  root: string,
   raw: ServerOptions | undefined,
-  logger: Logger // REMOVE
+  logger: Logger
 ): ResolvedServerOptions {
   const server: ResolvedServerOptions = {
     preTransformRequests: true,
     ...(raw as Omit<ResolvedServerOptions, "sourcemapIgnoreList">),
-    // REMOVE sourcemapIgnoreList sourcemap 忽略列表
     sourcemapIgnoreList:
       raw?.sourcemapIgnoreList === false
         ? () => false
         : raw?.sourcemapIgnoreList || isInNodeModules,
     middlewareMode: !!raw?.middlewareMode,
   };
-  const deny = [".env", ".env.*", "*.{crt,pem}"];
-  let allowDirs = [
-    "C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite",
-  ];
+  let allowDirs = server.fs?.allow;
+  const deny = server.fs?.deny || [".env", ".env.*", "*.{crt,pem}"];
+
+  if (!allowDirs) {
+    allowDirs = [searchForWorkspaceRoot(root)];
+  }
+
+  allowDirs = allowDirs.map((i) => resolvedAllowDir(root, i));
+
+  const resolvedClientDir = resolvedAllowDir(root, CLIENT_DIR);
+  if (!allowDirs.some((dir) => isParentDirectory(dir, resolvedClientDir))) {
+    allowDirs.push(resolvedClientDir);
+  }
 
   server.fs = {
     strict: server.fs?.strict ?? true,
     allow: allowDirs,
     deny,
   };
+
+  if (server.origin?.endsWith("/")) {
+    server.origin = server.origin.slice(0, -1);
+    logger.warn(
+      colors.yellow(
+        `${colors.bold("(!)")} server.origin should not end with "/". Using "${
+          server.origin
+        }" instead.`
+      )
+    );
+  }
+
   return server;
+}
+
+function resolvedAllowDir(root: string, dir: string): string {
+  return normalizePath(path.resolve(root, dir));
 }

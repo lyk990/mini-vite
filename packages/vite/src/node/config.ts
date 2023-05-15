@@ -123,7 +123,7 @@ export type ResolvedConfig = Readonly<
     env: Record<string, any>;
     envPrefix?: string | string[];
     base: string;
-    publicDir?: string | false;
+    publicDir: string;
     command: "build" | "serve";
     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
     isProduction: boolean;
@@ -288,11 +288,22 @@ export async function resolveConfig(
       ? createFilter(config.assetsInclude)
       : () => false;
   const isProduction = process.env.NODE_ENV === "production";
+  // REMOVE publicDir
+  const { publicDir } = config;
+  const resolvedPublicDir =
+    publicDir !== false && publicDir !== ""
+      ? path.resolve(
+          resolvedRoot,
+          typeof publicDir === "string" ? publicDir : "public"
+        )
+      : "";
+
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
       normalizePath(path.resolve(name))
     ),
+    publicDir: resolvedPublicDir,
     esbuild:
       config.esbuild === false
         ? false

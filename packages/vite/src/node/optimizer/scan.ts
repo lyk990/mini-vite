@@ -24,6 +24,7 @@ import {
 } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
+import { transformGlobImport } from '../plugins/importMetaGlob'
 
 const htmlTypesRE = /\.(html|vue|svelte|astro|imba)$/;
 export const commentRE = /<!--.*?-->/gs;
@@ -135,7 +136,15 @@ function esbuildScanPlugin(
       transpiledContents = contents;
     }
 
-    return transpiledContents;
+    const result = await transformGlobImport(
+      transpiledContents,
+      id,
+      config.root,
+      resolve,
+      config.isProduction
+    );
+
+    return result?.s.toString() || transpiledContents;
   };
 
   return {

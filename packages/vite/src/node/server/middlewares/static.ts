@@ -44,6 +44,7 @@ const sirvOptions = ({
     shouldServe,
   };
 };
+
 export function serveRawFsMiddleware(
   server: ViteDevServer
 ): Connect.NextHandleFunction {

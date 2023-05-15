@@ -1311,3 +1311,9 @@ async function doImportCSSReplace(
 
   return `@import ${wrap}${await replacer(rawUrl)}${wrap}`;
 }
+
+export const isDirectRequest = (request: string): boolean =>
+  directRequestRE.test(request);
+
+export const isModuleCSSRequest = (request: string): boolean =>
+  cssModuleRE.test(request);
