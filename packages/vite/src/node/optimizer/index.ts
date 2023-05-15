@@ -262,6 +262,7 @@ export function runOptimizeDeps(
     depsFromOptimizedDepInfo(depsInfo)
   );
 
+  const qualifiedIds = Object.keys(depsInfo);
   const cleanUp = () => {
     fsp
       .rm(processingCacheDir, { recursive: true, force: true })
@@ -271,6 +272,7 @@ export function runOptimizeDeps(
   const succesfulResult: DepOptimizationResult = {
     metadata,
     cancel: cleanUp,
+    // core 
     commit: async () => {
       const dataPath = path.join(processingCacheDir, "_metadata.json");
       fs.writeFileSync(
@@ -288,6 +290,13 @@ export function runOptimizeDeps(
         fsp.rm(temporalPath, { recursive: true, force: true });
     },
   };
+  // 没有依赖
+  if (!qualifiedIds.length) {
+    return {
+      cancel: async () => cleanUp(),
+      result: Promise.resolve(succesfulResult),
+    };
+  }
 
   const cancelledResult: DepOptimizationResult = {
     metadata,
@@ -534,11 +543,11 @@ async function prepareEsbuildOptimizerRun(
   const external = [...(optimizeDeps?.exclude ?? [])];
   const plugins = [...pluginsFromConfig];
   plugins.push(esbuildDepPlugin(flatIdDeps, external, config, ssr));
-  // 扫描依赖
+  // core: 扫描依赖
   const context = await esbuild.context({
     absWorkingDir: process.cwd(),
     entryPoints: Object.keys(flatIdDeps),
-    bundle: true, // 递归扫描依赖 
+    bundle: true, // 递归扫描依赖
     platform,
     define,
     format: "esm",

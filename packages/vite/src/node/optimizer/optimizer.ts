@@ -13,6 +13,7 @@ import {
   addOptimizedDepInfo,
   OptimizedDepInfo,
   DepsOptimizer,
+  DepOptimizationResult,
 } from "./index";
 
 const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
@@ -56,7 +57,17 @@ async function createDepsOptimizer(
     }
 
     const knownDeps = prepareKnownDeps();
-    runOptimizeDeps(config, knownDeps);
+    // core: 通过调用runOptimizeDeps方法将依赖信息写入metadata.json文件中
+    let optimizationResult:
+      | {
+          cancel: () => Promise<void>;
+          result: Promise<DepOptimizationResult>;
+        }
+      | undefined = runOptimizeDeps(config, knownDeps);
+
+    let processingResult: DepOptimizationResult =
+      await optimizationResult.result;
+    await processingResult.commit();
   }
 
   function addMissingDep(id: string, resolved: string) {
