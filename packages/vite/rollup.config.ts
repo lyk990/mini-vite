@@ -149,30 +149,30 @@ function createNodeConfig(isProduction: boolean) {
   });
 }
 
-function createCjsConfig(isProduction: boolean) {
-  return defineConfig({
-    ...sharedNodeOptions,
-    input: {
-      publicUtils: path.resolve(__dirname, "src/node/publicUtils.ts"),
-    },
-    output: {
-      dir: "./dist",
-      entryFileNames: `node-cjs/[name].cjs`,
-      chunkFileNames: "node-cjs/chunks/dep-[hash].js",
-      exports: "named",
-      format: "cjs",
-      externalLiveBindings: false,
-      freeze: false,
-      sourcemap: false,
-    },
-    external: [
-      "fsevents",
-      ...Object.keys(pkg.dependencies),
-      ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
-    ],
-    plugins: [...createNodePlugins(false, false, false), bundleSizeLimit(120)],
-  });
-}
+// function createCjsConfig(isProduction: boolean) {
+//   return defineConfig({
+//     ...sharedNodeOptions,
+//     input: {
+//       publicUtils: path.resolve(__dirname, "src/node/publicUtils.ts"),
+//     },
+//     output: {
+//       dir: "./dist",
+//       entryFileNames: `node-cjs/[name].cjs`,
+//       chunkFileNames: "node-cjs/chunks/dep-[hash].js",
+//       exports: "named",
+//       format: "cjs",
+//       externalLiveBindings: false,
+//       freeze: false,
+//       sourcemap: false,
+//     },
+//     external: [
+//       "fsevents",
+//       ...Object.keys(pkg.dependencies),
+//       ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
+//     ],
+//     plugins: [...createNodePlugins(false, false, false), bundleSizeLimit(120)],
+//   });
+// }
 
 export default (commandLineArgs: any): RollupOptions[] => {
   const isDev = commandLineArgs.watch;
@@ -182,7 +182,7 @@ export default (commandLineArgs: any): RollupOptions[] => {
     envConfig,
     clientConfig,
     createNodeConfig(isProduction),
-    createCjsConfig(isProduction),
+    // createCjsConfig(isProduction),
   ]);
 };
 
@@ -283,22 +283,22 @@ const __require = require;
   };
 }
 
-function bundleSizeLimit(limit: number): Plugin {
-  return {
-    name: "bundle-limit",
-    generateBundle(options, bundle) {
-      const size = Buffer.byteLength(
-        Object.values(bundle)
-          .map((i) => ("code" in i ? i.code : ""))
-          .join(""),
-        "utf-8"
-      );
-      const kb = size / 1024;
-      if (kb > limit) {
-        throw new Error(
-          `Bundle size exceeded ${limit}kb, current size is ${kb.toFixed(2)}kb.`
-        );
-      }
-    },
-  };
-}
+// function bundleSizeLimit(limit: number): Plugin {
+//   return {
+//     name: "bundle-limit",
+//     generateBundle(options, bundle) {
+//       const size = Buffer.byteLength(
+//         Object.values(bundle)
+//           .map((i) => ("code" in i ? i.code : ""))
+//           .join(""),
+//         "utf-8"
+//       );
+//       const kb = size / 1024;
+//       if (kb > limit) {
+//         throw new Error(
+//           `Bundle size exceeded ${limit}kb, current size is ${kb.toFixed(2)}kb.`
+//         );
+//       }
+//     },
+//   };
+// }

@@ -48,6 +48,9 @@ importers:
       typescript:
         specifier: ^4.9.5
         version: 4.9.5
+      vite:
+        specifier: 4.3.5
+        version: 4.3.5
     devDependencies:
       '@types/convert-source-map':
         specifier: ^2.0.0
@@ -90,10 +93,10 @@ importers:
         version: 2.2.1
       '@rollup/plugin-alias':
         specifier: ^4.0.4
-        version: 4.0.4(rollup@3.20.2)
+        version: 4.0.4(rollup@3.21.7)
       '@rollup/pluginutils':
         specifier: ^5.0.2
-        version: 5.0.2(rollup@3.20.2)
+        version: 5.0.2(rollup@3.21.7)
       '@types/estree':
         specifier: ^1.0.1
         version: 1.0.1
@@ -174,7 +177,7 @@ importers:
         version: 2.0.2
       rollup-plugin-license:
         specifier: ^3.0.1
-        version: 3.0.1(rollup@3.20.2)
+        version: 3.0.1(rollup@3.21.7)
       sass:
         specifier: '*'
         version: 0.4.0
@@ -523,7 +526,7 @@ packages:
     resolution: {integrity: sha512-a5Sab1C4/icpTZVzZc5Ghpz88yQtGOyNqYXcZgOssB2uuAr+wF/MvN6bgtW32q7HHrvBki+BsZ0OuNv6EV3K9g==}
     dev: true
 
-  /@rollup/plugin-alias@4.0.4(rollup@3.20.2):
+  /@rollup/plugin-alias@4.0.4(rollup@3.21.7):
     resolution: {integrity: sha512-0CaAY238SMtYAWEXXptWSR8iz8NYZnH7zNBKuJ14xFJSGwLtPgjvXYsoApAHfzYXXH1ejxpVw7WlHss3zhh9SQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
@@ -532,7 +535,7 @@ packages:
       rollup:
         optional: true
     dependencies:
-      rollup: 3.20.2
+      rollup: 3.21.7
       slash: 4.0.0
     dev: false
 
@@ -617,6 +620,21 @@ packages:
       estree-walker: 2.0.2
       picomatch: 2.3.1
       rollup: 3.20.2
+    dev: false
+
+  /@rollup/pluginutils@5.0.2(rollup@3.21.7):
+    resolution: {integrity: sha512-pTd9rIsP92h+B6wWwFbW8RkZv4hiR/xKsqre4SIuAOaOEQRxi0lqLke9k2/7WegC85GgUs9pjmOjCUi3In4vwA==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0||^3.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+    dependencies:
+      '@types/estree': 1.0.1
+      estree-walker: 2.0.2
+      picomatch: 2.3.1
+      rollup: 3.21.7
     dev: false
 
   /@types/braces@3.0.1:
@@ -1834,7 +1852,7 @@ packages:
       glob: 9.3.5
     dev: false
 
-  /rollup-plugin-license@3.0.1(rollup@3.20.2):
+  /rollup-plugin-license@3.0.1(rollup@3.21.7):
     resolution: {integrity: sha512-/lec6Y94Y3wMfTDeYTO/jSXII0GQ/XkDZCiqkMKxyU5D5nGPaxr/2JNYvAgYsoCYuOLGOanKDPjCCQiTT96p7A==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
@@ -1847,7 +1865,7 @@ packages:
       mkdirp: 1.0.4
       moment: 2.29.4
       package-name-regex: 2.0.6
-      rollup: 3.20.2
+      rollup: 3.21.7
       spdx-expression-validate: 2.0.0
       spdx-satisfies: 5.0.1
     dev: false
@@ -1858,6 +1876,14 @@ packages:
     hasBin: true
     optionalDependencies:
       fsevents: 2.3.2
+
+  /rollup@3.21.7:
+    resolution: {integrity: sha512-KXPaEuR8FfUoK2uHwNjxTmJ18ApyvD6zJpYv9FOJSqLStmt6xOY84l1IjK2dSolQmoXknrhEFRaPRgOPdqCT5w==}
+    engines: {node: '>=14.18.0', npm: '>=8.0.0'}
+    hasBin: true
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: false
 
   /run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
@@ -2128,6 +2154,38 @@ packages:
       terser: 5.4.0
     optionalDependencies:
       fsevents: 2.3.2
+
+  /vite@4.3.5:
+    resolution: {integrity: sha512-0gEnL9wiRFxgz40o/i/eTBwm+NEbpUeTWhzKrZDSdKm6nplj+z4lKz8ANDgildxHm47Vg8EUia0aicKbawUVVA==}
+    engines: {node: ^14.18.0 || >=16.0.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': '>= 14'
+      less: '*'
+      sass: '*'
+      stylus: '*'
+      sugarss: '*'
+      terser: ^5.4.0
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      less:
+        optional: true
+      sass:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+    dependencies:
+      esbuild: 0.17.16
+      postcss: 8.4.23
+      rollup: 3.21.7
+    optionalDependencies:
+      fsevents: 2.3.2
+    dev: false
 
   /vue-template-compiler@2.7.14:
     resolution: {integrity: sha512-zyA5Y3ArvVG0NacJDkkzJuPQDF8RFeRlzV2vLeSnhSpieO6LK2OVbdLPi5MPPs09Ii+gMO8nY4S3iKQxBxDmWQ==}
