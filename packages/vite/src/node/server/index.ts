@@ -38,6 +38,7 @@ import {
   indexHtmlMiddleware,
 } from "./middlewares/indexHtml";
 import {
+  servePublicMiddleware,
   serveRawFsMiddleware,
   serveStaticMiddleware,
 } from "./middlewares/static";
@@ -315,6 +316,12 @@ export async function _createServer(
   middlewares.use(serveRawFsMiddleware(server));
   middlewares.use(serveStaticMiddleware(root, server));
   server.transformIndexHtml = createDevHtmlTransformFn(server);
+  
+  if (config.publicDir) {
+    middlewares.use(
+      servePublicMiddleware(config.publicDir, config.server.headers)
+    );
+  }
 
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(htmlFallbackMiddleware(root, config.appType === "spa"));

@@ -13,6 +13,7 @@ import {
   isParentDirectory,
   isWindows,
   removeLeadingSlash,
+  shouldServeFile,
   slash,
 } from "../../utils";
 import type { OutgoingHttpHeaders, ServerResponse } from "node:http";
@@ -137,7 +138,6 @@ export function serveStaticMiddleware(
       }
     }
     if (redirectedPathname) {
-      // dir is pre-normalized to posix style
       if (redirectedPathname.startsWith(dir)) {
         redirectedPathname = redirectedPathname.slice(dir.length);
       }

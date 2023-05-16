@@ -883,3 +883,21 @@ export function mergeAlias(
   }
   return [...normalizeAlias(b), ...normalizeAlias(a)];
 }
+
+export function shouldServeFile(filePath: string, root: string): boolean {
+  if (!isCaseInsensitiveFS) return true;
+
+  return hasCorrectCase(filePath, root);
+}
+
+function hasCorrectCase(file: string, assets: string): boolean {
+  if (file === assets) return true;
+
+  const parent = path.dirname(file);
+
+  if (fs.readdirSync(parent).includes(path.basename(file))) {
+    return hasCorrectCase(parent, assets);
+  }
+
+  return false;
+}
