@@ -1,4 +1,3 @@
-import { isCSSRequest } from "vite";
 import {
   CLIENT_DIR,
   CLIENT_PUBLIC_PATH,
@@ -40,7 +39,7 @@ import {
   lexAcceptedHmrExports,
   normalizeHmrUrl,
 } from "../server/hmr";
-import { isDirectCSSRequest, isModuleCSSRequest } from "./css";
+import { isCSSRequest, isDirectCSSRequest, isModuleCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
 import { getDepsOptimizer, optimizedDepNeedsInterop } from "../optimizer";
 import fs from "node:fs";

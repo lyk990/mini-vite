@@ -8,6 +8,7 @@ import {
   fsPathFromId,
   fsPathFromUrl,
   isFileReadable,
+  isImportRequest,
   isInternalRequest,
   isParentDirectory,
   isWindows,
@@ -16,7 +17,7 @@ import {
 } from "../../utils";
 import type { OutgoingHttpHeaders, ServerResponse } from "node:http";
 import path from "node:path";
-import escapeHtml from 'escape-html'
+import escapeHtml from "escape-html";
 
 const knownJavascriptExtensionRE = /\.[tj]sx?$/;
 
@@ -44,6 +45,26 @@ const sirvOptions = ({
     shouldServe,
   };
 };
+
+export function servePublicMiddleware(
+  dir: string,
+  headers?: OutgoingHttpHeaders
+): Connect.NextHandleFunction {
+  const serve = sirv(
+    dir,
+    sirvOptions({
+      headers,
+      shouldServe: (filePath) => shouldServeFile(filePath, dir),
+    })
+  );
+
+  return function viteServePublicMiddleware(req, res, next) {
+    if (isImportRequest(req.url!) || isInternalRequest(req.url!)) {
+      return next();
+    }
+    serve(req, res, next);
+  };
+}
 
 export function serveRawFsMiddleware(
   server: ViteDevServer
@@ -104,7 +125,6 @@ export function serveStaticMiddleware(
     const url = new URL(req.url!, "http://example.com");
     const pathname = decodeURIComponent(url.pathname);
 
-    // apply aliases to static requests as well
     let redirectedPathname: string | undefined;
     for (const { find, replacement } of server.config.resolve.alias) {
       const matches =

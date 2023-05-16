@@ -29,6 +29,7 @@ import type MagicString from "magic-string";
 import { resolvePackageData } from "./package";
 import { fileURLToPath } from "node:url";
 import { promises as dns } from "node:dns";
+import type { Alias, AliasOptions } from "dep-types/alias";
 
 export function slash(p: string): string {
   return p.replace(/\\/g, "/");
@@ -834,4 +835,51 @@ export function evalValue<T = any>(rawValue: string): T {
     return (\n${rawValue}\n)
   `);
   return fn();
+}
+
+function normalizeSingleAlias({
+  find,
+  replacement,
+  customResolver,
+}: Alias): Alias {
+  if (
+    typeof find === "string" &&
+    find[find.length - 1] === "/" &&
+    replacement[replacement.length - 1] === "/"
+  ) {
+    find = find.slice(0, find.length - 1);
+    replacement = replacement.slice(0, replacement.length - 1);
+  }
+
+  const alias: Alias = {
+    find,
+    replacement,
+  };
+  if (customResolver) {
+    alias.customResolver = customResolver;
+  }
+  return alias;
+}
+
+export function normalizeAlias(o: AliasOptions = []): Alias[] {
+  return Array.isArray(o)
+    ? o.map(normalizeSingleAlias)
+    : Object.keys(o).map((find) =>
+        normalizeSingleAlias({
+          find,
+          replacement: (o as any)[find],
+        })
+      );
+}
+
+export function mergeAlias(
+  a?: AliasOptions,
+  b?: AliasOptions
+): AliasOptions | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  if (isObject(a) && isObject(b)) {
+    return { ...a, ...b };
+  }
+  return [...normalizeAlias(b), ...normalizeAlias(a)];
 }

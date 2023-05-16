@@ -18,10 +18,13 @@ import {
 import { createLogger } from "vite";
 import { resolveBuildOptions } from "./build";
 import {
+  CLIENT_ENTRY,
   DEFAULT_ASSETS_RE,
   DEFAULT_CONFIG_FILES,
   DEFAULT_EXTENSIONS,
   DEFAULT_MAIN_FIELDS,
+  ENV_ENTRY,
+  FS_PREFIX,
 } from "./constants";
 import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
@@ -35,6 +38,8 @@ import {
   isBuiltin,
   isObject,
   lookupFile,
+  mergeAlias,
+  normalizeAlias,
   normalizePath,
 } from "./utils";
 import fs from "node:fs";
@@ -198,6 +203,22 @@ export async function resolveConfig(
   const resolvedRoot = normalizePath(
     config.root ? path.resolve(config.root) : process.cwd()
   );
+  // TODO or REMOVE is feature?
+  const clientAlias = [
+    {
+      find: /^\/?@vite\/env/,
+      replacement: path.posix.join(FS_PREFIX, normalizePath(ENV_ENTRY)),
+    },
+    {
+      find: /^\/?@vite\/client/,
+      replacement: path.posix.join(FS_PREFIX, normalizePath(CLIENT_ENTRY)),
+    },
+  ];
+
+  const resolvedAlias = normalizeAlias(
+    mergeAlias(clientAlias, config.resolve?.alias || [])
+  );
+
   const optimizeDeps = config.optimizeDeps || {};
   const resolveOptions: ResolvedConfig["resolve"] = {
     mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS, // = undefined
@@ -206,7 +227,7 @@ export async function resolveConfig(
     extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS, // = undefined
     dedupe: config.resolve?.dedupe ?? [], // ['vue']
     preserveSymlinks: config.resolve?.preserveSymlinks ?? false, // = undefined
-    alias: [{ find: "", replacement: "@" }], // REMOVE clientAlias resolvedAlias
+    alias: resolvedAlias, // REMOVE clientAlias resolvedAlias
   };
   const resolvedBuildOptions = resolveBuildOptions(
     config.build,
