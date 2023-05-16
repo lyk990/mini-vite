@@ -7,6 +7,7 @@ import {
   ensureWatchedFile,
   isObject,
   prettifyUrl,
+  removeTimestampQuery,
   timeFrom,
 } from "../utils";
 import { promises as fs } from "node:fs";
@@ -23,6 +24,7 @@ import { applySourcemapIgnoreList, injectSourcesContent } from "./sourcemap";
 
 const debugLoad = createDebugger("vite:load");
 const debugTransform = createDebugger("vite:transform");
+const debugCache = createDebugger("vite:cache");
 
 export const ERR_LOAD_PUBLIC_URL = "ERR_LOAD_PUBLIC_URL";
 export const ERR_LOAD_URL = "ERR_LOAD_URL";
@@ -40,8 +42,40 @@ export function transformRequest(
   server: ViteDevServer,
   options: TransformOptions = {}
 ): Promise<TransformResult | null> {
+  const cacheKey = (options.ssr ? "ssr:" : options.html ? "html:" : "") + url;
   const timestamp = Date.now();
+
+  const pending = server._pendingRequests.get(cacheKey);
+  if (pending) {
+    return server.moduleGraph
+      .getModuleByUrl(removeTimestampQuery(url), options.ssr)
+      .then((module) => {
+        if (!module || pending.timestamp > module.lastInvalidationTimestamp) {
+          return pending.request;
+        } else {
+          pending.abort();
+          return transformRequest(url, server, options);
+        }
+      });
+  }
+
   const request = doTransform(url, server, options, timestamp);
+
+  let cleared = false;
+  const clearCache = () => {
+    if (!cleared) {
+      server._pendingRequests.delete(cacheKey);
+      cleared = true;
+    }
+  };
+
+  server._pendingRequests.set(cacheKey, {
+    request,
+    timestamp,
+    abort: clearCache,
+  });
+  request.then(clearCache, clearCache);
+
   return request;
 }
 
@@ -51,18 +85,24 @@ async function doTransform(
   options: TransformOptions,
   timestamp: number
 ) {
-  // REMOVE ssr
+  url = removeTimestampQuery(url);
+
   const { config, pluginContainer } = server;
-  const ssr = false;
+  const prettyUrl = debugCache ? prettifyUrl(url, config.root) : "";
+  const ssr = !!options.ssr;
+
   const module = await server.moduleGraph.getModuleByUrl(url, ssr);
-  // 判断是否有缓存数据
+
   const cached =
     module && (ssr ? module.ssrTransformResult : module.transformResult);
   if (cached) {
+    debugCache?.(`[memory] ${prettyUrl}`);
     return cached;
   }
   const id =
-    (await pluginContainer.resolveId(url, undefined, { ssr }))?.id || url;
+    module?.id ??
+    (await pluginContainer.resolveId(url, undefined, { ssr }))?.id ??
+    url;
   const result = loadAndTransform(id, url, server, options, timestamp);
   getDepsOptimizer(config, ssr)?.delayDepsOptimizerUntil(id, () => result);
   return result;
@@ -85,7 +125,7 @@ async function loadAndTransform(
 
   let code: string | null = null;
   let map: SourceDescription["map"] = null;
-  
+
   const loadStart = debugLoad ? performance.now() : 0;
   const loadResult = await pluginContainer.load(id, { ssr });
   if (loadResult == null) {

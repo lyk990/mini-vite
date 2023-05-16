@@ -10,6 +10,7 @@ import { getDepsOptimizer } from "../optimizer/optimizer";
 import { esbuildPlugin } from "./esbuild";
 import { assetPlugin } from "./asset";
 import { htmlInlineProxyPlugin } from "./html";
+import { preAliasPlugin } from "./preAlias";
 
 export function resolvePlugins(
   config: ResolvedConfig,
@@ -29,6 +30,7 @@ export function resolvePlugins(
       getDepsOptimizer: (ssr: boolean) => getDepsOptimizer(config, ssr),
       shouldExternalize: undefined,
     }),
+    preAliasPlugin(config), // REMOVE
     esbuildPlugin(config),
     importAnalysisPlugin(config as any),
     cssPlugin(config),

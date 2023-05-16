@@ -12,6 +12,10 @@ import type {
   ModuleOptions,
   SourceMap,
   TransformResult,
+  NormalizedInputOptions,
+  ParallelPluginHooks,
+  AsyncPluginHooks,
+  FunctionPluginHooks,
 } from "rollup";
 import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
@@ -28,17 +32,25 @@ import {
   isExternalUrl,
   isObject,
   normalizePath,
+  prettifyUrl,
+  timeFrom,
 } from "./utils";
 import { FS_PREFIX } from "./constants";
 import MagicString from "magic-string";
 import * as acorn from "acorn";
+import colors from "picocolors";
+import type { RawSourceMap } from "@ampproject/remapping";
 
 type PluginContext = Omit<RollupPluginContext, "cache" | "moduleIds">;
 const debugResolve = createDebugger("vite:resolve");
 const debugSourcemapCombine = createDebugger("vite:sourcemap-combine", {
   onlyWhenFocused: true,
 });
-import type { RawSourceMap } from "@ampproject/remapping";
+
+const debugPluginResolve = createDebugger("vite:plugin-resolve", {
+  onlyWhenFocused: "vite:plugin",
+});
+
 export let parser = acorn.Parser;
 
 const debugSourcemapCombineFilter =
@@ -321,8 +333,14 @@ export async function createPluginContainer(
     })(),
 
     getModuleInfo,
-
-    async buildStart() {},
+    // REMOVE
+    async buildStart() {
+      await hookParallel(
+        "buildStart",
+        (plugin) => new Context(plugin),
+        () => [container.options as NormalizedInputOptions]
+      );
+    },
 
     async resolveId(rawId, importer = join(root, "index.html"), options) {
       const skip = options?.skip;
@@ -332,6 +350,7 @@ export async function createPluginContainer(
       ctx.ssr = !!ssr;
       ctx._scan = scan;
       ctx._resolveSkips = skip;
+      const resolveStart = debugResolve ? performance.now() : 0;
 
       let id: string | null = null;
       const partial: Partial<PartialResolvedId> = {};
@@ -341,6 +360,8 @@ export async function createPluginContainer(
 
         ctx._activePlugin = plugin;
 
+        const pluginResolveStart = debugPluginResolve ? performance.now() : 0;
+        // DEBUG handler error 
         const handler =
           "handler" in plugin.resolveId
             ? plugin.resolveId.handler
@@ -361,6 +382,12 @@ export async function createPluginContainer(
           Object.assign(partial, result);
         }
 
+        debugPluginResolve?.(
+          timeFrom(pluginResolveStart),
+          plugin.name,
+          prettifyUrl(id, root)
+        );
+
         break;
       }
 
@@ -368,6 +395,11 @@ export async function createPluginContainer(
         const key = rawId + id;
         if (!seenResolves[key]) {
           seenResolves[key] = true;
+          debugResolve(
+            `${timeFrom(resolveStart)} ${colors.cyan(rawId)} -> ${colors.dim(
+              id
+            )}`
+          );
         }
       }
 
@@ -445,4 +477,27 @@ export async function createPluginContainer(
   };
 
   return container;
+
+  async function hookParallel<H extends AsyncPluginHooks & ParallelPluginHooks>(
+    hookName: H,
+    context: (plugin: Plugin) => ThisType<FunctionPluginHooks[H]>,
+    args: (plugin: Plugin) => Parameters<FunctionPluginHooks[H]>
+  ): Promise<void> {
+    const parallelPromises: Promise<unknown>[] = [];
+    for (const plugin of getSortedPlugins(hookName)) {
+      const hook = plugin[hookName];
+      if (!hook) continue;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore hook is not a primitive
+      const handler: Function = "handler" in hook ? hook.handler : hook;
+      if ((hook as { sequential?: boolean }).sequential) {
+        await Promise.all(parallelPromises);
+        parallelPromises.length = 0;
+        await handler.apply(context(plugin), args(plugin));
+      } else {
+        parallelPromises.push(handler.apply(context(plugin), args(plugin)));
+      }
+    }
+    await Promise.all(parallelPromises);
+  }
 }

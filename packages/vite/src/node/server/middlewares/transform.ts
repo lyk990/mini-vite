@@ -81,7 +81,7 @@ export function transformMiddleware(
             applySourcemapIgnoreList(
               map,
               sourcemapPath,
-              server.config.server.sourcemapIgnoreList as any,
+              server.config.server.sourcemapIgnoreList,
               logger
             );
 
@@ -176,7 +176,7 @@ export function transformMiddleware(
           html: req.headers.accept?.includes("text/html"),
         });
         if (result) {
-          const depsOptimizer = getDepsOptimizer(server.config, false); // non-ssr
+          const depsOptimizer = getDepsOptimizer(server.config, false);
           const type = isDirectCSSRequest(url) ? "css" : "js";
           const isDep =
             DEP_VERSION_RE.test(url) || depsOptimizer?.isOptimizedDepUrl(url);
@@ -195,7 +195,6 @@ export function transformMiddleware(
           res.statusMessage = "Optimize Deps Processing Error";
           res.end();
         }
-        // This timeout is unexpected
         logger.error(e.message);
         return;
       }
