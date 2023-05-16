@@ -6,6 +6,7 @@ import type {
   ViteHotContext,
   ViteHotContext as _ViteHotContext,
 } from "types/hot";
+import '@vite/env'
 
 const importMetaUrl = new URL(import.meta.url);
 interface HotModule {

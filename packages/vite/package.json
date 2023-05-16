@@ -1,8 +1,11 @@
 {
-  "name": "@mini-vite/vite",
+  "name": "mini-vite",
   "version": "0.0.1",
   "description": "@mini-vite/vite",
   "main": "index.js",
+  "keywords": ["vite","mini-vite"],
+  "author": "lyk990",
+  "license": "ISC",
   "bin": {
     "mini-vite": "bin/mini-vite.js"
   },
@@ -14,9 +17,6 @@
     "rm": "rimraf node_modules && rimraf dist",
     "i": "rimraf node_modules && pnpm i"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@ampproject/remapping": "^2.2.1",
     "@rollup/plugin-alias": "^4.0.4",
