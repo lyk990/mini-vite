@@ -44,6 +44,7 @@ export async function handleHMRUpdate(
       await server.restart();
     } catch (e) {
       config.logger.error(colors.red(e));
+      console.log(e);
     }
     return;
   }

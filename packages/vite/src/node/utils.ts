@@ -385,7 +385,8 @@ export function tryStatSync(file: string): fs.Stats | undefined {
     // fs.statSync 获取文件信息 throwIfNoEntry <boolean> 如果文件系统条目不存在，
     // 是否会抛出异常。 默认值: true。
     return fs.statSync(file, { throwIfNoEntry: false });
-  } catch {
+  } catch (e) {
+    console.log(e);
     // Ignore errors
   }
 }
@@ -727,7 +728,8 @@ export function isFileReadable(filename: string): boolean {
     fs.accessSync(filename, fs.constants.R_OK);
 
     return true;
-  } catch {
+  } catch (e) {
+    console.log(e);
     return false;
   }
 }
@@ -900,4 +902,17 @@ function hasCorrectCase(file: string, assets: string): boolean {
   }
 
   return false;
+}
+
+export const requestQuerySplitRE = /\?(?!.*[/|}])/;
+export function parseRequest(id: string): Record<string, string> | null {
+  const [_, search] = id.split(requestQuerySplitRE, 2);
+  if (!search) {
+    return null;
+  }
+  return Object.fromEntries(new URLSearchParams(search));
+}
+
+export function emptyCssComments(raw: string): string {
+  return raw.replace(multilineCommentsRE, (s) => " ".repeat(s.length));
 }

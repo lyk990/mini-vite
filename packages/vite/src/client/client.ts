@@ -1,58 +1,35 @@
 import type { ErrorPayload, HMRPayload, Update } from "types/hmrPayload";
+import type { ModuleNamespace, ViteHotContext } from "types/hot";
 import type { InferCustomEventPayload } from "types/customEvent";
 import { ErrorOverlay, overlayId } from "./overlay";
-import type {
-  ModuleNamespace,
-  ViteHotContext,
-  ViteHotContext as _ViteHotContext,
-} from "types/hot";
-import '@vite/env'
+import "@vite/env";
 
-const importMetaUrl = new URL(import.meta.url);
-interface HotModule {
-  id: string;
-  callbacks: HotCallback[];
-}
-interface HotCallback {
-  deps: string[];
-  fn: (modules: Array<ModuleNamespace | undefined>) => void;
-}
 declare const __BASE__: string;
+declare const __SERVER_HOST__: string;
 declare const __HMR_PROTOCOL__: string | null;
+declare const __HMR_HOSTNAME__: string | null;
 declare const __HMR_PORT__: number | null;
 declare const __HMR_DIRECT_TARGET__: string;
-declare const __SERVER_HOST__: string;
-declare const __HMR_HOSTNAME__: string | null;
 declare const __HMR_BASE__: string;
 declare const __HMR_TIMEOUT__: number;
 declare const __HMR_ENABLE_OVERLAY__: boolean;
 
-const pruneMap = new Map<string, (data: any) => void | Promise<void>>();
-const dataMap = new Map<string, any>();
-const base = __BASE__ || "/";
-const enableOverlay = __HMR_ENABLE_OVERLAY__;
-const ctxToListenersMap = new Map<string, CustomListenersMap>();
+console.debug("[vite] connecting...");
 
-const messageBuffer: string[] = [];
-const outdatedLinkTags = new WeakSet<HTMLLinkElement>();
+const importMetaUrl = new URL(import.meta.url);
 
 const serverHost = __SERVER_HOST__;
-const hmrPort = __HMR_PORT__;
 const socketProtocol =
   __HMR_PROTOCOL__ || (importMetaUrl.protocol === "https:" ? "wss" : "ws");
-const directSocketHost = __HMR_DIRECT_TARGET__;
-const hotModulesMap = new Map<string, HotModule>();
-
+const hmrPort = __HMR_PORT__;
 const socketHost = `${__HMR_HOSTNAME__ || importMetaUrl.hostname}:${
   hmrPort || importMetaUrl.port
 }${__HMR_BASE__}`;
+const directSocketHost = __HMR_DIRECT_TARGET__;
+const base = __BASE__ || "/";
+const messageBuffer: string[] = [];
+
 let socket: WebSocket;
-let isFirstUpdate = true;
-
-type CustomListenersMap = Map<string, ((data: any) => void)[]>;
-const customListenersMap: CustomListenersMap = new Map();
-const disposeMap = new Map<string, (data: any) => void | Promise<void>>();
-
 try {
   let fallback: (() => void) | undefined;
   if (!hmrPort) {
@@ -84,6 +61,7 @@ try {
 
   socket = setupWebSocket(socketProtocol, socketHost, fallback);
 } catch (error) {
+  console.log(error);
   console.error(`[vite] failed to connect to websocket (${error}). `);
 }
 
@@ -123,6 +101,26 @@ function setupWebSocket(
   return socket;
 }
 
+function warnFailedFetch(err: Error, path: string | string[]) {
+  if (!err.message.match("fetch")) {
+    console.error(err);
+  }
+  console.error(
+    `[hmr] Failed to reload ${path}. ` +
+      `This could be due to syntax errors or importing non-existent ` +
+      `modules. (see errors above)`
+  );
+}
+
+function cleanUrl(pathname: string): string {
+  const url = new URL(pathname, location.toString());
+  url.searchParams.delete("direct");
+  return url.pathname + url.search;
+}
+
+let isFirstUpdate = true;
+const outdatedLinkTags = new WeakSet<HTMLLinkElement>();
+
 async function handleMessage(payload: HMRPayload) {
   switch (payload.type) {
     case "connected":
@@ -149,9 +147,13 @@ async function handleMessage(payload: HMRPayload) {
             return queueUpdate(fetchUpdate(update));
           }
 
+          // css-update
+          // this is only sent when a css file referenced with <link> is updated
           const { path, timestamp } = update;
           const searchUrl = cleanUrl(path);
-
+          // can't use querySelector with `[href*=]` here since the link may be
+          // using relative paths so we need to use link.href to grab the full
+          // URL for the include check.
           const el = Array.from(
             document.querySelectorAll<HTMLLinkElement>("link")
           ).find(
@@ -233,6 +235,50 @@ async function handleMessage(payload: HMRPayload) {
   }
 }
 
+function notifyListeners<T extends string>(
+  event: T,
+  data: InferCustomEventPayload<T>
+): void;
+function notifyListeners(event: string, data: any): void {
+  const cbs = customListenersMap.get(event);
+  if (cbs) {
+    cbs.forEach((cb) => cb(data));
+  }
+}
+
+const enableOverlay = __HMR_ENABLE_OVERLAY__;
+
+function createErrorOverlay(err: ErrorPayload["err"]) {
+  if (!enableOverlay) return;
+  clearErrorOverlay();
+  document.body.appendChild(new ErrorOverlay(err));
+}
+
+function clearErrorOverlay() {
+  document
+    .querySelectorAll(overlayId)
+    .forEach((n) => (n as ErrorOverlay).close());
+}
+
+function hasErrorOverlay() {
+  return document.querySelectorAll(overlayId).length;
+}
+
+let pending = false;
+let queued: Promise<(() => void) | undefined>[] = [];
+
+async function queueUpdate(p: Promise<(() => void) | undefined>) {
+  queued.push(p);
+  if (!pending) {
+    pending = true;
+    await Promise.resolve();
+    pending = false;
+    const loading = [...queued];
+    queued = [];
+    (await Promise.all(loading)).forEach((fn) => fn && fn());
+  }
+}
+
 async function waitForSuccessfulPing(
   socketProtocol: string,
   hostAndPath: string,
@@ -244,9 +290,12 @@ async function waitForSuccessfulPing(
     try {
       await fetch(`${pingHostProtocol}://${hostAndPath}`, {
         mode: "no-cors",
+        headers: {
+          Accept: "text/x-vite-ping",
+        },
       });
       return true;
-    } catch {}
+    } catch(e) {console.log(e);}
     return false;
   };
 
@@ -267,46 +316,61 @@ async function waitForSuccessfulPing(
   }
 }
 
-function sendMessageBuffer() {
-  if (socket.readyState === 1) {
-    messageBuffer.forEach((msg) => socket.send(msg));
-    messageBuffer.length = 0;
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function waitForWindowShow() {
+  return new Promise<void>((resolve) => {
+    const onChange = async () => {
+      if (document.visibilityState === "visible") {
+        resolve();
+        document.removeEventListener("visibilitychange", onChange);
+      }
+    };
+    document.addEventListener("visibilitychange", onChange);
+  });
+}
+
+const sheetsMap = new Map<string, HTMLStyleElement>();
+
+if ("document" in globalThis) {
+  document.querySelectorAll("style[data-vite-dev-id]").forEach((el) => {
+    sheetsMap.set(el.getAttribute("data-vite-dev-id")!, el as HTMLStyleElement);
+  });
+}
+
+let lastInsertedStyle: HTMLStyleElement | undefined;
+
+export function updateStyle(id: string, content: string): void {
+  let style = sheetsMap.get(id);
+  if (!style) {
+    style = document.createElement("style");
+    style.setAttribute("type", "text/css");
+    style.setAttribute("data-vite-dev-id", id);
+    style.textContent = content;
+
+    if (!lastInsertedStyle) {
+      document.head.appendChild(style);
+
+      setTimeout(() => {
+        lastInsertedStyle = undefined;
+      }, 0);
+    } else {
+      lastInsertedStyle.insertAdjacentElement("afterend", style);
+    }
+    lastInsertedStyle = style;
+  } else {
+    style.textContent = content;
   }
+  sheetsMap.set(id, style);
 }
 
-function notifyListeners<T extends string>(
-  event: T,
-  data: InferCustomEventPayload<T>
-): void;
-function notifyListeners(event: string, data: any): void {
-  const cbs = customListenersMap.get(event);
-  if (cbs) {
-    cbs.forEach((cb) => cb(data));
-  }
-}
-
-function hasErrorOverlay() {
-  return document.querySelectorAll(overlayId).length;
-}
-
-function clearErrorOverlay() {
-  document
-    .querySelectorAll(overlayId)
-    .forEach((n) => (n as ErrorOverlay).close());
-}
-
-let pending = false;
-let queued: Promise<(() => void) | undefined>[] = [];
-
-async function queueUpdate(p: Promise<(() => void) | undefined>) {
-  queued.push(p);
-  if (!pending) {
-    pending = true;
-    await Promise.resolve();
-    pending = false;
-    const loading = [...queued];
-    queued = [];
-    (await Promise.all(loading)).forEach((fn) => fn && fn());
+export function removeStyle(id: string): void {
+  const style = sheetsMap.get(id);
+  if (style) {
+    document.head.removeChild(style);
+    sheetsMap.delete(id);
   }
 }
 
@@ -334,7 +398,6 @@ async function fetchUpdate({
     const [acceptedPathWithoutQuery, query] = acceptedPath.split(`?`);
     try {
       fetchedModule = await import(
-        /* @vite-ignore */
         base +
           acceptedPathWithoutQuery.slice(1) +
           `?${explicitImportRequired ? "import&" : ""}t=${timestamp}${
@@ -342,6 +405,7 @@ async function fetchUpdate({
           }`
       );
     } catch (e) {
+      console.log(e);
       warnFailedFetch(e, acceptedPath);
     }
   }
@@ -355,44 +419,31 @@ async function fetchUpdate({
   };
 }
 
-function cleanUrl(pathname: string): string {
-  const url = new URL(pathname, location.toString());
-  url.searchParams.delete("direct");
-  return url.pathname + url.search;
-}
-
-function createErrorOverlay(err: ErrorPayload["err"]) {
-  if (!enableOverlay) return;
-  clearErrorOverlay();
-  document.body.appendChild(new ErrorOverlay(err));
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function waitForWindowShow() {
-  return new Promise<void>((resolve) => {
-    const onChange = async () => {
-      if (document.visibilityState === "visible") {
-        resolve();
-        document.removeEventListener("visibilitychange", onChange);
-      }
-    };
-    document.addEventListener("visibilitychange", onChange);
-  });
-}
-
-function warnFailedFetch(err: Error, path: string | string[]) {
-  if (!err.message.match("fetch")) {
-    console.error(err);
+function sendMessageBuffer() {
+  if (socket.readyState === 1) {
+    messageBuffer.forEach((msg) => socket.send(msg));
+    messageBuffer.length = 0;
   }
-  console.error(
-    `[hmr] Failed to reload ${path}. ` +
-      `This could be due to syntax errors or importing non-existent ` +
-      `modules. (see errors above)`
-  );
 }
+
+interface HotModule {
+  id: string;
+  callbacks: HotCallback[];
+}
+
+interface HotCallback {
+  deps: string[];
+  fn: (modules: Array<ModuleNamespace | undefined>) => void;
+}
+
+type CustomListenersMap = Map<string, ((data: any) => void)[]>;
+
+const hotModulesMap = new Map<string, HotModule>();
+const disposeMap = new Map<string, (data: any) => void | Promise<void>>();
+const pruneMap = new Map<string, (data: any) => void | Promise<void>>();
+const dataMap = new Map<string, any>();
+const customListenersMap: CustomListenersMap = new Map();
+const ctxToListenersMap = new Map<string, CustomListenersMap>();
 
 export function createHotContext(ownerPath: string): ViteHotContext {
   if (!dataMap.has(ownerPath)) {
@@ -461,7 +512,9 @@ export function createHotContext(ownerPath: string): ViteHotContext {
       pruneMap.set(ownerPath, cb);
     },
 
+    // Kept for backward compatibility (#11036)
     // @ts-expect-error untyped
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     decline() {},
 
     invalidate(message) {
@@ -490,36 +543,18 @@ export function createHotContext(ownerPath: string): ViteHotContext {
 
   return hot;
 }
-let lastInsertedStyle: HTMLStyleElement | undefined
-const sheetsMap = new Map<string, HTMLStyleElement>()
-export function updateStyle(id: string, content: string): void {
-  let style = sheetsMap.get(id);
-  if (!style) {
-    style = document.createElement("style");
-    style.setAttribute("type", "text/css");
-    style.setAttribute("data-vite-dev-id", id);
-    style.textContent = content;
 
-    if (!lastInsertedStyle) {
-      document.head.appendChild(style);
-      setTimeout(() => {
-        lastInsertedStyle = undefined;
-      }, 0);
-    } else {
-      lastInsertedStyle.insertAdjacentElement("afterend", style);
-    }
-    lastInsertedStyle = style;
-  } else {
-    style.textContent = content;
+export function injectQuery(url: string, queryToInject: string): string {
+  if (url[0] !== "." && url[0] !== "/") {
+    return url;
   }
-  sheetsMap.set(id, style);
+
+  const pathname = url.replace(/#.*$/, "").replace(/\?.*$/, "");
+  const { search, hash } = new URL(url, "http://vitejs.dev");
+
+  return `${pathname}?${queryToInject}${search ? `&` + search.slice(1) : ""}${
+    hash || ""
+  }`;
 }
 
-export function removeStyle(id: string): void {
-  const style = sheetsMap.get(id)
-  if (style) {
-    document.head.removeChild(style)
-    sheetsMap.delete(id)
-  }
-}
 export { ErrorOverlay };

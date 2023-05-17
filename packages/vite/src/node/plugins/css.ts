@@ -1,19 +1,36 @@
 import { ResolvedConfig } from "../config";
-import { CSS_LANGS_RE, SPECIAL_QUERY_RE } from "../constants";
+import {
+  CLIENT_PUBLIC_PATH,
+  CSS_LANGS_RE,
+  SPECIAL_QUERY_RE,
+} from "../constants";
 import { Plugin } from "../plugin";
 import type * as PostCSS from "postcss";
 import path from "node:path";
 import type {
   ExistingRawSourceMap,
+  NormalizedOutputOptions,
+  OutputChunk,
   RenderedChunk,
   RollupError,
   SourceMapInput,
 } from "rollup";
-import { checkPublicFile, publicFileToBuiltUrl, fileToUrl } from "./asset";
 import {
+  checkPublicFile,
+  publicFileToBuiltUrl,
+  fileToUrl,
+  publicAssetUrlCache,
+  assetUrlRE,
+  publicAssetUrlRE,
+  generatedAssets,
+  renderAssetUrlInJS,
+} from "./asset";
+import {
+  arrayEqual,
   asyncReplace,
   cleanUrl,
   combineSourcemaps,
+  emptyCssComments,
   generateCodeFrame,
   getHash,
   isDataUrl,
@@ -21,10 +38,12 @@ import {
   isObject,
   joinUrlSegments,
   normalizePath,
+  parseRequest,
   processSrcSet,
   removeDirectQuery,
   requireResolveFromRootWithFallback,
   stripBase,
+  stripBomTag,
 } from "../utils";
 import { ModuleNode } from "../server/moduleGraph";
 import postcssrc from "postcss-load-config";
@@ -40,6 +59,15 @@ import type { Alias } from "dep-types/alias";
 import MagicString from "magic-string";
 import { createRequire } from "node:module";
 import fsp from "node:fs/promises";
+import { resolveUserExternal, toOutputFilePathInCss } from "../build"; // REMOVE
+import { dataToEsm } from "@rollup/pluginutils";
+import {
+  getCodeWithSourcemap,
+  injectSourcesContent,
+} from "../server/sourcemap";
+import { addToHTMLProxyTransformResult } from "./html";
+import { formatMessages, transform, TransformOptions } from "esbuild";
+import { ESBuildOptions } from "./esbuild";
 
 export interface StylePreprocessorResults {
   code: string;
@@ -141,6 +169,9 @@ const cssImageSetRE =
   /(?<=image-set\()((?:[\w\-]{1,256}\([^)]*\)|[^)])*)(?=\))/;
 const postcssReturnsVirtualFilesRE = /^<.+>$/;
 const cssNotProcessedRE = /(?:gradient|element|cross-fade|image)\(/;
+const inlineCSSRE = /(?:\?|&)inline-css\b/;
+const usedRE = /(?:\?|&)used\b/;
+const cssBundleName = "style.css";
 
 interface PostCSSConfigResult {
   options: PostCSS.ProcessOptions;
@@ -229,9 +260,20 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
           return fileToUrl(resolved, config, this);
         }
         if (config.command === "build") {
-          config.logger.warnOnce(
-            `\n${url} referenced in ${id} didn't resolve at build time, it will remain unchanged to be resolved at runtime`
-          );
+          const isExternal = config.build.rollupOptions.external
+            ? resolveUserExternal(
+                config.build.rollupOptions.external,
+                url,
+                id,
+                false
+              )
+            : false;
+
+          if (!isExternal) {
+            config.logger.warnOnce(
+              `\n${url} referenced in ${id} didn't resolve at build time, it will remain unchanged to be resolved at runtime`
+            );
+          }
         }
         return url;
       };
@@ -448,8 +490,6 @@ async function compileCSS(
 
   if (needInlineImport) {
     postcssPlugins.unshift(
-      // TODO ts类型不正确
-      // @ts-ignore
       (await importPostcssImport()).default({
         async resolve(id, basedir) {
           const publicFile = checkPublicFile(id, config);
@@ -578,6 +618,7 @@ async function compileCSS(
       }
     }
   } catch (e) {
+    console.log(e);
     e.message = `[postcss] ${e.message}`;
     e.code = code;
     e.loc = {
@@ -690,6 +731,7 @@ const less: StylePreprocessor = async (source, root, options, resolvers) => {
         : {}),
     });
   } catch (e) {
+    console.log(e);
     const error = e as Less.RenderError;
     const normalizedError: RollupError = new Error(
       `[less] ${error.message || error.type}`
@@ -796,6 +838,7 @@ const scss: SassStylePreprocessor = async (
       deps,
     };
   } catch (e) {
+    console.log(e);
     e.message = `[sass] ${e.message}`;
     e.id = e.file;
     e.frame = e.formatted;
@@ -843,6 +886,7 @@ const styl: StylusStylePreprocessor = async (source, root, options) => {
       deps,
     };
   } catch (e) {
+    console.log(e);
     e.message = `[stylus] ${e.message}`;
     return { code: "", error: e, deps: [] };
   }
@@ -970,6 +1014,7 @@ function loadPreprocessor(
     const resolved = requireResolveFromRootWithFallback(root, lang);
     return (loadedPreprocessors[lang] = _require(resolved));
   } catch (e) {
+    console.log(e);
     if (e.code === "MODULE_NOT_FOUND") {
       throw new Error(
         `Preprocessor dependency "${lang}" not found. Did you install it?`
@@ -1317,3 +1362,476 @@ export const isDirectRequest = (request: string): boolean =>
 
 export const isModuleCSSRequest = (request: string): boolean =>
   cssModuleRE.test(request);
+
+export function cssPostPlugin(config: ResolvedConfig): Plugin {
+  const styles: Map<string, string> = new Map<string, string>();
+  let emitTasks: Promise<void>[] = [];
+  let pureCssChunks: Set<RenderedChunk>;
+  let outputToExtractedCSSMap: Map<NormalizedOutputOptions, string>;
+  let hasEmitted = false;
+
+  const rollupOptionsOutput = config.build.rollupOptions.output;
+  const assetFileNames = (
+    Array.isArray(rollupOptionsOutput)
+      ? rollupOptionsOutput[0]
+      : rollupOptionsOutput
+  )?.assetFileNames;
+  const getCssAssetDirname = (cssAssetName: string) => {
+    if (!assetFileNames) {
+      return config.build.assetsDir;
+    } else if (typeof assetFileNames === "string") {
+      return path.dirname(assetFileNames);
+    } else {
+      return path.dirname(
+        assetFileNames({
+          name: cssAssetName,
+          type: "asset",
+          source: "/* vite internal call, ignore */",
+        })
+      );
+    }
+  };
+
+  return {
+    name: "vite:css-post",
+
+    buildStart() {
+      pureCssChunks = new Set<RenderedChunk>();
+      outputToExtractedCSSMap = new Map<NormalizedOutputOptions, string>();
+      hasEmitted = false;
+      emitTasks = [];
+    },
+
+    async transform(css, id, options) {
+      if (
+        !isCSSRequest(id) ||
+        commonjsProxyRE.test(id) ||
+        SPECIAL_QUERY_RE.test(id)
+      ) {
+        return;
+      }
+
+      css = stripBomTag(css);
+
+      const inlined = inlineRE.test(id);
+      const modules = cssModulesCache.get(config)!.get(id);
+
+      const modulesCode =
+        modules &&
+        !inlined &&
+        dataToEsm(modules, { namedExports: true, preferConst: true });
+
+      if (config.command === "serve") {
+        const getContentWithSourcemap = async (content: string) => {
+          if (config.css?.devSourcemap) {
+            const sourcemap = this.getCombinedSourcemap();
+            if (sourcemap.mappings && !sourcemap.sourcesContent) {
+              await injectSourcesContent(
+                sourcemap,
+                cleanUrl(id),
+                config.logger
+              );
+            }
+            return getCodeWithSourcemap("css", content, sourcemap);
+          }
+          return content;
+        };
+
+        if (isDirectCSSRequest(id)) {
+          return null;
+        }
+        // server only
+        if (options?.ssr) {
+          return modulesCode || `export default ${JSON.stringify(css)}`;
+        }
+        if (inlined) {
+          return `export default ${JSON.stringify(css)}`;
+        }
+
+        const cssContent = await getContentWithSourcemap(css);
+        const code = [
+          `import { updateStyle as __vite__updateStyle, removeStyle as __vite__removeStyle } from ${JSON.stringify(
+            path.posix.join(config.base, CLIENT_PUBLIC_PATH)
+          )}`,
+          `const __vite__id = ${JSON.stringify(id)}`,
+          `const __vite__css = ${JSON.stringify(cssContent)}`,
+          `__vite__updateStyle(__vite__id, __vite__css)`,
+          // css modules exports change on edit so it can't self accept
+          `${
+            modulesCode ||
+            `import.meta.hot.accept()\nexport default __vite__css`
+          }`,
+          `import.meta.hot.prune(() => __vite__removeStyle(__vite__id))`,
+        ].join("\n");
+        return { code, map: { mappings: "" } };
+      }
+
+      const inlineCSS = inlineCSSRE.test(id);
+      const isHTMLProxy = htmlProxyRE.test(id);
+      const query = parseRequest(id);
+      if (inlineCSS && isHTMLProxy) {
+        addToHTMLProxyTransformResult(
+          `${getHash(cleanUrl(id))}_${Number.parseInt(query!.index)}`,
+          css
+        );
+        return `export default ''`;
+      }
+      if (!inlined) {
+        styles.set(id, css);
+      }
+
+      let code: string;
+      if (usedRE.test(id)) {
+        if (modulesCode) {
+          code = modulesCode;
+        } else {
+          let content = css;
+          if (config.build.cssMinify) {
+            content = await minifyCSS(content, config);
+          }
+          code = `export default ${JSON.stringify(content)}`;
+        }
+      } else {
+        code = modulesCode || `export default ''`;
+      }
+
+      return {
+        code,
+        map: { mappings: "" },
+        moduleSideEffects: inlined ? false : "no-treeshake",
+      };
+    },
+
+    async renderChunk(code, chunk, opts) {
+      let chunkCSS = "";
+      let isPureCssChunk = true;
+      const ids = Object.keys(chunk.modules);
+      for (const id of ids) {
+        if (styles.has(id)) {
+          chunkCSS += styles.get(id);
+          if (cssModuleRE.test(id)) {
+            isPureCssChunk = false;
+          }
+        } else {
+          isPureCssChunk = false;
+        }
+      }
+
+      if (!chunkCSS) {
+        return null;
+      }
+
+      const publicAssetUrlMap = publicAssetUrlCache.get(config)!;
+
+      const resolveAssetUrlsInCss = (
+        chunkCSS: string,
+        cssAssetName: string
+      ) => {
+        const encodedPublicUrls = encodePublicUrlsInCSS(config);
+
+        const relative = config.base === "./" || config.base === "";
+        const cssAssetDirname =
+          encodedPublicUrls || relative
+            ? getCssAssetDirname(cssAssetName)
+            : undefined;
+
+        const toRelative = (filename: string, importer: string) => {
+          const relativePath = path.posix.relative(cssAssetDirname!, filename);
+          return relativePath[0] === "." ? relativePath : "./" + relativePath;
+        };
+
+        chunkCSS = chunkCSS.replace(assetUrlRE, (_, fileHash, postfix = "") => {
+          const filename = this.getFileName(fileHash) + postfix;
+          chunk.viteMetadata!.importedAssets.add(cleanUrl(filename));
+          return toOutputFilePathInCss(
+            filename,
+            "asset",
+            cssAssetName,
+            "css",
+            config,
+            toRelative
+          );
+        });
+        // resolve public URL from CSS paths
+        if (encodedPublicUrls) {
+          const relativePathToPublicFromCSS = path.posix.relative(
+            cssAssetDirname!,
+            ""
+          );
+          chunkCSS = chunkCSS.replace(publicAssetUrlRE, (_, hash) => {
+            const publicUrl = publicAssetUrlMap.get(hash)!.slice(1);
+            return toOutputFilePathInCss(
+              publicUrl,
+              "public",
+              cssAssetName,
+              "css",
+              config,
+              () => `${relativePathToPublicFromCSS}/${publicUrl}`
+            );
+          });
+        }
+        return chunkCSS;
+      };
+
+      function ensureFileExt(name: string, ext: string) {
+        return normalizePath(
+          path.format({ ...path.parse(name), base: undefined, ext })
+        );
+      }
+
+      if (config.build.cssCodeSplit) {
+        if (isPureCssChunk) {
+          pureCssChunks.add(chunk);
+        }
+        if (opts.format === "es" || opts.format === "cjs") {
+          const cssAssetName = chunk.facadeModuleId
+            ? normalizePath(path.relative(config.root, chunk.facadeModuleId))
+            : chunk.name;
+
+          const lang = path.extname(cssAssetName).slice(1);
+          const cssFileName = ensureFileExt(cssAssetName, ".css");
+
+          chunkCSS = resolveAssetUrlsInCss(chunkCSS, cssAssetName);
+
+          const previousTask = emitTasks[emitTasks.length - 1];
+          const thisTask = finalizeCss(chunkCSS, true, config).then((css) => {
+            chunkCSS = css;
+            return previousTask;
+          });
+
+          emitTasks.push(thisTask);
+          const emitTasksLength = emitTasks.length;
+
+          await thisTask;
+
+          const referenceId = this.emitFile({
+            name: path.basename(cssFileName),
+            type: "asset",
+            source: chunkCSS,
+          });
+          const originalName = isPreProcessor(lang)
+            ? cssAssetName
+            : cssFileName;
+          const isEntry = chunk.isEntry && isPureCssChunk;
+          generatedAssets
+            .get(config)!
+            .set(referenceId, { originalName, isEntry });
+          chunk.viteMetadata!.importedCss.add(this.getFileName(referenceId));
+
+          if (emitTasksLength === emitTasks.length) {
+            emitTasks = [];
+          }
+        } else if (!config.build.ssr) {
+          chunkCSS = await finalizeCss(chunkCSS, true, config);
+          let cssString = JSON.stringify(chunkCSS);
+          cssString =
+            renderAssetUrlInJS(
+              this,
+              config,
+              chunk,
+              opts,
+              cssString
+            )?.toString() || cssString;
+          const style = `__vite_style__`;
+          const injectCode =
+            `var ${style} = document.createElement('style');` +
+            `${style}.textContent = ${cssString};` +
+            `document.head.appendChild(${style});`;
+          const wrapIdx = code.indexOf("System.register");
+          const insertMark = "'use strict';";
+          const insertIdx = code.indexOf(insertMark, wrapIdx);
+          const s = new MagicString(code);
+          s.appendLeft(insertIdx + insertMark.length, injectCode);
+          if (config.build.sourcemap) {
+            // resolve public URL from CSS paths, we need to use absolute paths
+            return {
+              code: s.toString(),
+              map: s.generateMap({ hires: true }),
+            };
+          } else {
+            return { code: s.toString() };
+          }
+        }
+      } else {
+        chunkCSS = resolveAssetUrlsInCss(chunkCSS, cssBundleName);
+
+        outputToExtractedCSSMap.set(
+          opts,
+          (outputToExtractedCSSMap.get(opts) || "") + chunkCSS
+        );
+      }
+      return null;
+    },
+
+    augmentChunkHash(chunk) {
+      if (chunk.viteMetadata?.importedCss.size) {
+        let hash = "";
+        for (const id of chunk.viteMetadata.importedCss) {
+          hash += id;
+        }
+        return hash;
+      }
+    },
+
+    async generateBundle(opts, bundle) {
+      // @ts-expect-error asset emits are skipped in legacy bundle
+      if (opts.__vite_skip_asset_emit__) {
+        return;
+      }
+
+      if (pureCssChunks.size) {
+        const pureCssChunkNames: string[] = [];
+        for (const pureCssChunk of pureCssChunks) {
+          for (const key in bundle) {
+            const bundleChunk = bundle[key];
+            if (
+              bundleChunk.type === "chunk" &&
+              arrayEqual(bundleChunk.moduleIds, pureCssChunk.moduleIds)
+            ) {
+              pureCssChunkNames.push(key);
+              break;
+            }
+          }
+        }
+
+        const emptyChunkFiles = pureCssChunkNames
+          .map((file) => path.basename(file))
+          .join("|")
+          .replace(/\./g, "\\.");
+        const emptyChunkRE = new RegExp(
+          opts.format === "es"
+            ? `\\bimport\\s*["'][^"']*(?:${emptyChunkFiles})["'];\n?`
+            : `\\brequire\\(\\s*["'][^"']*(?:${emptyChunkFiles})["']\\);\n?`,
+          "g"
+        );
+        for (const file in bundle) {
+          const chunk = bundle[file];
+          if (chunk.type === "chunk") {
+            chunk.imports = chunk.imports.filter((file) => {
+              if (pureCssChunkNames.includes(file)) {
+                const { importedCss } = (bundle[file] as OutputChunk)
+                  .viteMetadata!;
+                importedCss.forEach((file) =>
+                  chunk.viteMetadata!.importedCss.add(file)
+                );
+                return false;
+              }
+              return true;
+            });
+            chunk.code = chunk.code.replace(
+              emptyChunkRE,
+              (m) => `/* empty css ${"".padEnd(m.length - 15)}*/`
+            );
+          }
+        }
+        const removedPureCssFiles = removedPureCssFilesCache.get(config)!;
+        pureCssChunkNames.forEach((fileName) => {
+          removedPureCssFiles.set(fileName, bundle[fileName] as RenderedChunk);
+          delete bundle[fileName];
+        });
+      }
+
+      let extractedCss = outputToExtractedCSSMap.get(opts);
+      if (extractedCss && !hasEmitted) {
+        hasEmitted = true;
+        extractedCss = await finalizeCss(extractedCss, true, config);
+        this.emitFile({
+          name: cssBundleName,
+          type: "asset",
+          source: extractedCss,
+        });
+      }
+    },
+  };
+}
+
+async function minifyCSS(css: string, config: ResolvedConfig) {
+  try {
+    const { code, warnings } = await transform(css, {
+      loader: "css",
+      target: config.build.cssTarget || undefined,
+      ...resolveMinifyCssEsbuildOptions(config.esbuild || {}),
+    });
+    if (warnings.length) {
+      const msgs = await formatMessages(warnings, { kind: "warning" });
+      config.logger.warn(
+        colors.yellow(`warnings when minifying css:\n${msgs.join("\n")}`)
+      );
+    }
+    return code;
+  } catch (e) {
+    if (e.errors) {
+      e.message = "[esbuild css minify] " + e.message;
+      const msgs = await formatMessages(e.errors, { kind: "error" });
+      e.frame = "\n" + msgs.join("\n");
+      e.loc = e.errors[0].location;
+    }
+    throw e;
+  }
+}
+
+async function finalizeCss(
+  css: string,
+  minify: boolean,
+  config: ResolvedConfig
+) {
+  if (css.includes("@import") || css.includes("@charset")) {
+    css = await hoistAtRules(css);
+  }
+  if (minify && config.build.cssMinify) {
+    css = await minifyCSS(css, config);
+  }
+  return css;
+}
+
+function resolveMinifyCssEsbuildOptions(
+  options: ESBuildOptions
+): TransformOptions {
+  const base: TransformOptions = {
+    charset: options.charset ?? "utf8",
+    logLevel: options.logLevel,
+    logLimit: options.logLimit,
+    logOverride: options.logOverride,
+  };
+
+  if (
+    options.minifyIdentifiers != null ||
+    options.minifySyntax != null ||
+    options.minifyWhitespace != null
+  ) {
+    return {
+      ...base,
+      minifyIdentifiers: options.minifyIdentifiers ?? true,
+      minifySyntax: options.minifySyntax ?? true,
+      minifyWhitespace: options.minifyWhitespace ?? true,
+    };
+  } else {
+    return { ...base, minify: true };
+  }
+}
+
+export async function hoistAtRules(css: string): Promise<string> {
+  const s = new MagicString(css);
+  const cleanCss = emptyCssComments(css);
+  let match: RegExpExecArray | null;
+
+  const atImportRE =
+    /@import(?:\s*(?:url\([^)]*\)|"(?:[^"]|(?<=\\)")*"|'(?:[^']|(?<=\\)')*').*?|[^;]*);/g;
+  while ((match = atImportRE.exec(cleanCss))) {
+    s.remove(match.index, match.index + match[0].length);
+    s.appendLeft(0, match[0]);
+  }
+
+  const atCharsetRE =
+    /@charset(?:\s*(?:"(?:[^"]|(?<=\\)")*"|'(?:[^']|(?<=\\)')*').*?|[^;]*);/g;
+  let foundCharset = false;
+  while ((match = atCharsetRE.exec(cleanCss))) {
+    s.remove(match.index, match.index + match[0].length);
+    if (!foundCharset) {
+      s.prepend(match[0]);
+      foundCharset = true;
+    }
+  }
+
+  return s.toString();
+}

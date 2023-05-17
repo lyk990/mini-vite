@@ -3,7 +3,10 @@
   "version": "0.0.1",
   "description": "@mini-vite/vite",
   "main": "index.js",
-  "keywords": ["vite","mini-vite"],
+  "keywords": [
+    "vite",
+    "mini-vite"
+  ],
   "author": "lyk990",
   "license": "ISC",
   "bin": {
@@ -30,6 +33,8 @@
     "connect-history-api-fallback": "^2.0.0",
     "cross-spawn": "^7.0.3",
     "debug": "^4.3.4",
+    "dotenv": "^16.0.3",
+    "dotenv-expand": "^10.0.0",
     "es-module-lexer": "^1.2.1",
     "esbuild": "^0.17.16",
     "escape-html": "^1.0.3",

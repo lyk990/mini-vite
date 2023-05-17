@@ -84,7 +84,9 @@ async function startBrowserProcess(
         );
         return true;
       }
-    } catch (err) {}
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   if (process.platform === "darwin" && browser === "open") {
@@ -95,9 +97,12 @@ async function startBrowserProcess(
     const options: Options = browser
       ? { app: { name: browser, arguments: browserArgs } }
       : {};
-    open(url, options).catch(() => {}); // Prevent `unhandledRejection` error.
+    open(url, options).catch((e) => {
+      console.log(e);
+    }); // Prevent `unhandledRejection` error.
     return true;
   } catch (err) {
+    console.log(err);
     return false;
   }
 }

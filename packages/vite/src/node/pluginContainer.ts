@@ -448,7 +448,9 @@ export async function createPluginContainer(
             : plugin.transform;
         try {
           result = await handler.call(ctx as any, code, id, { ssr });
-        } catch (e) {}
+        } catch (e) {
+          console.log(e)
+        }
 
         if (!result) continue;
         if (isObject(result)) {

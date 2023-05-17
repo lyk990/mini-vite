@@ -1,5 +1,9 @@
 import type { ErrorPayload } from "types/hmrPayload";
 
+declare const __BASE__: string;
+
+const base = __BASE__ || "/";
+
 const template = /*html*/ `
 <style>
 :host {
@@ -125,11 +129,9 @@ code {
   </div>
 </div>
 `;
-const codeframeRE = /^(?:>?\s+\d+\s+\|.*|\s+\|\s*\^.*)\r?\n/gm
-const fileRE = /(?:[a-zA-Z]:\\|\/).*?:\d+:\d+/g
-declare const __BASE__: string
 
-const base = __BASE__ || '/'
+const fileRE = /(?:[a-zA-Z]:\\|\/).*?:\d+:\d+/g;
+const codeframeRE = /^(?:>?\s+\d+\s+\|.*|\s+\|\s*\^.*)\r?\n/gm;
 
 const { HTMLElement = class {} as typeof globalThis.HTMLElement } = globalThis;
 export class ErrorOverlay extends HTMLElement {
@@ -202,3 +204,7 @@ export class ErrorOverlay extends HTMLElement {
 }
 
 export const overlayId = "vite-error-overlay";
+const { customElements } = globalThis;
+if (customElements && !customElements.get(overlayId)) {
+  customElements.define(overlayId, ErrorOverlay);
+}

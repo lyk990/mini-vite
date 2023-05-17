@@ -53,15 +53,27 @@ import { PluginContainer, createPluginContainer } from "./pluginContainer";
 import aliasPlugin from "@rollup/plugin-alias";
 import { promisify } from "node:util";
 import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
-import { resolvePlugins } from "./plugins";
+import {
+  createPluginHookUtils,
+  getSortedPluginsByHook,
+  resolvePlugins,
+} from "./plugins";
 import type { ServerOptions as HttpsServerOptions } from "node:https";
 import type { ProxyOptions } from "./server/middlewares/proxy";
 import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
+import { loadEnv, resolveEnvPrefix } from "./env";
+import { resolveSSROptions } from "./ssr";
+import { RollupOptions } from "rollup";
 
 const debug = createDebugger("vite:config");
 const promisifiedRealpath = promisify(fs.realpath);
 
 export type CorsOrigin = boolean | string | RegExp | (string | RegExp)[];
+export interface ResolveWorkerOptions extends PluginHookUtils {
+  format: "es" | "iife";
+  plugins: Plugin[];
+  rollupOptions: RollupOptions;
+}
 
 export interface CorsOptions {
   origin?:
@@ -135,10 +147,13 @@ export type ResolvedConfig = Readonly<
     assetsInclude: (file: string) => boolean;
     packageCache: PackageCache;
     envDir: string;
-    // isWorker: boolean FEATURE worker打包
+    isWorker: boolean; // FEATURE worker打包
     experimental: ExperimentalOptions;
     mode: string;
     esbuild: ESBuildOptions | false;
+    rawBase: string; // REMOVE
+    mainConfig: ResolvedConfig | null; // REMOVE
+    worker: ResolveWorkerOptions; // REMOVE
   } & PluginHookUtils
 >;
 
@@ -156,13 +171,19 @@ export async function resolveConfig(
 ): Promise<ResolvedConfig> {
   let config = inlineConfig;
   let configFileDependencies: string[] = [];
-  let mode = "development";
+  let mode = inlineConfig.mode || defaultMode;
+  const isNodeEnvSet = !!process.env.NODE_ENV;
+  const packageCache: PackageCache = new Map();
+
+  if (!isNodeEnvSet) {
+    process.env.NODE_ENV = defaultNodeEnv;
+  }
+
   const configEnv = {
     mode,
     command,
-    ssrBuild: false,
+    ssrBuild: !!config.build?.ssr,
   };
-  const packageCache: PackageCache = new Map();
 
   let { configFile } = config;
   if (configFile !== false) {
@@ -173,12 +194,15 @@ export async function resolveConfig(
       config.logLevel
     );
     if (loadResult) {
-      // 合并vite.config.ts中的配置（plugins、alias、noExternal等）
       config = mergeConfig(loadResult.config, config);
       configFile = loadResult.path;
       configFileDependencies = loadResult.dependencies;
     }
   }
+
+  mode = inlineConfig.mode || config.mode || mode;
+  configEnv.mode = mode;
+
   const filterPlugin = (p: Plugin) => {
     if (!p) {
       return false;
@@ -190,20 +214,39 @@ export async function resolveConfig(
       return p.apply === command;
     }
   };
+
+  const rawWorkerUserPlugins = (
+    (await asyncFlatten(config.worker?.plugins || [])) as Plugin[]
+  ).filter(filterPlugin);
+
   const rawUserPlugins = (
     (await asyncFlatten(config.plugins || [])) as Plugin[]
   ).filter(filterPlugin);
+
   const [prePlugins, normalPlugins, postPlugins] =
     sortUserPlugins(rawUserPlugins);
+
   const userPlugins = [...prePlugins, ...normalPlugins, ...postPlugins];
+  config = await runConfigHook(config, userPlugins, configEnv);
+
+  if (process.env.VITE_TEST_WITHOUT_PLUGIN_COMMONJS) {
+    config = mergeConfig(config, {
+      optimizeDeps: { disabled: false },
+      ssr: { optimizeDeps: { disabled: false } },
+    });
+    config.build ??= {};
+    config.build.commonjsOptions = { include: [] };
+  }
+
   const logger = createLogger(config.logLevel, {
     allowClearScreen: config.clearScreen,
     customLogger: config.customLogger,
   });
+
   const resolvedRoot = normalizePath(
     config.root ? path.resolve(config.root) : process.cwd()
   );
-  // TODO or REMOVE is feature?
+
   const clientAlias = [
     {
       find: /^\/?@vite\/env/,
@@ -219,39 +262,67 @@ export async function resolveConfig(
     mergeAlias(clientAlias, config.resolve?.alias || [])
   );
 
-  const optimizeDeps = config.optimizeDeps || {};
   const resolveOptions: ResolvedConfig["resolve"] = {
-    mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS, // = undefined
-    browserField: config.resolve?.browserField ?? true, // = undefined
-    conditions: config.resolve?.conditions ?? [], // = undefined
-    extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS, // = undefined
-    dedupe: config.resolve?.dedupe ?? [], // ['vue']
-    preserveSymlinks: config.resolve?.preserveSymlinks ?? false, // = undefined
-    alias: resolvedAlias, // REMOVE clientAlias resolvedAlias
+    mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS,
+    browserField: config.resolve?.browserField ?? true,
+    conditions: config.resolve?.conditions ?? [],
+    extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS,
+    dedupe: config.resolve?.dedupe ?? [],
+    preserveSymlinks: config.resolve?.preserveSymlinks ?? false,
+    alias: resolvedAlias,
   };
-  const resolvedBuildOptions = resolveBuildOptions(
-    config.build,
-    logger,
-    resolvedRoot
-  );
+
   const envDir = config.envDir
     ? normalizePath(path.resolve(resolvedRoot, config.envDir))
     : resolvedRoot;
+  const userEnv =
+    inlineConfig.envFile !== false &&
+    loadEnv(mode, envDir, resolveEnvPrefix(config));
 
-  const middlewareMode = config?.server?.middlewareMode;
+  const userNodeEnv = process.env.VITE_USER_NODE_ENV;
+  if (!isNodeEnvSet && userNodeEnv) {
+    if (userNodeEnv === "development") {
+      process.env.NODE_ENV = "development";
+    } else {
+      logger.warn(
+        `NODE_ENV=${userNodeEnv} is not supported in the .env file. ` +
+          `Only NODE_ENV=development is supported to create a development build of your project. ` +
+          `If you need to set process.env.NODE_ENV, you can set it in the Vite config instead.`
+      );
+    }
+  }
+
+  const isProduction = process.env.NODE_ENV === "production";
 
   const isBuild = command === "build";
   const relativeBaseShortcut = config.base === "" || config.base === "./";
 
   const resolvedBase = relativeBaseShortcut
-    ? true || config.build?.ssr
+    ? !isBuild || config.build?.ssr
       ? "/"
       : "./"
     : resolveBaseUrl(config.base, isBuild, logger) ?? "/";
-  const BASE_URL = resolvedBase;
-  const server = resolveServerOptions(resolvedRoot, config.server, logger);
-  const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir;
 
+  const resolvedBuildOptions = resolveBuildOptions(
+    config.build,
+    logger,
+    resolvedRoot
+  );
+
+  const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir;
+  const cacheDir = normalizePath(
+    config.cacheDir
+      ? path.resolve(resolvedRoot, config.cacheDir)
+      : pkgDir
+      ? path.join(pkgDir, `node_modules/.vite`)
+      : path.join(resolvedRoot, `.vite`)
+  );
+
+  const assetsFilter =
+    config.assetsInclude &&
+    (!Array.isArray(config.assetsInclude) || config.assetsInclude.length)
+      ? createFilter(config.assetsInclude)
+      : () => false;
   const createResolver: ResolvedConfig["createResolver"] = (options) => {
     let aliasContainer: PluginContainer | undefined;
     let resolverContainer: PluginContainer | undefined;
@@ -274,7 +345,7 @@ export async function resolveConfig(
               resolvePlugin({
                 ...resolved.resolve,
                 root: resolvedRoot,
-                isProduction: false,
+                isProduction,
                 isBuild: command === "build",
                 ssrConfig: resolved.ssr,
                 asSrc: true,
@@ -295,21 +366,6 @@ export async function resolveConfig(
     };
   };
 
-  const cacheDir = normalizePath(
-    config.cacheDir
-      ? path.resolve(resolvedRoot, config.cacheDir)
-      : pkgDir
-      ? path.join(pkgDir, `node_modules/.vite`)
-      : path.join(resolvedRoot, `.vite`)
-  );
-
-  const assetsFilter =
-    config.assetsInclude &&
-    (!Array.isArray(config.assetsInclude) || config.assetsInclude.length)
-      ? createFilter(config.assetsInclude)
-      : () => false;
-  const isProduction = process.env.NODE_ENV === "production";
-  // REMOVE publicDir
   const { publicDir } = config;
   const resolvedPublicDir =
     publicDir !== false && publicDir !== ""
@@ -319,12 +375,60 @@ export async function resolveConfig(
         )
       : "";
 
+  const server = resolveServerOptions(resolvedRoot, config.server, logger);
+  const ssr = resolveSSROptions(
+    config.ssr,
+    resolveOptions.preserveSymlinks,
+    config.legacy?.buildSsrCjsExternalHeuristics
+  );
+
+  const middlewareMode = config?.server?.middlewareMode;
+
+  const optimizeDeps = config.optimizeDeps || {};
+
+  const BASE_URL = resolvedBase;
+
+  let workerConfig = mergeConfig({}, config);
+  const [workerPrePlugins, workerNormalPlugins, workerPostPlugins] =
+    sortUserPlugins(rawWorkerUserPlugins);
+
+  const workerUserPlugins = [
+    ...workerPrePlugins,
+    ...workerNormalPlugins,
+    ...workerPostPlugins,
+  ];
+  workerConfig = await runConfigHook(
+    workerConfig,
+    workerUserPlugins,
+    configEnv
+  );
+  const resolvedWorkerOptions: ResolveWorkerOptions = {
+    format: workerConfig.worker?.format || "iife",
+    plugins: [],
+    rollupOptions: workerConfig.worker?.rollupOptions || {},
+    getSortedPlugins: undefined!,
+    getSortedPluginHooks: undefined!,
+  };
+
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
     configFileDependencies: configFileDependencies.map((name) =>
       normalizePath(path.resolve(name))
     ),
+    inlineConfig,
+    root: resolvedRoot,
+    base: resolvedBase.endsWith("/") ? resolvedBase : resolvedBase + "/",
+    rawBase: resolvedBase,
+    resolve: resolveOptions,
     publicDir: resolvedPublicDir,
+    cacheDir,
+    command,
+    mode,
+    ssr,
+    isWorker: false,
+    mainConfig: null,
+    isProduction,
+    plugins: userPlugins,
     esbuild:
       config.esbuild === false
         ? false
@@ -332,27 +436,22 @@ export async function resolveConfig(
             jsxDev: !isProduction,
             ...config.esbuild,
           },
-    mode,
+    server,
+    build: resolvedBuildOptions,
     envDir,
-    isProduction: false,
-    inlineConfig,
-    logger,
-    createResolver,
-    cacheDir,
-    command,
-    root: process.cwd(),
-    base: resolvedBase.endsWith("/") ? resolvedBase : resolvedBase + "/",
     env: {
+      ...userEnv,
       BASE_URL,
       MODE: mode,
-      DEV: true,
-      PROD: false,
+      DEV: !isProduction,
+      PROD: isProduction,
     },
     assetsInclude(file: string) {
       return DEFAULT_ASSETS_RE.test(file) || assetsFilter(file);
     },
-    server,
-    resolve: resolveOptions,
+    logger,
+    packageCache,
+    createResolver,
     optimizeDeps: {
       disabled: "build",
       ...optimizeDeps,
@@ -361,29 +460,127 @@ export async function resolveConfig(
         ...optimizeDeps.esbuildOptions,
       },
     },
-    build: resolvedBuildOptions,
+    worker: resolvedWorkerOptions,
     appType: config.appType ?? (middlewareMode === "ssr" ? "custom" : "spa"),
-    plugins: userPlugins,
-    getSortedPluginHooks: undefined!,
-    getSortedPlugins: undefined!,
-    packageCache,
     experimental: {
       importGlobRestoreExtension: false,
       hmrPartialAccept: false,
       ...config.experimental,
     },
+    getSortedPlugins: undefined!,
+    getSortedPluginHooks: undefined!,
   };
   const resolved: ResolvedConfig = {
     ...config,
     ...resolvedConfig,
   };
+
   (resolved.plugins as Plugin[]) = await resolvePlugins(
     resolved,
     prePlugins,
     normalPlugins,
     postPlugins
   );
-  // Object.assign(resolved, createPluginHookUtils(resolved.plugins));
+  Object.assign(resolved, createPluginHookUtils(resolved.plugins));
+
+  const workerResolved: ResolvedConfig = {
+    ...workerConfig,
+    ...resolvedConfig,
+    isWorker: true,
+    mainConfig: resolved,
+  };
+  resolvedConfig.worker.plugins = await resolvePlugins(
+    workerResolved,
+    workerPrePlugins,
+    workerNormalPlugins,
+    workerPostPlugins
+  );
+  Object.assign(
+    resolvedConfig.worker,
+    createPluginHookUtils(resolvedConfig.worker.plugins)
+  );
+
+  // call configResolved hooks
+  await Promise.all([
+    ...resolved
+      .getSortedPluginHooks("configResolved")
+      .map((hook) => hook(resolved)),
+    ...resolvedConfig.worker
+      .getSortedPluginHooks("configResolved")
+      .map((hook) => hook(workerResolved)),
+  ]);
+
+  // validate config
+
+  if (middlewareMode === "ssr") {
+    logger.warn(
+      colors.yellow(
+        `Setting server.middlewareMode to 'ssr' is deprecated, set server.middlewareMode to \`true\`${
+          config.appType === "custom" ? "" : ` and appType to 'custom'`
+        } instead`
+      )
+    );
+  }
+  if (middlewareMode === "html") {
+    logger.warn(
+      colors.yellow(
+        `Setting server.middlewareMode to 'html' is deprecated, set server.middlewareMode to \`true\` instead`
+      )
+    );
+  }
+
+  if (
+    config.server?.force &&
+    !isBuild &&
+    config.optimizeDeps?.force === undefined
+  ) {
+    resolved.optimizeDeps.force = true;
+    logger.warn(
+      colors.yellow(
+        `server.force is deprecated, use optimizeDeps.force instead`
+      )
+    );
+  }
+
+  debug?.(`using resolved config: %O`, {
+    ...resolved,
+    plugins: resolved.plugins.map((p) => p.name),
+    worker: {
+      ...resolved.worker,
+      plugins: resolved.worker.plugins.map((p) => p.name),
+    },
+  });
+
+  if (config.build?.terserOptions && config.build.minify !== "terser") {
+    logger.warn(
+      colors.yellow(
+        `build.terserOptions is specified but build.minify is not set to use Terser. ` +
+          `Note Vite now defaults to use esbuild for minification. If you still ` +
+          `prefer Terser, set build.minify to "terser".`
+      )
+    );
+  }
+
+  const outputOption = config.build?.rollupOptions?.output ?? [];
+  if (Array.isArray(outputOption)) {
+    const assetFileNamesList = outputOption.map(
+      (output) => output.assetFileNames
+    );
+    if (assetFileNamesList.length > 1) {
+      const firstAssetFileNames = assetFileNamesList[0];
+      const hasDifferentReference = assetFileNamesList.some(
+        (assetFileNames) => assetFileNames !== firstAssetFileNames
+      );
+      if (hasDifferentReference) {
+        resolved.logger.warn(
+          colors.yellow(`
+assetFileNames isn't equal for every build.rollupOptions.output. A single pattern across all outputs is supported by Vite.
+`)
+        );
+      }
+    }
+  }
+
   return resolved;
 }
 
@@ -455,7 +652,9 @@ export async function loadConfigFromFile(
       const pkg = lookupFile(configRoot, ["package.json"]);
       isESM =
         !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
-    } catch (e) {}
+    } catch (e) {
+      console.log(e);
+    }
   }
 
   try {
@@ -477,6 +676,7 @@ export async function loadConfigFromFile(
       dependencies: bundled.dependencies,
     };
   } catch (e) {
+    console.log(e);
     createLogger(logLevel).error(
       colors.red(`failed to load config from ${resolvedPath}`),
       { error: e }
@@ -635,4 +835,25 @@ export function getDepOptimizationConfig(
   ssr: boolean
 ): DepOptimizationConfig {
   return config.optimizeDeps;
+}
+
+async function runConfigHook(
+  config: InlineConfig,
+  plugins: Plugin[],
+  configEnv: ConfigEnv
+): Promise<InlineConfig> {
+  let conf = config;
+
+  for (const p of getSortedPluginsByHook("config", plugins)) {
+    const hook = p.config;
+    const handler = hook && "handler" in hook ? hook.handler : hook;
+    if (handler) {
+      const res = await handler(conf, configEnv);
+      if (res) {
+        conf = mergeConfig(conf, res);
+      }
+    }
+  }
+
+  return conf;
 }

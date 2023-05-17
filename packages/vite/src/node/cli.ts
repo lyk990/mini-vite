@@ -27,7 +27,7 @@ cli
         throw new Error("HTTP server not available");
       }
       await server.listen();
-      // 终端窗口展示信息 INFO 
+      // 终端窗口展示信息 INFO
       // MINI-VITE v0.0.1  ready in 936 ms
       const info = server.config.logger.info;
       const viteStartTime = global.__vite_start_time ?? false;
@@ -49,6 +49,7 @@ cli
       // Network: ipv4地址
       server.printUrls();
     } catch (e) {
+      console.log(e);
       const logger = createLogger(options.logLevel);
       logger.error(colors.red(`error when starting dev server:\n${e.stack}`), {
         error: e,

@@ -116,7 +116,9 @@ export function createWebSocketServer(
       let parsed: any;
       try {
         parsed = JSON.parse(String(raw));
-      } catch {}
+      } catch (e) {
+        console.log(e);
+      }
       if (!parsed || parsed.type !== "custom" || !parsed.event) return;
       const listeners = customListeners.get(parsed.event);
       if (!listeners?.size) return;

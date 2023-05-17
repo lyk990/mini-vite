@@ -3,7 +3,7 @@ import { ResolvedConfig, PluginHookUtils } from "../config";
 import { watchPackageDataPlugin } from "../package";
 import { Plugin } from "../plugin";
 import { clientInjectionsPlugin } from "./clientInjections";
-import { cssPlugin } from "./css";
+import { cssPlugin, cssPostPlugin } from "./css";
 import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
 import { getDepsOptimizer } from "../optimizer/optimizer";
@@ -20,10 +20,11 @@ export async function resolvePlugins(
   postPlugins: Plugin[]
 ): Promise<Plugin[]> {
   const isBuild = config.command === "build";
+  const buildPlugins = { pre: [], post: [] }; // REMOVE
 
   return [
     watchPackageDataPlugin(config.packageCache),
-    preAliasPlugin(config),
+    preAliasPlugin(config), // REMOVE
     aliasPlugin({ entries: config.resolve.alias }),
     ...prePlugins,
     resolvePlugin({
@@ -42,7 +43,10 @@ export async function resolvePlugins(
     config.esbuild !== false ? esbuildPlugin(config) : null,
     assetPlugin(config),
     ...normalPlugins,
+    cssPostPlugin(config), // REMOVE
+    ...buildPlugins.pre,
     ...postPlugins,
+    ...buildPlugins.post,
     ...(isBuild
       ? []
       : [clientInjectionsPlugin(config), importAnalysisPlugin(config)]),

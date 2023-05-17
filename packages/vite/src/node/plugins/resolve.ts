@@ -431,6 +431,7 @@ export function tryNodeResolve(
   try {
     resolved = resolveId(unresolvedId, pkg, targetWeb, options);
   } catch (err) {
+    console.log(err);
     if (!options.tryEsmOnly) {
       throw err;
     }
@@ -979,6 +980,7 @@ export function resolvePackageEntry(
       }
     }
   } catch (e) {
+    console.log(e);
     packageEntryFailure(id, e.message);
   }
   packageEntryFailure(id);
@@ -1092,6 +1094,7 @@ function tryCleanFsResolve(
           return resolvePackageEntry(dirPath, pkg, targetWeb, options);
         }
       } catch (e) {
+        console.log(e);
         if (e.code !== "ENOENT") throw e;
       }
     }

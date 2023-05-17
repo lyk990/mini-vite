@@ -9,7 +9,7 @@ let pnp: typeof import("pnpapi") | undefined;
 if (process.versions.pnp) {
   try {
     pnp = createRequire(import.meta.url)("pnpapi");
-  } catch {}
+  } catch(e) {console.log(e);}
 }
 export type PackageCache = Map<string, PackageData>;
 export interface PackageData {
@@ -110,7 +110,8 @@ export function resolvePackageData(
       pkg = pnp.resolveToUnqualified(pkgName, basedir, {
         considerBuiltins: false,
       });
-    } catch {
+    } catch(e) {
+      console.log(e);
       return null;
     }
     if (!pkg) return null;
@@ -153,7 +154,7 @@ export function resolvePackageData(
 
         return pkgData;
       }
-    } catch {}
+    } catch(e) {console.log(e);}
 
     const nextBasedir = path.dirname(basedir);
     if (nextBasedir === basedir) break;
@@ -276,7 +277,7 @@ export function findNearestPackageData(
 
         return pkgData;
       }
-    } catch {}
+    } catch(e) {console.log(e);}
 
     const nextBasedir = path.dirname(basedir);
     if (nextBasedir === basedir) break;

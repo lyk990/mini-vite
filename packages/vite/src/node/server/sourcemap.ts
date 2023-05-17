@@ -90,7 +90,9 @@ export async function injectSourcesContent(
     sourceRoot = await fs.realpath(
       path.resolve(path.dirname(file), map.sourceRoot || "")
     );
-  } catch {}
+  } catch (e) {
+    console.log(e);
+  }
 
   const missingSources: string[] = [];
   map.sourcesContent = await Promise.all(
@@ -100,7 +102,8 @@ export async function injectSourcesContent(
         if (sourceRoot) {
           sourcePath = path.resolve(sourceRoot, sourcePath);
         }
-        return fs.readFile(sourcePath, "utf-8").catch(() => {
+        return fs.readFile(sourcePath, "utf-8").catch((e) => {
+          console.log(e);
           missingSources.push(sourcePath);
           return null;
         });

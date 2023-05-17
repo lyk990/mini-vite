@@ -135,6 +135,7 @@ export async function loadCachedDepOptimizationMetadata(
       depsCacheDir
     );
   } catch (e) {
+    console.log(e);
     // entry point
     // error
   }
@@ -266,7 +267,7 @@ export function runOptimizeDeps(
   const cleanUp = () => {
     fsp
       .rm(processingCacheDir, { recursive: true, force: true })
-      .catch(() => {});
+      .catch((e) => {console.log(e);});
   };
 
   const succesfulResult: DepOptimizationResult = {
@@ -317,6 +318,7 @@ export function runOptimizeDeps(
   const runResult = preparedRun.then(({ context, idToExports }) => {
     function disposeContext() {
       return context?.dispose().catch((e) => {
+        console.log(e);
         config.logger.error("Failed to dispose esbuild context", { error: e });
       });
     }
@@ -389,6 +391,7 @@ export function runOptimizeDeps(
       })
 
       .catch((e) => {
+        console.log(e);
         if (e.errors && e.message.includes("The build was canceled")) {
           return cancelledResult;
         }
@@ -399,7 +402,8 @@ export function runOptimizeDeps(
       });
   });
 
-  runResult.catch(() => {
+  runResult.catch((e) => {
+    console.log(e);
     cleanUp();
   });
 
@@ -683,7 +687,8 @@ export async function extractExportsData(
   const entryContent = await fsp.readFile(filePath, "utf-8");
   try {
     parseResult = parse(entryContent);
-  } catch {
+  } catch(e) {
+    console.log(e);
     const loader = esbuildOptions.loader?.[path.extname(filePath)] || "jsx";
     debug?.(
       `Unable to parse: ${filePath}.\n Trying again with a ${loader} transform.`

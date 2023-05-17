@@ -1,7 +1,7 @@
 import path from "node:path";
 import { BuildOptions, ResolvedBuildOptions } from "vite";
 import { Logger } from "./logger";
-import type { InternalModuleFormat } from "rollup";
+import type { ExternalOption, InternalModuleFormat } from "rollup";
 import { joinUrlSegments } from "./utils";
 import { ResolvedConfig } from "./config";
 
@@ -164,3 +164,64 @@ export function toOutputFilePathInJS(
   }
   return joinUrlSegments(config.base, filename);
 }
+
+export function resolveUserExternal(
+  user: ExternalOption,
+  id: string,
+  parentId: string | undefined,
+  isResolved: boolean
+): boolean | null | void {
+  if (typeof user === "function") {
+    return user(id, parentId, isResolved);
+  } else if (Array.isArray(user)) {
+    return user.some((test) => isExternal(id, test));
+  } else {
+    return isExternal(id, user);
+  }
+}
+
+function isExternal(id: string, test: string | RegExp) {
+  if (typeof test === "string") {
+    return id === test;
+  } else {
+    return test.test(id);
+  }
+}
+
+export function toOutputFilePathWithoutRuntime(
+  filename: string,
+  type: "asset" | "public",
+  hostId: string,
+  hostType: "js" | "css" | "html",
+  config: ResolvedConfig,
+  toRelative: (filename: string, hostId: string) => string
+): string {
+  const { renderBuiltUrl } = config.experimental;
+  let relative = config.base === "" || config.base === "./";
+  if (renderBuiltUrl) {
+    const result = renderBuiltUrl(filename, {
+      hostId,
+      hostType,
+      type,
+      ssr: !!config.build.ssr,
+    });
+    if (typeof result === "object") {
+      if (result.runtime) {
+        throw new Error(
+          `{ runtime: "${result.runtime}" } is not supported for assets in ${hostType} files: ${filename}`
+        );
+      }
+      if (typeof result.relative === "boolean") {
+        relative = result.relative;
+      }
+    } else if (result) {
+      return result;
+    }
+  }
+  if (relative && !config.build.ssr) {
+    return toRelative(filename, hostId);
+  } else {
+    return joinUrlSegments(config.base, filename);
+  }
+}
+export const toOutputFilePathInCss = toOutputFilePathWithoutRuntime;

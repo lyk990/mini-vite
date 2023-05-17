@@ -526,4 +526,12 @@ export function htmlInlineProxyPlugin(config: ResolvedConfig): Plugin {
   };
 }
 
-export const isHTMLProxy = (id: string): boolean => htmlProxyRE.test(id)
+export const isHTMLProxy = (id: string): boolean => htmlProxyRE.test(id);
+
+export const htmlProxyResult = new Map<string, string>();
+export function addToHTMLProxyTransformResult(
+  hash: string,
+  code: string
+): void {
+  htmlProxyResult.set(hash, code);
+}

@@ -47,7 +47,7 @@ export function findNearestPackageData(
 
         return pkgData;
       }
-    } catch {}
+    } catch(e) {console.log(e);}
 
     const nextBasedir = path.dirname(basedir);
     if (nextBasedir === basedir) break;

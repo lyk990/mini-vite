@@ -201,6 +201,7 @@ export async function _createServer(
       try {
         await handleHMRUpdate(file, server, configOnly);
       } catch (err) {
+        console.log(err);
         ws.send({
           type: "error",
           err,
@@ -308,24 +309,26 @@ export async function _createServer(
     _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
     _shortcutsOptions: undefined,
   };
+  server.transformIndexHtml = createDevHtmlTransformFn(server);
   const { proxy } = serverConfig;
   if (proxy) {
     middlewares.use(proxyMiddleware(httpServer, proxy, config));
   }
-  middlewares.use(transformMiddleware(server));
-  middlewares.use(serveRawFsMiddleware(server));
-  middlewares.use(serveStaticMiddleware(root, server));
-  server.transformIndexHtml = createDevHtmlTransformFn(server);
-  
+
   if (config.publicDir) {
     middlewares.use(
       servePublicMiddleware(config.publicDir, config.server.headers)
     );
   }
 
+  middlewares.use(transformMiddleware(server));
+  middlewares.use(serveRawFsMiddleware(server));
+  middlewares.use(serveStaticMiddleware(root, server));
+
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(htmlFallbackMiddleware(root, config.appType === "spa"));
   }
+
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(indexHtmlMiddleware(server));
 
@@ -334,7 +337,43 @@ export async function _createServer(
       res.end();
     });
   }
+
   middlewares.use(errorMiddleware(server, middlewareMode));
+  // TODO 代码优化
+  let initingServer: Promise<void> | undefined;
+  let serverInited = false;
+  const initServer = async () => {
+    if (serverInited) return;
+    if (initingServer) return initingServer;
+
+    initingServer = (async function () {
+      await container.buildStart({});
+      await initDepsOptimizer(config, server);
+      initingServer = undefined;
+      serverInited = true;
+    })();
+    return initingServer;
+  };
+
+  if (!middlewareMode && httpServer) {
+    const listen = httpServer.listen.bind(httpServer);
+    httpServer.listen = (async (port: number, ...args: any[]) => {
+      try {
+        ws.listen();
+        await initServer();
+      } catch (e) {
+        httpServer.emit("error", e);
+        return;
+      }
+      return listen(port, ...args);
+    }) as any;
+  } else {
+    if (options.ws) {
+      ws.listen();
+    }
+    await initServer();
+  }
+
   return server;
 }
 
@@ -357,6 +396,7 @@ async function restartServer(server: ViteDevServer) {
   try {
     newServer = await _createServer(inlineConfig, { ws: false });
   } catch (err: any) {
+    console.log(err);
     server.config.logger.error(err.message, {
       timestamp: true,
     });

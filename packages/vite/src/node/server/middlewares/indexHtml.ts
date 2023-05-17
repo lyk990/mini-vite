@@ -64,6 +64,7 @@ export function indexHtmlMiddleware(
             headers: server.config.server.headers,
           });
         } catch (e) {
+          console.log(e);
           return next(e);
         }
       }
@@ -266,9 +267,8 @@ function preTransformRequest(server: ViteDevServer, url: string, base: string) {
 
   url = unwrapId(stripBase(url, base));
 
-  // transform all url as non-ssr as html includes client-side assets only
   server.transformRequest(url).catch((e) => {
-    // Unexpected error, log the issue but avoid an unhandled exception
+    console.log(e);
     server.config.logger.error(e.message);
   });
 }
