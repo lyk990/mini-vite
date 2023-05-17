@@ -11,34 +11,42 @@ import { esbuildPlugin } from "./esbuild";
 import { assetPlugin } from "./asset";
 import { htmlInlineProxyPlugin } from "./html";
 import { preAliasPlugin } from "./preAlias";
+import aliasPlugin from "@rollup/plugin-alias";
 
-export function resolvePlugins(
+export async function resolvePlugins(
   config: ResolvedConfig,
-  prePlugins?: Plugin[],
-  normalPlugins?: Plugin[],
-  postPlugins?: Plugin[]
-): Plugin[] {
+  prePlugins: Plugin[],
+  normalPlugins: Plugin[],
+  postPlugins: Plugin[]
+): Promise<Plugin[]> {
+  const isBuild = config.command === "build";
+
   return [
+    watchPackageDataPlugin(config.packageCache),
+    preAliasPlugin(config),
+    aliasPlugin({ entries: config.resolve.alias }),
+    ...prePlugins,
     resolvePlugin({
       ...config.resolve,
       root: config.root,
-      isProduction: false,
-      isBuild: false,
+      isProduction: config.isProduction,
+      isBuild,
       packageCache: config.packageCache,
       ssrConfig: config.ssr,
       asSrc: true,
       getDepsOptimizer: (ssr: boolean) => getDepsOptimizer(config, ssr),
       shouldExternalize: undefined,
     }),
-    preAliasPlugin(config), // REMOVE
-    esbuildPlugin(config),
-    importAnalysisPlugin(config as any),
-    cssPlugin(config),
-    watchPackageDataPlugin(config.packageCache),
-    assetPlugin(config),
-    clientInjectionsPlugin(config),
     htmlInlineProxyPlugin(config),
-  ].filter(Boolean) as Plugin[]; // NOTE Boolean的写法
+    cssPlugin(config),
+    config.esbuild !== false ? esbuildPlugin(config) : null,
+    assetPlugin(config),
+    ...normalPlugins,
+    ...postPlugins,
+    ...(isBuild
+      ? []
+      : [clientInjectionsPlugin(config), importAnalysisPlugin(config)]),
+  ].filter(Boolean) as Plugin[]; // NOTE Bolean 写法
 }
 
 export function createPluginHookUtils(
