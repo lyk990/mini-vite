@@ -13,7 +13,7 @@ import {
 import { ModuleGraph } from "./moduleGraph";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
-import { resolveConfig } from "../config";
+import { resolveConfig, isDepsOptimizerEnabled } from "../config";
 import { ResolvedConfig } from "../config";
 import {
   diffDnsOrderChange,
@@ -170,7 +170,6 @@ export async function _createServer(
   options: { ws: boolean }
 ): Promise<ViteDevServer> {
   const config = await resolveConfig(inlineConfig, "serve");
-  await initDepsOptimizer(config);
 
   const { root, server: serverConfig } = config;
   const { middlewareMode } = serverConfig;
@@ -348,7 +347,10 @@ export async function _createServer(
 
     initingServer = (async function () {
       await container.buildStart({});
-      await initDepsOptimizer(config, server);
+      // NOTE  isDepsOptimizerEnabled 流程
+      if (isDepsOptimizerEnabled(config, false)) {
+        await initDepsOptimizer(config);
+      }
       initingServer = undefined;
       serverInited = true;
     })();

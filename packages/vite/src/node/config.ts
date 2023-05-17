@@ -857,3 +857,16 @@ async function runConfigHook(
 
   return conf;
 }
+
+export function isDepsOptimizerEnabled(
+  config: ResolvedConfig,
+  ssr: boolean
+): boolean {
+  const { command } = config;
+  const { disabled } = getDepOptimizationConfig(config, ssr);
+  return !(
+    disabled === true ||
+    (command === "build" && disabled === "build") ||
+    (command === "serve" && disabled === "dev")
+  );
+}
