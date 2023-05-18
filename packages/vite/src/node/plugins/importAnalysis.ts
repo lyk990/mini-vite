@@ -189,7 +189,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
 
         let importerFile = importer;
 
-        const optimizeDeps = getDepOptimizationConfig(config, ssr);
+        const optimizeDeps = getDepOptimizationConfig(config);
         if (moduleListContains(optimizeDeps?.exclude, url)) {
           if (depsOptimizer) {
             await depsOptimizer.scanProcessing;
@@ -344,6 +344,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             if (isExternalUrl(specifier) || isDataUrl(specifier)) {
               return;
             }
+            // DELETE
             // if (ssr) {
             //   if (config.legacy?.buildSsrCjsExternalHeuristics) {
             //     if (

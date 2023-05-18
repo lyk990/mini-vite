@@ -228,15 +228,15 @@ export async function resolveConfig(
 
   const userPlugins = [...prePlugins, ...normalPlugins, ...postPlugins];
   config = await runConfigHook(config, userPlugins, configEnv);
-
-  if (process.env.VITE_TEST_WITHOUT_PLUGIN_COMMONJS) {
-    config = mergeConfig(config, {
-      optimizeDeps: { disabled: false },
-      ssr: { optimizeDeps: { disabled: false } },
-    });
-    config.build ??= {};
-    config.build.commonjsOptions = { include: [] };
-  }
+  // DELETE
+  // if (process.env.VITE_TEST_WITHOUT_PLUGIN_COMMONJS) {
+  //   config = mergeConfig(config, {
+  //     optimizeDeps: { disabled: false },
+  //     ssr: { optimizeDeps: { disabled: false } },
+  //   });
+  //   config.build ??= {};
+  //   config.build.commonjsOptions = { include: [] };
+  // }
 
   const logger = createLogger(config.logLevel, {
     allowClearScreen: config.clearScreen,
@@ -278,19 +278,19 @@ export async function resolveConfig(
   const userEnv =
     inlineConfig.envFile !== false &&
     loadEnv(mode, envDir, resolveEnvPrefix(config));
-
-  const userNodeEnv = process.env.VITE_USER_NODE_ENV;
-  if (!isNodeEnvSet && userNodeEnv) {
-    if (userNodeEnv === "development") {
-      process.env.NODE_ENV = "development";
-    } else {
-      logger.warn(
-        `NODE_ENV=${userNodeEnv} is not supported in the .env file. ` +
-          `Only NODE_ENV=development is supported to create a development build of your project. ` +
-          `If you need to set process.env.NODE_ENV, you can set it in the Vite config instead.`
-      );
-    }
-  }
+  // DELETE
+  // const userNodeEnv = process.env.VITE_USER_NODE_ENV;
+  // if (!isNodeEnvSet && userNodeEnv) {
+  //   if (userNodeEnv === "development") {
+  //     process.env.NODE_ENV = "development";
+  //   } else {
+  //     logger.warn(
+  //       `NODE_ENV=${userNodeEnv} is not supported in the .env file. ` +
+  //         `Only NODE_ENV=development is supported to create a development build of your project. ` +
+  //         `If you need to set process.env.NODE_ENV, you can set it in the Vite config instead.`
+  //     );
+  //   }
+  // }
 
   const isProduction = process.env.NODE_ENV === "production";
 
@@ -323,6 +323,7 @@ export async function resolveConfig(
     (!Array.isArray(config.assetsInclude) || config.assetsInclude.length)
       ? createFilter(config.assetsInclude)
       : () => false;
+
   const createResolver: ResolvedConfig["createResolver"] = (options) => {
     let aliasContainer: PluginContainer | undefined;
     let resolverContainer: PluginContainer | undefined;
@@ -353,7 +354,7 @@ export async function resolveConfig(
                 tryIndex: true,
                 ...options,
                 idOnly: true,
-              } as any), // TODO ts类型不正确
+              } as any),
             ],
           }));
       }
@@ -375,7 +376,7 @@ export async function resolveConfig(
         )
       : "";
 
-  const server = resolveServerOptions(resolvedRoot, config.server, logger);
+  const server = resolveServerOptions(resolvedRoot, config.server);
   const ssr = resolveSSROptions(
     config.ssr,
     resolveOptions.preserveSymlinks,
@@ -483,103 +484,103 @@ export async function resolveConfig(
   );
   Object.assign(resolved, createPluginHookUtils(resolved.plugins));
   // REMOVE
-  const workerResolved: ResolvedConfig = {
-    ...workerConfig,
-    ...resolvedConfig,
-    isWorker: true,
-    mainConfig: resolved,
-  };
-  resolvedConfig.worker.plugins = await resolvePlugins(
-    workerResolved,
-    workerPrePlugins,
-    workerNormalPlugins,
-    workerPostPlugins
-  );
-  Object.assign(
-    resolvedConfig.worker,
-    createPluginHookUtils(resolvedConfig.worker.plugins)
-  );
+  // const workerResolved: ResolvedConfig = {
+  //   ...workerConfig,
+  //   ...resolvedConfig,
+  //   isWorker: true,
+  //   mainConfig: resolved,
+  // };
+  // resolvedConfig.worker.plugins = await resolvePlugins(
+  //   workerResolved,
+  //   workerPrePlugins,
+  //   workerNormalPlugins,
+  //   workerPostPlugins
+  // );
+  // Object.assign(
+  //   resolvedConfig.worker,
+  //   createPluginHookUtils(resolvedConfig.worker.plugins)
+  // );
 
   // call configResolved hooks
-  await Promise.all([
-    ...resolved
-      .getSortedPluginHooks("configResolved")
-      .map((hook) => hook(resolved)),
-    ...resolvedConfig.worker
-      .getSortedPluginHooks("configResolved")
-      .map((hook) => hook(workerResolved)),
-  ]);
+  // await Promise.all([
+  //   ...resolved
+  //     .getSortedPluginHooks("configResolved")
+  //     .map((hook) => hook(resolved)),
+  //   ...resolvedConfig.worker
+  //     .getSortedPluginHooks("configResolved")
+  //     .map((hook) => hook(workerResolved)),
+  // ]);
 
   // validate config
 
-  if (middlewareMode === "ssr") {
-    logger.warn(
-      colors.yellow(
-        `Setting server.middlewareMode to 'ssr' is deprecated, set server.middlewareMode to \`true\`${
-          config.appType === "custom" ? "" : ` and appType to 'custom'`
-        } instead`
-      )
-    );
-  }
-  if (middlewareMode === "html") {
-    logger.warn(
-      colors.yellow(
-        `Setting server.middlewareMode to 'html' is deprecated, set server.middlewareMode to \`true\` instead`
-      )
-    );
-  }
+  // if (middlewareMode === "ssr") {
+  //   logger.warn(
+  //     colors.yellow(
+  //       `Setting server.middlewareMode to 'ssr' is deprecated, set server.middlewareMode to \`true\`${
+  //         config.appType === "custom" ? "" : ` and appType to 'custom'`
+  //       } instead`
+  //     )
+  //   );
+  // }
+  // if (middlewareMode === "html") {
+  //   logger.warn(
+  //     colors.yellow(
+  //       `Setting server.middlewareMode to 'html' is deprecated, set server.middlewareMode to \`true\` instead`
+  //     )
+  //   );
+  // }
 
-  if (
-    config.server?.force &&
-    !isBuild &&
-    config.optimizeDeps?.force === undefined
-  ) {
-    resolved.optimizeDeps.force = true;
-    logger.warn(
-      colors.yellow(
-        `server.force is deprecated, use optimizeDeps.force instead`
-      )
-    );
-  }
+  // if (
+  //   config.server?.force &&
+  //   !isBuild &&
+  //   config.optimizeDeps?.force === undefined
+  // ) {
+  //   resolved.optimizeDeps.force = true;
+  //   logger.warn(
+  //     colors.yellow(
+  //       `server.force is deprecated, use optimizeDeps.force instead`
+  //     )
+  //   );
+  // }
 
-  debug?.(`using resolved config: %O`, {
-    ...resolved,
-    plugins: resolved.plugins.map((p) => p.name),
-    worker: {
-      ...resolved.worker,
-      plugins: resolved.worker.plugins.map((p) => p.name),
-    },
-  });
+  // debug?.(`using resolved config: %O`, {
+  //   ...resolved,
+  //   plugins: resolved.plugins.map((p) => p.name),
+  //   worker: {
+  //     ...resolved.worker,
+  //     plugins: resolved.worker.plugins.map((p) => p.name),
+  //   },
+  // });
 
-  if (config.build?.terserOptions && config.build.minify !== "terser") {
-    logger.warn(
-      colors.yellow(
-        `build.terserOptions is specified but build.minify is not set to use Terser. ` +
-          `Note Vite now defaults to use esbuild for minification. If you still ` +
-          `prefer Terser, set build.minify to "terser".`
-      )
-    );
-  }
+  // if (config.build?.terserOptions && config.build.minify !== "terser") {
+  //   logger.warn(
+  //     colors.yellow(
+  //       `build.terserOptions is specified but build.minify is not set to use Terser. ` +
+  //         `Note Vite now defaults to use esbuild for minification. If you still ` +
+  //         `prefer Terser, set build.minify to "terser".`
+  //     )
+  //   );
+  // }
 
-  const outputOption = config.build?.rollupOptions?.output ?? [];
-  if (Array.isArray(outputOption)) {
-    const assetFileNamesList = outputOption.map(
-      (output) => output.assetFileNames
-    );
-    if (assetFileNamesList.length > 1) {
-      const firstAssetFileNames = assetFileNamesList[0];
-      const hasDifferentReference = assetFileNamesList.some(
-        (assetFileNames) => assetFileNames !== firstAssetFileNames
-      );
-      if (hasDifferentReference) {
-        resolved.logger.warn(
-          colors.yellow(`
-assetFileNames isn't equal for every build.rollupOptions.output. A single pattern across all outputs is supported by Vite.
-`)
-        );
-      }
-    }
-  }
+//   const outputOption = config.build?.rollupOptions?.output ?? [];
+//   if (Array.isArray(outputOption)) {
+//     const assetFileNamesList = outputOption.map(
+//       (output) => output.assetFileNames
+//     );
+//     if (assetFileNamesList.length > 1) {
+//       const firstAssetFileNames = assetFileNamesList[0];
+//       const hasDifferentReference = assetFileNamesList.some(
+//         (assetFileNames) => assetFileNames !== firstAssetFileNames
+//       );
+//       if (hasDifferentReference) {
+//         resolved.logger.warn(
+//           colors.yellow(`
+// assetFileNames isn't equal for every build.rollupOptions.output. A single pattern across all outputs is supported by Vite.
+// `)
+//         );
+//       }
+//     }
+//   }
 
   return resolved;
 }
@@ -832,7 +833,7 @@ async function loadConfigFromBundledFile(
 
 export function getDepOptimizationConfig(
   config: ResolvedConfig,
-  ssr: boolean
+  // ssr: boolean
 ): DepOptimizationConfig {
   return config.optimizeDeps;
 }
@@ -858,15 +859,16 @@ async function runConfigHook(
   return conf;
 }
 
-export function isDepsOptimizerEnabled(
-  config: ResolvedConfig,
-  ssr: boolean
-): boolean {
-  const { command } = config;
-  const { disabled } = getDepOptimizationConfig(config, ssr);
-  return !(
-    disabled === true ||
-    (command === "build" && disabled === "build") ||
-    (command === "serve" && disabled === "dev")
-  );
-}
+// DELETE
+// export function isDepsOptimizerEnabled(
+//   config: ResolvedConfig,
+//   ssr: boolean
+// ): boolean {
+//   const { command } = config;
+//   const { disabled } = getDepOptimizationConfig(config, ssr);
+//   return !(
+//     disabled === true ||
+//     (command === "build" && disabled === "build") ||
+//     (command === "serve" && disabled === "dev")
+//   );
+// }

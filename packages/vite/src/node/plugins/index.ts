@@ -10,7 +10,7 @@ import { getDepsOptimizer } from "../optimizer/optimizer";
 import { esbuildPlugin } from "./esbuild";
 import { assetPlugin } from "./asset";
 import { htmlInlineProxyPlugin } from "./html";
-import { preAliasPlugin } from "./preAlias";
+// import { preAliasPlugin } from "./preAlias"; // DELETE
 import aliasPlugin from "@rollup/plugin-alias";
 
 export async function resolvePlugins(
@@ -20,11 +20,11 @@ export async function resolvePlugins(
   postPlugins: Plugin[]
 ): Promise<Plugin[]> {
   const isBuild = config.command === "build";
-  const buildPlugins = { pre: [], post: [] }; // REMOVE
+  // const buildPlugins = { pre: [], post: [] }; // DELETE
 
   return [
     watchPackageDataPlugin(config.packageCache),
-    preAliasPlugin(config), // REMOVE
+    // preAliasPlugin(config), // DELETE
     aliasPlugin({ entries: config.resolve.alias }),
     ...prePlugins,
     resolvePlugin({
@@ -43,13 +43,12 @@ export async function resolvePlugins(
     config.esbuild !== false ? esbuildPlugin(config) : null,
     assetPlugin(config),
     ...normalPlugins,
-    cssPostPlugin(config), // REMOVE
-    ...buildPlugins.pre,
+    cssPostPlugin(config),
+    // ...buildPlugins.pre, DELETE
     ...postPlugins,
-    ...buildPlugins.post,
-    ...(isBuild
-      ? []
-      : [clientInjectionsPlugin(config), importAnalysisPlugin(config)]),
+    // ...buildPlugins.post,DELETE
+    clientInjectionsPlugin(config),
+    importAnalysisPlugin(config),
   ].filter(Boolean) as Plugin[]; // NOTE Bolean 写法
 }
 

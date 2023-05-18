@@ -404,7 +404,7 @@ export function tryNodeResolve(
   );
   if (!pkg) {
     if (
-      basedir !== root && // root has no peer dep
+      basedir !== root &&
       !isBuiltin(id) &&
       !id.includes("\0") &&
       bareImportRE.test(id)
@@ -508,7 +508,6 @@ export function tryNodeResolve(
   }
   //  REMOVE 有没有可能将这一段逻辑移除
   const skipOptimization =
-    // @ts-ignore
     depsOptimizer?.options.noDiscovery ||
     !isJsType ||
     (importer && isInNodeModules(importer)) ||
@@ -776,7 +775,7 @@ export async function tryOptimizedResolve(
   const nestedIdMatch = `> ${id}`;
 
   for (const optimizedData of metadata.depInfoList) {
-    if (!optimizedData.src) continue; // Ignore chunks
+    if (!optimizedData.src) continue;
 
     if (!optimizedData.id.endsWith(nestedIdMatch)) continue;
 
@@ -817,10 +816,8 @@ function resolveDeepImport(
   let relativeId: string | undefined | void = id;
   const { exports: exportsField, browser: browserField } = data;
 
-  // map relative based on exports data
   if (exportsField) {
     if (isObject(exportsField) && !Array.isArray(exportsField)) {
-      // resolve without postfix (see #7098)
       const { file, postfix } = splitFileAndPostfix(relativeId);
       const exportsId = resolveExportsOrImports(
         data,
@@ -845,7 +842,6 @@ function resolveDeepImport(
       );
     }
   } else if (targetWeb && options.browserField && isObject(browserField)) {
-    // resolve without postfix (see #7098)
     const { file, postfix } = splitFileAndPostfix(relativeId);
     const mapped = mapWithBrowserField(file, browserField);
     if (mapped) {
@@ -859,7 +855,7 @@ function resolveDeepImport(
     const resolved = tryFsResolve(
       path.join(dir, relativeId),
       options,
-      !exportsField, // try index only if no exports field
+      !exportsField,
       targetWeb
     );
     if (resolved) {
@@ -1044,7 +1040,6 @@ function tryCleanFsResolve(
           ))
         )
           return res;
-        // for .js, also try .tsx
         if (
           fileExt === ".js" &&
           (res = tryResolveRealFile(fileName + ".tsx", preserveSymlinks))

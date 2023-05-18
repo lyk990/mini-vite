@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import { STATUS_CODES, createServer as createHttpServer } from "node:http";
-import type { ServerOptions as HttpsServerOptions } from "node:https";
-import { createServer as createHttpsServer } from "node:https";
+// import type { ServerOptions as HttpsServerOptions } from "node:https"; // DELETE
+// import { createServer as createHttpsServer } from "node:https"; // DELETE
 import {
   ErrorPayload,
   HMRPayload,
@@ -64,8 +64,8 @@ const wsServerEvents = [
 ];
 export function createWebSocketServer(
   server: Server | null,
-  config: ResolvedConfig,
-  httpsOptions?: HttpsServerOptions
+  config: ResolvedConfig
+  // httpsOptions?: HttpsServerOptions
 ): WebSocketServer {
   let wss: WebSocketServerRaw;
   let wsHttpServer: Server | undefined = undefined;
@@ -102,11 +102,11 @@ export function createWebSocketServer(
       });
       res.end(body);
     }) as Parameters<typeof createHttpServer>[1];
-    if (httpsOptions) {
-      wsHttpServer = createHttpsServer(httpsOptions, route);
-    } else {
-      wsHttpServer = createHttpServer(route);
-    }
+    // if (httpsOptions) {
+    //   wsHttpServer = createHttpsServer(httpsOptions, route);
+    // } else {
+    wsHttpServer = createHttpServer(route);
+    // }
     wss = new WebSocketServerRaw({ server: wsHttpServer });
   }
 

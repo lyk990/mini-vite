@@ -748,7 +748,7 @@ function needsInterop(
   exportsData: ExportsData,
   output?: { exports: string[] }
 ): boolean {
-  if (getDepOptimizationConfig(config, ssr)?.needsInterop?.includes(id)) {
+  if (getDepOptimizationConfig(config)?.needsInterop?.includes(id)) {
     return true;
   }
   const { hasImports, exports } = exportsData;
@@ -801,7 +801,7 @@ export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
     }
   }
 
-  const optimizeDeps = getDepOptimizationConfig(config, ssr);
+  const optimizeDeps = getDepOptimizationConfig(config);
   content += JSON.stringify(
     {
       mode: process.env.NODE_ENV || config.mode,

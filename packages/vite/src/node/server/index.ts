@@ -13,7 +13,7 @@ import {
 import { ModuleGraph } from "./moduleGraph";
 import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
-import { resolveConfig, isDepsOptimizerEnabled } from "../config";
+import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
 import {
   diffDnsOrderChange,
@@ -22,7 +22,7 @@ import {
   normalizePath,
   resolveServerUrls,
 } from "../utils";
-import { Logger, printServerUrls } from "../logger";
+import { printServerUrls } from "../logger";
 import { transformMiddleware } from "./middlewares/transform";
 import { FSWatcher } from "chokidar";
 import chokidar from "chokidar";
@@ -49,7 +49,7 @@ import path from "node:path";
 import { resolveChokidarOptions } from "../watch";
 import { htmlFallbackMiddleware } from "./middlewares/htmlFallback";
 import { errorMiddleware } from "./middlewares/error";
-import colors from "picocolors";
+// import colors from "picocolors"; DELETE
 import { searchForWorkspaceRoot } from "./searchRoot";
 
 export interface ResolvedServerUrls {
@@ -79,7 +79,7 @@ export interface ViteDevServer {
   watcher: FSWatcher;
   ws: WebSocketServer;
   restart(forceOptimize?: boolean): Promise<void>;
-  _ssrExternals: string[] | null;
+  // _ssrExternals: string[] | null; // DELETE
   _restartPromise: Promise<void> | null;
   _forceOptimizeOnRestart: boolean;
   _pendingRequests: Map<
@@ -181,8 +181,8 @@ export async function _createServer(
   });
 
   const httpServer = await resolveHttpServer(middlewares);
-  const httpsOptions = undefined; // REMOVE
-  const ws = createWebSocketServer(httpServer, config, httpsOptions);
+  // const httpsOptions = undefined; // DELETE
+  const ws = createWebSocketServer(httpServer, config);
 
   const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>
     container.resolveId(url, undefined, { ssr })
@@ -238,7 +238,7 @@ export async function _createServer(
     transformRequest(url, options) {
       return transformRequest(url, server, options);
     },
-    transformIndexHtml: null!, // to be immediately set
+    transformIndexHtml: null!,
     async listen(port?: number, isRestart?: boolean) {
       await startServer(server, port);
       if (httpServer) {
@@ -300,7 +300,7 @@ export async function _createServer(
       }
       return server._restartPromise;
     },
-    _ssrExternals: null,
+    // _ssrExternals: null, // DELETE
     _restartPromise: null,
     _importGlobMap: new Map(),
     _forceOptimizeOnRestart: false,
@@ -346,7 +346,7 @@ export async function _createServer(
   }
 
   middlewares.use(errorMiddleware(server, middlewareMode));
-  // TODO 代码优化
+  // 是否正在初始化服务器
   let initingServer: Promise<void> | undefined;
   let serverInited = false;
   const initServer = async () => {
@@ -355,10 +355,7 @@ export async function _createServer(
 
     initingServer = (async function () {
       await container.buildStart({});
-      // NOTE  isDepsOptimizerEnabled 流程
-      if (isDepsOptimizerEnabled(config, false)) {
-        await initDepsOptimizer(config);
-      }
+      await initDepsOptimizer(config);
       initingServer = undefined;
       serverInited = true;
     })();
@@ -406,7 +403,6 @@ async function restartServer(server: ViteDevServer) {
   try {
     newServer = await _createServer(inlineConfig, { ws: false });
   } catch (err: any) {
-    console.log(err);
     server.config.logger.error(err.message, {
       timestamp: true,
     });
@@ -416,7 +412,6 @@ async function restartServer(server: ViteDevServer) {
 
   await server.close();
 
-  // prevent new server `restart` function from calling
   newServer._restartPromise = server._restartPromise;
 
   Object.assign(server, newServer);
@@ -446,14 +441,13 @@ async function restartServer(server: ViteDevServer) {
     bindShortcuts(newServer, shortcutsOptions);
   }
 
-  // new server (the current server) can restart now
   newServer._restartPromise = null;
 }
 
 export function resolveServerOptions(
   root: string,
-  raw: ServerOptions | undefined,
-  logger: Logger
+  raw: ServerOptions | undefined
+  // logger: Logger
 ): ResolvedServerOptions {
   const server: ResolvedServerOptions = {
     preTransformRequests: true,
@@ -483,17 +477,17 @@ export function resolveServerOptions(
     allow: allowDirs,
     deny,
   };
-
-  if (server.origin?.endsWith("/")) {
-    server.origin = server.origin.slice(0, -1);
-    logger.warn(
-      colors.yellow(
-        `${colors.bold("(!)")} server.origin should not end with "/". Using "${
-          server.origin
-        }" instead.`
-      )
-    );
-  }
+  // DELETE
+  // if (server.origin?.endsWith("/")) {
+  //   server.origin = server.origin.slice(0, -1);
+  //   logger.warn(
+  //     colors.yellow(
+  //       `${colors.bold("(!)")} server.origin should not end with "/". Using "${
+  //         server.origin
+  //       }" instead.`
+  //     )
+  //   );
+  // }
 
   return server;
 }
