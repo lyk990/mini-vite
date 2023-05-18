@@ -309,6 +309,12 @@ export async function _createServer(
     _shortcutsOptions: undefined,
   };
   server.transformIndexHtml = createDevHtmlTransformFn(server);
+
+  const postHooks: ((() => void) | void)[] = [];
+  for (const hook of config.getSortedPluginHooks("configureServer")) {
+    postHooks.push(await hook(server));
+  }
+
   const { proxy } = serverConfig;
   if (proxy) {
     middlewares.use(proxyMiddleware(httpServer, proxy, config));
@@ -327,6 +333,8 @@ export async function _createServer(
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(htmlFallbackMiddleware(root, config.appType === "spa"));
   }
+
+  postHooks.forEach((fn) => fn && fn());
 
   if (config.appType === "spa" || config.appType === "mpa") {
     middlewares.use(indexHtmlMiddleware(server));
