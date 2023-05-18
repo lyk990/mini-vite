@@ -482,7 +482,7 @@ export async function resolveConfig(
     postPlugins
   );
   Object.assign(resolved, createPluginHookUtils(resolved.plugins));
-
+  // REMOVE
   const workerResolved: ResolvedConfig = {
     ...workerConfig,
     ...resolvedConfig,

@@ -135,7 +135,6 @@ export async function loadCachedDepOptimizationMetadata(
       depsCacheDir
     );
   } catch (e) {
-    console.log(e);
     // entry point
     // error
   }
