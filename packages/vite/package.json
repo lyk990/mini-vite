@@ -1,18 +1,18 @@
 {
   "name": "mini-vite",
   "version": "0.0.1",
+  "type": "module",
   "description": "@mini-vite/vite",
-  "main": "index.js",
+  "author": "lyk990",
+  "license": "MIT",
+  "bin": {
+    "mini-vite": "bin/mini-vite.js"
+  },
   "keywords": [
     "vite",
     "mini-vite"
   ],
-  "author": "lyk990",
-  "license": "ISC",
-  "bin": {
-    "mini-vite": "bin/mini-vite.js"
-  },
-  "type": "module",
+  "main": "index.js",
   "scripts": {
     "dev": "rimraf dist && pnpm run build-bundle -w",
     "build-bundle": "rollup --config rollup.config.ts --configPlugin typescript",

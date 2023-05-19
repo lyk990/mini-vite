@@ -1,11 +1,14 @@
 {
   "name": "mini-vite",
+  "private": true,
+  "type": "module",
   "version": "0.0.1",
-  "description": "you can use mini-vite to learn vite",
   "author": "lyk990",
-  "license": "ISC",
-  "main": "index.js",
   "homepage": "https://github.com/lyk990/mini-vite",
+  "description": "you can use mini-vite to learn vite",
+  "engines": {
+    "node": "^14.18.0 || >=16.0.0"
+  },
   "keywords": [
     "vite",
     "mini-vite"
