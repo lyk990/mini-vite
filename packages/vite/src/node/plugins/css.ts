@@ -618,7 +618,6 @@ async function compileCSS(
       }
     }
   } catch (e) {
-    console.log(e);
     e.message = `[postcss] ${e.message}`;
     e.code = code;
     e.loc = {
@@ -731,7 +730,6 @@ const less: StylePreprocessor = async (source, root, options, resolvers) => {
         : {}),
     });
   } catch (e) {
-    console.log(e);
     const error = e as Less.RenderError;
     const normalizedError: RollupError = new Error(
       `[less] ${error.message || error.type}`
@@ -838,7 +836,6 @@ const scss: SassStylePreprocessor = async (
       deps,
     };
   } catch (e) {
-    console.log(e);
     e.message = `[sass] ${e.message}`;
     e.id = e.file;
     e.frame = e.formatted;
@@ -886,7 +883,6 @@ const styl: StylusStylePreprocessor = async (source, root, options) => {
       deps,
     };
   } catch (e) {
-    console.log(e);
     e.message = `[stylus] ${e.message}`;
     return { code: "", error: e, deps: [] };
   }
@@ -1014,7 +1010,6 @@ function loadPreprocessor(
     const resolved = requireResolveFromRootWithFallback(root, lang);
     return (loadedPreprocessors[lang] = _require(resolved));
   } catch (e) {
-    console.log(e);
     if (e.code === "MODULE_NOT_FOUND") {
       throw new Error(
         `Preprocessor dependency "${lang}" not found. Did you install it?`

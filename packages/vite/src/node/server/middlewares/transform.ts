@@ -60,7 +60,6 @@ export function transformMiddleware(
         "\0"
       );
     } catch (e) {
-      console.log(e);
       return next(e);
     }
 
@@ -90,7 +89,6 @@ export function transformMiddleware(
               headers: server.config.server.headers,
             });
           } catch (e) {
-            console.log(e);
             const dummySourceMap = {
               version: 3,
               file: sourcemapPath.replace(/\.map$/, ""),
@@ -191,7 +189,6 @@ export function transformMiddleware(
         }
       }
     } catch (e) {
-      console.log(e);
       if (e?.code === ERR_OPTIMIZE_DEPS_PROCESSING_ERROR) {
         if (!res.writableEnded) {
           res.statusCode = 504;

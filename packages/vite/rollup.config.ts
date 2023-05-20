@@ -148,7 +148,7 @@ function createNodeConfig(isProduction: boolean) {
     ),
   });
 }
-
+// DELETE
 // function createCjsConfig(isProduction: boolean) {
 //   return defineConfig({
 //     ...sharedNodeOptions,

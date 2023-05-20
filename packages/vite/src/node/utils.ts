@@ -382,13 +382,10 @@ export function lookupFile(
 /**获取文件信息 */
 export function tryStatSync(file: string): fs.Stats | undefined {
   try {
-    // fs.statSync 获取文件信息 throwIfNoEntry <boolean> 如果文件系统条目不存在，
+    // fs.statSync: 获取文件信息 throwIfNoEntry <boolean> 如果文件系统条目不存在，
     // 是否会抛出异常。 默认值: true。
     return fs.statSync(file, { throwIfNoEntry: false });
-  } catch (e) {
-    console.log(e);
-    // Ignore errors
-  }
+  } catch (e) {}
 }
 const builtins = new Set([
   ...builtinModules,
@@ -719,17 +716,14 @@ export const isInternalRequest = (url: string): boolean =>
 
 export function isFileReadable(filename: string): boolean {
   try {
-    // The "throwIfNoEntry" is a performance optimization for cases where the file does not exist
     if (!fs.statSync(filename, { throwIfNoEntry: false })) {
       return false;
     }
 
-    // Check if current process has read permission to the file
     fs.accessSync(filename, fs.constants.R_OK);
 
     return true;
   } catch (e) {
-    console.log(e);
     return false;
   }
 }

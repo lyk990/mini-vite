@@ -449,7 +449,6 @@ export async function createPluginContainer(
         try {
           result = await handler.call(ctx as any, code, id, { ssr });
         } catch (e) {
-          console.log(e)
         }
 
         if (!result) continue;

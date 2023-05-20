@@ -654,7 +654,6 @@ export async function loadConfigFromFile(
       isESM =
         !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
     } catch (e) {
-      console.log(e);
     }
   }
 
@@ -677,7 +676,6 @@ export async function loadConfigFromFile(
       dependencies: bundled.dependencies,
     };
   } catch (e) {
-    console.log(e);
     createLogger(logLevel).error(
       colors.red(`failed to load config from ${resolvedPath}`),
       { error: e }

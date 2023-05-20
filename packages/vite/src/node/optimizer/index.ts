@@ -55,9 +55,7 @@ export interface DepsOptimizer {
   registerWorkersSource: (id: string) => void;
   resetRegisteredIds: () => void;
   ensureFirstRun: () => void;
-
   close: () => Promise<void>;
-
   options: DepOptimizationOptions;
 }
 
@@ -119,11 +117,8 @@ export interface OptimizedDepInfo {
 /**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig,
-  ssr: boolean = false,
-  force = config.optimizeDeps.force,
-  asCommand = false
+  ssr: boolean = false
 ): Promise<DepOptimizationMetadata | undefined> {
-  const log = debug;
   const depsCacheDir = getDepsCacheDir(config, ssr);
   let cachedMetadata: DepOptimizationMetadata | undefined;
   try {
@@ -136,11 +131,9 @@ export async function loadCachedDepOptimizationMetadata(
     );
   } catch (e) {
     // entry point
-    // error
   }
   // 比较hash是否一直来判断需不需要重复预构建依赖
   if (cachedMetadata && cachedMetadata.hash === getDepHash(config, ssr)) {
-    log?.("Hash is consistent. Skipping. Use --force to override.");
     return cachedMetadata;
   }
   // 删除预构建依赖文件(deps)和目录
@@ -262,17 +255,15 @@ export function runOptimizeDeps(
     depsFromOptimizedDepInfo(depsInfo)
   );
 
-  const qualifiedIds = Object.keys(depsInfo);
+  // const qualifiedIds = Object.keys(depsInfo); DELETE
   const cleanUp = () => {
-    fsp
-      .rm(processingCacheDir, { recursive: true, force: true })
-      .catch((e) => {console.log(e);});
+    fsp.rm(processingCacheDir, { recursive: true, force: true }).catch((e) => {
+    });
   };
 
   const succesfulResult: DepOptimizationResult = {
     metadata,
     cancel: cleanUp,
-    // core 
     commit: async () => {
       const dataPath = path.join(processingCacheDir, "_metadata.json");
       fs.writeFileSync(
@@ -290,13 +281,13 @@ export function runOptimizeDeps(
         fsp.rm(temporalPath, { recursive: true, force: true });
     },
   };
-  // 没有依赖
-  if (!qualifiedIds.length) {
-    return {
-      cancel: async () => cleanUp(),
-      result: Promise.resolve(succesfulResult),
-    };
-  }
+  //  DELETE 没有依赖
+  // if (!qualifiedIds.length) {
+  //   return {
+  //     cancel: async () => cleanUp(),
+  //     result: Promise.resolve(succesfulResult),
+  //   };
+  // }
 
   const cancelledResult: DepOptimizationResult = {
     metadata,
@@ -317,7 +308,6 @@ export function runOptimizeDeps(
   const runResult = preparedRun.then(({ context, idToExports }) => {
     function disposeContext() {
       return context?.dispose().catch((e) => {
-        console.log(e);
         config.logger.error("Failed to dispose esbuild context", { error: e });
       });
     }
@@ -390,7 +380,6 @@ export function runOptimizeDeps(
       })
 
       .catch((e) => {
-        console.log(e);
         if (e.errors && e.message.includes("The build was canceled")) {
           return cancelledResult;
         }
@@ -402,7 +391,6 @@ export function runOptimizeDeps(
   });
 
   runResult.catch((e) => {
-    console.log(e);
     cleanUp();
   });
 
@@ -686,8 +674,7 @@ export async function extractExportsData(
   const entryContent = await fsp.readFile(filePath, "utf-8");
   try {
     parseResult = parse(entryContent);
-  } catch(e) {
-    console.log(e);
+  } catch (e) {
     const loader = esbuildOptions.loader?.[path.extname(filePath)] || "jsx";
     debug?.(
       `Unable to parse: ${filePath}.\n Trying again with a ${loader} transform.`

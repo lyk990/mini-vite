@@ -61,7 +61,6 @@ try {
 
   socket = setupWebSocket(socketProtocol, socketHost, fallback);
 } catch (error) {
-  console.log(error);
   console.error(`[vite] failed to connect to websocket (${error}). `);
 }
 
@@ -147,13 +146,8 @@ async function handleMessage(payload: HMRPayload) {
             return queueUpdate(fetchUpdate(update));
           }
 
-          // css-update
-          // this is only sent when a css file referenced with <link> is updated
           const { path, timestamp } = update;
           const searchUrl = cleanUrl(path);
-          // can't use querySelector with `[href*=]` here since the link may be
-          // using relative paths so we need to use link.href to grab the full
-          // URL for the include check.
           const el = Array.from(
             document.querySelectorAll<HTMLLinkElement>("link")
           ).find(
@@ -295,7 +289,7 @@ async function waitForSuccessfulPing(
         },
       });
       return true;
-    } catch(e) {console.log(e);}
+    } catch(e) {}
     return false;
   };
 
@@ -405,7 +399,6 @@ async function fetchUpdate({
           }`
       );
     } catch (e) {
-      console.log(e);
       warnFailedFetch(e, acceptedPath);
     }
   }
@@ -512,9 +505,7 @@ export function createHotContext(ownerPath: string): ViteHotContext {
       pruneMap.set(ownerPath, cb);
     },
 
-    // Kept for backward compatibility (#11036)
     // @ts-expect-error untyped
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
     decline() {},
 
     invalidate(message) {

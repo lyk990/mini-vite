@@ -91,7 +91,6 @@ export async function injectSourcesContent(
       path.resolve(path.dirname(file), map.sourceRoot || "")
     );
   } catch (e) {
-    console.log(e);
   }
 
   const missingSources: string[] = [];
@@ -103,7 +102,6 @@ export async function injectSourcesContent(
           sourcePath = path.resolve(sourceRoot, sourcePath);
         }
         return fs.readFile(sourcePath, "utf-8").catch((e) => {
-          console.log(e);
           missingSources.push(sourcePath);
           return null;
         });

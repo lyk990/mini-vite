@@ -137,7 +137,6 @@ async function loadAndTransform(
         code = await fs.readFile(file, "utf-8");
         debugLoad?.(`${timeFrom(loadStart)} [fs] ${prettyUrl}`);
       } catch (e) {
-        console.log(e);
         if (e.code !== "ENOENT") {
           throw e;
         }
@@ -158,7 +157,6 @@ async function loadAndTransform(
           blankReplacer
         );
       } catch (e) {
-        console.log(e);
         logger.warn(`Failed to load source map for ${url}.`, {
           timestamp: true,
         });

@@ -119,7 +119,6 @@ export async function parseImportGlob(
   try {
     cleanCode = stripLiteral(code);
   } catch (e) {
-    console.log(e);
     return [];
   }
   const matches = Array.from(cleanCode.matchAll(importGlobRE));
@@ -147,7 +146,6 @@ export async function parseImportGlob(
         },
       }) as any;
     } catch (e) {
-      console.log(e);
       const _e = e as any;
       if (_e.message && _e.message.startsWith("Unterminated string constant"))
         return undefined!;
@@ -163,7 +161,6 @@ export async function parseImportGlob(
           ranges: true,
         }) as any;
       } catch (e) {
-        console.log(e);
         throw _e;
       }
     }
@@ -478,7 +475,6 @@ function parseGlobOptions(
   try {
     opts = evalValue(rawOpts);
   } catch (e) {
-    console.log(e);
     throw err(
       "Vite is unable to parse the glob options as the value is not static",
       optsStartIndex

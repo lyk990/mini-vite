@@ -272,7 +272,6 @@ export async function transformWithEsbuild(
       map,
     };
   } catch (e: any) {
-    console.log(e);
     debug?.(`esbuild error with options used: `, resolvedOptions);
     if (e.errors) {
       e.frame = "";
@@ -334,7 +333,6 @@ async function loadTsconfigJsonForFile(
     }
     return result.tsconfig;
   } catch (e) {
-    console.log(e);
     if (e instanceof TSConfckParseError) {
       if (server && e.tsconfigFile) {
         ensureWatchedFile(server.watcher, e.tsconfigFile, server.config.root);

@@ -64,7 +64,6 @@ export function indexHtmlMiddleware(
             headers: server.config.server.headers,
           });
         } catch (e) {
-          console.log(e);
           return next(e);
         }
       }
@@ -268,7 +267,6 @@ function preTransformRequest(server: ViteDevServer, url: string, base: string) {
   url = unwrapId(stripBase(url, base));
 
   server.transformRequest(url).catch((e) => {
-    console.log(e);
     server.config.logger.error(e.message);
   });
 }

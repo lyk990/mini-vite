@@ -200,7 +200,6 @@ export async function _createServer(
       try {
         await handleHMRUpdate(file, server, configOnly);
       } catch (err) {
-        console.log(err);
         ws.send({
           type: "error",
           err,

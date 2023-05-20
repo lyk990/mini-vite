@@ -125,7 +125,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       try {
         [imports, exports] = parseImports(source);
       } catch (e: any) {
-        console.log(e);
         const isVue = importer.endsWith(".vue");
         const isJsx = importer.endsWith(".jsx") || importer.endsWith(".tsx");
         const maybeJSX = !isVue && isJSRequest(importer);
@@ -267,7 +266,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               url = injectQuery(url, `t=${depModule.lastHMRTimestamp}`);
             }
           } catch (e: any) {
-            console.log(e);
             e.pos = pos;
             throw e;
           }
@@ -493,7 +491,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             ) {
               const url = removeImportQuery(hmrUrl);
               server.transformRequest(url, { ssr }).catch((e) => {
-                console.log(e);
                 if (e?.code === ERR_OUTDATED_OPTIMIZED_DEP) {
                   return;
                 }
