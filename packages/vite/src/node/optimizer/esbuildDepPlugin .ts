@@ -1,5 +1,5 @@
 import { ResolvedConfig } from "../config";
-import type { ImportKind as _, Plugin } from "esbuild";
+import type { Plugin } from "esbuild";
 import { CSS_LANGS_RE, KNOWN_ASSET_TYPES } from "../constants";
 import { PackageCache } from "../packages";
 import {
@@ -44,7 +44,6 @@ export function esbuildDepPlugin(
   config: ResolvedConfig
   // ssr: boolean
 ): Plugin {
-
   const allExternalTypes = externalTypes;
 
   const esmPackageCache: PackageCache = new Map();

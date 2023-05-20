@@ -1,5 +1,5 @@
 import { ResolvedConfig } from "../config";
-import { ViteDevServer } from "../server";
+// import { ViteDevServer } from "../server";
 import { getHash } from "../utils";
 import {
   loadCachedDepOptimizationMetadata,
@@ -30,21 +30,20 @@ export function getDepsOptimizer(
 /**初始化预构建依赖 */
 export async function initDepsOptimizer(
   config: ResolvedConfig,
-  server?: ViteDevServer
+  // server?: ViteDevServer
 ): Promise<void> {
-  await createDepsOptimizer(config, server);
+  await createDepsOptimizer(config);
 }
 
 async function createDepsOptimizer(
   config: ResolvedConfig,
-  server?: ViteDevServer
+  // server?: ViteDevServer
 ): Promise<void> {
   const sessionTimestamp = Date.now().toString();
-  let ssr = false;
+  // let ssr = false;
   const cachedMetadata = await loadCachedDepOptimizationMetadata(config, false);
   let metadata =
-    cachedMetadata ||
-    initDepsOptimizerMetadata(config, false, sessionTimestamp);
+    cachedMetadata || initDepsOptimizerMetadata(config, sessionTimestamp);
   let depOptimizationProcessing = newDepOptimizationProcessing();
 
   let discover;
@@ -73,7 +72,7 @@ async function createDepsOptimizer(
   function addMissingDep(id: string, resolved: string) {
     return addOptimizedDepInfo(metadata, "discovered", {
       id,
-      file: getOptimizedDepPath(id, config, ssr),
+      file: getOptimizedDepPath(id, config),
       src: resolved,
       browserHash: getDiscoveredBrowserHash(
         metadata.hash,
@@ -81,7 +80,7 @@ async function createDepsOptimizer(
         depsFromOptimizedDepInfo(metadata.discovered)
       ),
       processing: depOptimizationProcessing.promise,
-      exportsData: extractExportsData(resolved, config, ssr),
+      exportsData: extractExportsData(resolved, config),
     });
   }
 

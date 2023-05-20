@@ -119,7 +119,7 @@ export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig,
   ssr: boolean = false
 ): Promise<DepOptimizationMetadata | undefined> {
-  const depsCacheDir = getDepsCacheDir(config, ssr);
+  const depsCacheDir = getDepsCacheDir(config);
   let cachedMetadata: DepOptimizationMetadata | undefined;
   try {
     // 首次进行依赖预构建时并没有_metadata.json文件，所以会报错，这里捕获错误
@@ -133,15 +133,15 @@ export async function loadCachedDepOptimizationMetadata(
     // entry point
   }
   // 比较hash是否一直来判断需不需要重复预构建依赖
-  if (cachedMetadata && cachedMetadata.hash === getDepHash(config, ssr)) {
+  if (cachedMetadata && cachedMetadata.hash === getDepHash(config)) {
     return cachedMetadata;
   }
   // 删除预构建依赖文件(deps)和目录
   await fsp.rm(depsCacheDir, { recursive: true, force: true });
 }
 /**获取deps文件的路径 */
-export function getDepsCacheDir(config: ResolvedConfig, ssr: boolean): string {
-  return getDepsCacheDirPrefix(config) + getDepsCacheSuffix(config, ssr);
+export function getDepsCacheDir(config: ResolvedConfig): string {
+  return getDepsCacheDirPrefix(config) + getDepsCacheSuffix();
 }
 /**解析_metadat.json内容 */
 function parseDepsOptimizerMetadata(
@@ -157,12 +157,12 @@ function parseDepsOptimizerMetadata(
       return value;
     }
   );
-  if (
-    !chunks ||
-    Object.values(optimized).some((depInfo: any) => !depInfo.fileHash)
-  ) {
-    return;
-  }
+  // if (
+  //   !chunks ||
+  //   Object.values(optimized).some((depInfo: any) => !depInfo.fileHash)
+  // ) {
+  //   return;
+  // }
   const metadata = {
     hash,
     browserHash,
@@ -238,8 +238,8 @@ export function runOptimizeDeps(
     command: "build",
   };
 
-  const depsCacheDir = getDepsCacheDir(resolvedConfig, ssr);
-  const processingCacheDir = getProcessingDepsCacheDir(resolvedConfig, ssr);
+  const depsCacheDir = getDepsCacheDir(resolvedConfig);
+  const processingCacheDir = getProcessingDepsCacheDir(resolvedConfig);
 
   fs.mkdirSync(processingCacheDir, { recursive: true });
 
@@ -248,7 +248,7 @@ export function runOptimizeDeps(
     `{\n  "type": "module"\n}\n`
   );
 
-  const metadata = initDepsOptimizerMetadata(config, ssr);
+  const metadata = initDepsOptimizerMetadata(config);
 
   metadata.browserHash = getOptimizedBrowserHash(
     metadata.hash,
@@ -296,7 +296,7 @@ export function runOptimizeDeps(
     cancel: cleanUp,
   };
 
-  const start = performance.now();
+  // const start = performance.now();
 
   const preparedRun = prepareEsbuildOptimizerRun(
     resolvedConfig,
@@ -306,7 +306,7 @@ export function runOptimizeDeps(
     optimizerContext
   );
 
-  const runResult = preparedRun.then(({ context, idToExports }) => {
+  const runResult = preparedRun.then(({ context }) => {
     function disposeContext() {
       return context?.dispose().catch((e) => {
         config.logger.error("Failed to dispose esbuild context", { error: e });
@@ -341,13 +341,12 @@ export function runOptimizeDeps(
               metadata.hash + depsInfo[id].file + JSON.stringify(output.imports)
             ),
             browserHash: metadata.browserHash,
-            needsInterop: needsInterop(
-              config,
-              ssr,
-              id,
-              idToExports[id],
-              output
-            ),
+            needsInterop: needsInterop(),
+            // config,
+            // ssr,
+            // id,
+            // idToExports[id],
+            // output
           });
         }
 
@@ -356,7 +355,7 @@ export function runOptimizeDeps(
             const id = path
               .relative(processingCacheDirOutputPath, o)
               .replace(jsExtensionRE, "");
-            const file = getOptimizedDepPath(id, resolvedConfig, ssr);
+            const file = getOptimizedDepPath(id, resolvedConfig);
             if (
               !findOptimizedDepInfoInRecord(
                 metadata.optimized,
@@ -373,9 +372,9 @@ export function runOptimizeDeps(
           }
         }
 
-        debug?.(
-          `Dependencies bundled in ${(performance.now() - start).toFixed(2)}ms`
-        );
+        // debug?.(
+        //   `Dependencies bundled in ${(performance.now() - start).toFixed(2)}ms`
+        // );
 
         return succesfulResult;
       })
@@ -405,29 +404,25 @@ export function runOptimizeDeps(
     result: runResult,
   };
 }
-
-function getProcessingDepsCacheDir(config: ResolvedConfig, ssr: boolean) {
-  return (
-    getDepsCacheDirPrefix(config) +
-    getDepsCacheSuffix(config, ssr) +
-    getTempSuffix()
-  );
+// TODO  getDepsCacheSuffix 是否直接返回""
+function getProcessingDepsCacheDir(config: ResolvedConfig) {
+  return getDepsCacheDirPrefix(config) + getDepsCacheSuffix() + getTempSuffix();
 }
 function getDepsCacheDirPrefix(config: ResolvedConfig): string {
   return normalizePath(path.resolve(config.cacheDir, "deps"));
 }
 
-function getDepsCacheSuffix(config: ResolvedConfig, ssr: boolean): string {
+function getDepsCacheSuffix(): string {
   let suffix = "";
-  if (config.command === "build") {
-    const { outDir } = config.build;
-    const buildId =
-      outDir.length > 8 || outDir.includes("/") ? getHash(outDir) : outDir;
-    suffix += `_build-${buildId}`;
-  }
-  if (ssr) {
-    suffix += "_ssr";
-  }
+  // if (config.command === "build") {
+  //   const { outDir } = config.build;
+  //   const buildId =
+  //     outDir.length > 8 || outDir.includes("/") ? getHash(outDir) : outDir;
+  //   suffix += `_build-${buildId}`;
+  // }
+  // if (ssr) {
+  //   suffix += "_ssr";
+  // }
   return suffix;
 }
 
@@ -489,7 +484,7 @@ async function prepareEsbuildOptimizerRun(
   context?: BuildContext;
   idToExports: Record<string, ExportsData>;
 }> {
-  const isBuild = resolvedConfig.command === "build";
+  // const isBuild = resolvedConfig.command === "build";
   const config: ResolvedConfig = {
     ...resolvedConfig,
     command: "build",
@@ -508,7 +503,7 @@ async function prepareEsbuildOptimizerRun(
     Object.keys(depsInfo).map(async (id) => {
       const src = depsInfo[id].src!;
       const exportsData = await (depsInfo[id].exportsData ??
-        extractExportsData(src, config, ssr));
+        extractExportsData(src, config));
       if (exportsData.jsxLoader && !esbuildOptions.loader?.[".js"]) {
         esbuildOptions.loader = {
           ".js": "jsx",
@@ -524,9 +519,11 @@ async function prepareEsbuildOptimizerRun(
 
   if (optimizerContext.cancelled) return { context: undefined, idToExports };
   const define = {
-    "process.env.NODE_ENV": isBuild
-      ? "__vite_process_env_NODE_ENV"
-      : JSON.stringify(process.env.NODE_ENV || config.mode),
+    "process.env.NODE_ENV":
+      // isBuild
+      //   ? "__vite_process_env_NODE_ENV"
+      //   :
+      JSON.stringify(process.env.NODE_ENV || config.mode),
   };
 
   // const platform =
@@ -549,13 +546,14 @@ async function prepareEsbuildOptimizerRun(
     //       js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
     //     }
     //   : undefined,
-    target: isBuild ? config.build.target || undefined : ESBUILD_MODULES_TARGET,
+    // isBuild ? config.build.target || undefined :
+    target: ESBUILD_MODULES_TARGET,
     external,
     logLevel: "error",
     splitting: true,
     sourcemap: true,
     outdir: processingCacheDir,
-    ignoreAnnotations: !isBuild,
+    ignoreAnnotations: true,
     metafile: true,
     plugins,
     charset: "utf8",
@@ -597,10 +595,9 @@ const safeRename = promisify(function gracefulRename(
 
 export function initDepsOptimizerMetadata(
   config: ResolvedConfig,
-  ssr: boolean,
   timestamp?: string
 ): DepOptimizationMetadata {
-  const hash = getDepHash(config, ssr);
+  const hash = getDepHash(config);
   return {
     hash,
     browserHash: getOptimizedBrowserHash(hash, {}, timestamp),
@@ -621,11 +618,10 @@ function getOptimizedBrowserHash(
 
 export function getOptimizedDepPath(
   id: string,
-  config: ResolvedConfig,
-  ssr: boolean
+  config: ResolvedConfig
 ): string {
   return normalizePath(
-    path.resolve(getDepsCacheDir(config, ssr), flattenId(id) + ".js")
+    path.resolve(getDepsCacheDir(config), flattenId(id) + ".js")
   );
 }
 
@@ -647,8 +643,8 @@ export function newDepOptimizationProcessing(): DepOptimizationProcessing {
 
 export async function extractExportsData(
   filePath: string,
-  config: ResolvedConfig,
-  ssr: boolean
+  config: ResolvedConfig
+  // ssr: boolean
 ): Promise<ExportsData> {
   await init;
 
@@ -729,38 +725,38 @@ function esbuildOutputFromId(
   }
 }
 
-function needsInterop(
-  config: ResolvedConfig,
-  ssr: boolean,
-  id: string,
-  exportsData: ExportsData,
-  output?: { exports: string[] }
-): boolean {
-  if (getDepOptimizationConfig(config)?.needsInterop?.includes(id)) {
-    return true;
-  }
-  const { hasImports, exports } = exportsData;
-  if (!exports.length && !hasImports) {
-    return true;
-  }
+// DELETE
+function needsInterop(): boolean {
+  // config: ResolvedConfig,
+  // ssr: boolean,
+  // id: string,
+  // exportsData: ExportsData,
+  // output?: { exports: string[] }
+  // if (getDepOptimizationConfig(config)?.needsInterop?.includes(id)) {
+  //   return true;
+  // }
+  // const { hasImports, exports } = exportsData;
+  // if (!exports.length && !hasImports) {
+  //   return true;
+  // }
 
-  if (output) {
-    const generatedExports: string[] = output.exports;
+  // if (output) {
+  //   const generatedExports: string[] = output.exports;
 
-    if (
-      !generatedExports ||
-      (isSingleDefaultExport(generatedExports) &&
-        !isSingleDefaultExport(exports))
-    ) {
-      return true;
-    }
-  }
+  //   if (
+  //     !generatedExports ||
+  //     (isSingleDefaultExport(generatedExports) &&
+  //       !isSingleDefaultExport(exports))
+  //   ) {
+  //     return true;
+  //   }
+  // }
   return false;
 }
 
-function isSingleDefaultExport(exports: readonly string[]) {
-  return exports.length === 1 && exports[0] === "default";
-}
+// function isSingleDefaultExport(exports: readonly string[]) {
+//   return exports.length === 1 && exports[0] === "default";
+// }
 
 const lockfileFormats = [
   { name: "package-lock.json", checkPatches: true, manager: "npm" },
@@ -772,7 +768,7 @@ const lockfileFormats = [
 });
 const lockfileNames = lockfileFormats.map((l) => l.name);
 
-export function getDepHash(config: ResolvedConfig, ssr: boolean): string {
+export function getDepHash(config: ResolvedConfig): string {
   const lockfilePath = lookupFile(config.root, lockfileNames);
   let content = lockfilePath ? fs.readFileSync(lockfilePath, "utf-8") : "";
   if (lockfilePath) {
@@ -834,13 +830,12 @@ export async function optimizedDepNeedsInterop(
 ): Promise<boolean | undefined> {
   const depInfo = optimizedDepInfoFromFile(metadata, file);
   if (depInfo?.src && depInfo.needsInterop === undefined) {
-    depInfo.exportsData ??= extractExportsData(depInfo.src, config, ssr);
-    depInfo.needsInterop = needsInterop(
-      config,
-      ssr,
-      depInfo.id,
-      await depInfo.exportsData
-    );
+    depInfo.exportsData ??= extractExportsData(depInfo.src, config);
+    depInfo.needsInterop = needsInterop();
+    // config,
+    // ssr,
+    // depInfo.id,
+    // await depInfo.exportsData
   }
   return depInfo?.needsInterop;
 }
