@@ -257,8 +257,9 @@ export function runOptimizeDeps(
 
   // const qualifiedIds = Object.keys(depsInfo); DELETE
   const cleanUp = () => {
-    fsp.rm(processingCacheDir, { recursive: true, force: true }).catch((e) => {
-    });
+    fsp
+      .rm(processingCacheDir, { recursive: true, force: true })
+      .catch((e) => {});
   };
 
   const succesfulResult: DepOptimizationResult = {
@@ -528,26 +529,26 @@ async function prepareEsbuildOptimizerRun(
       : JSON.stringify(process.env.NODE_ENV || config.mode),
   };
 
-  const platform =
-    ssr && config.ssr?.target !== "webworker" ? "node" : "browser";
+  // const platform =
+  //   ssr && config.ssr?.target !== "webworker" ? "node" : "browser";
 
   const external = [...(optimizeDeps?.exclude ?? [])];
   const plugins = [...pluginsFromConfig];
-  plugins.push(esbuildDepPlugin(flatIdDeps, external, config, ssr));
+  plugins.push(esbuildDepPlugin(flatIdDeps, external, config));
   // core: 扫描依赖
   const context = await esbuild.context({
     absWorkingDir: process.cwd(),
     entryPoints: Object.keys(flatIdDeps),
     bundle: true, // 递归扫描依赖
-    platform,
+    platform: "browser",
     define,
     format: "esm",
-    banner:
-      platform === "node"
-        ? {
-            js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
-          }
-        : undefined,
+    banner: undefined,
+    // platform === "node"
+    //   ? {
+    //       js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
+    //     }
+    //   : undefined,
     target: isBuild ? config.build.target || undefined : ESBUILD_MODULES_TARGET,
     external,
     logLevel: "error",

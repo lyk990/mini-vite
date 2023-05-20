@@ -33,7 +33,7 @@ export async function resolvePlugins(
       isProduction: config.isProduction,
       isBuild,
       packageCache: config.packageCache,
-      ssrConfig: config.ssr,
+      // ssrConfig: config.ssr, // DELETE
       asSrc: true,
       getDepsOptimizer: (ssr: boolean) => getDepsOptimizer(config, ssr),
       shouldExternalize: undefined,

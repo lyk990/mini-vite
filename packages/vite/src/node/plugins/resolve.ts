@@ -1,4 +1,4 @@
-import { SSROptions } from "vite";
+// import { SSROptions } from "vite";
 import {
   findNearestPackageData,
   loadPackageData,
@@ -60,7 +60,7 @@ export interface InternalResolveOptions extends Required<ResolveOptions> {
   root: string;
   isBuild: boolean;
   isProduction: boolean;
-  ssrConfig?: SSROptions;
+  // ssrConfig?: SSROptions;
   packageCache?: PackageCache;
   asSrc?: boolean;
   tryIndex?: boolean;
@@ -93,11 +93,11 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
     root,
     isProduction,
     asSrc,
-    ssrConfig,
+    // ssrConfig, // DELETE
     preferRelative = false,
   } = resolveOptions;
 
-  const { target: ssrTarget, noExternal: ssrNoExternal } = ssrConfig ?? {};
+  // const { target: ssrTarget, noExternal: ssrNoExternal } = ssrConfig ?? {};
 
   const rootInRoot = tryStatSync(path.join(root, root))?.isDirectory() ?? false;
 
@@ -121,7 +121,8 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         return id;
       }
 
-      const targetWeb = !ssr || ssrTarget === "webworker";
+      // const targetWeb = !ssr || ssrTarget === "webworker"; // DELETE
+      const targetWeb = true;
 
       const isRequire: boolean =
         resolveOpts?.custom?.["node-resolve"]?.isRequire ?? false;
@@ -306,37 +307,37 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         }
 
         if (isBuiltin(id)) {
-          if (ssr) {
-            if (ssrNoExternal === true) {
-              let message = `Cannot bundle Node.js built-in "${id}"`;
-              if (importer) {
-                message += ` imported from "${path.relative(
-                  process.cwd(),
-                  importer
-                )}"`;
-              }
-              message += `. Consider disabling ssr.noExternal or remove the built-in dependency.`;
-              this.error(message);
-            }
+          // if (ssr) {
+          //   if (ssrNoExternal === true) {
+          //     let message = `Cannot bundle Node.js built-in "${id}"`;
+          //     if (importer) {
+          //       message += ` imported from "${path.relative(
+          //         process.cwd(),
+          //         importer
+          //       )}"`;
+          //     }
+          //     message += `. Consider disabling ssr.noExternal or remove the built-in dependency.`;
+          //     this.error(message);
+          //   }
 
-            return options.idOnly ? id : { id, external: true };
-          } else {
-            if (!asSrc) {
-              debug?.(
-                `externalized node built-in "${id}" to empty module. ` +
-                  `(imported by: ${colors.white(colors.dim(importer))})`
-              );
-            } else if (isProduction) {
-              this.warn(
-                `Module "${id}" has been externalized for browser compatibility, imported by "${importer}". ` +
-                  `See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`
-              );
-            }
-            return isProduction
-              ? browserExternalId
-              : `${browserExternalId}:${id}`;
-          }
+          //   return options.idOnly ? id : { id, external: true };
+          // } else {
+          // if (!asSrc) {
+          //   debug?.(
+          //     `externalized node built-in "${id}" to empty module. ` +
+          //       `(imported by: ${colors.white(colors.dim(importer))})`
+          //   );
+          // } else if (isProduction) {
+          //   this.warn(
+          //     `Module "${id}" has been externalized for browser compatibility, imported by "${importer}". ` +
+          //       `See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`
+          //   );
+          // }
+          return isProduction
+            ? browserExternalId
+            : `${browserExternalId}:${id}`;
         }
+        // }
       }
 
       debug?.(`[fallthrough] ${colors.dim(id)}`);
@@ -501,10 +502,11 @@ export function tryNodeResolve(
 
   let exclude = depsOptimizer?.options.exclude;
   let include = depsOptimizer?.options.include;
-  if (options.ssrOptimizeCheck) {
-    exclude = options.ssrConfig?.optimizeDeps?.exclude;
-    include = options.ssrConfig?.optimizeDeps?.include;
-  }
+  // DELETE
+  // if (options.ssrOptimizeCheck) {
+  //   exclude = options.ssrConfig?.optimizeDeps?.exclude;
+  //   include = options.ssrConfig?.optimizeDeps?.include;
+  // }
   //  REMOVE 有没有可能将这一段逻辑移除
   const skipOptimization =
     depsOptimizer?.options.noDiscovery ||

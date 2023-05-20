@@ -1,16 +1,16 @@
 import { ResolvedConfig } from "../config";
-import type { ImportKind, Plugin } from "esbuild";
+import type { ImportKind as _, Plugin } from "esbuild";
 import { CSS_LANGS_RE, KNOWN_ASSET_TYPES } from "../constants";
 import { PackageCache } from "../packages";
 import {
   flattenId,
-  isBuiltin,
-  isExternalUrl,
+  // isBuiltin,
+  // isExternalUrl,
   moduleListContains,
-  normalizePath,
+  // normalizePath,
 } from "../utils";
-import path from "node:path";
-import { browserExternalId, optionalPeerDepId } from "../plugins/resolve";
+// import path from "node:path";
+// import { browserExternalId, optionalPeerDepId } from "../plugins/resolve";
 
 const convertedExternalPrefix = "vite-dep-pre-bundle-external:";
 
@@ -37,11 +37,12 @@ const externalTypes = [
   ...KNOWN_ASSET_TYPES,
 ];
 
+// DELETE
 export function esbuildDepPlugin(
   qualified: Record<string, string>,
   external: string[],
-  config: ResolvedConfig,
-  ssr: boolean
+  config: ResolvedConfig
+  // ssr: boolean
 ): Plugin {
 
   const allExternalTypes = externalTypes;
@@ -55,55 +56,55 @@ export function esbuildDepPlugin(
     packageCache: esmPackageCache,
   });
 
-  const _resolveRequire = config.createResolver({
-    asSrc: false,
-    isRequire: true,
-    scan: true,
-    packageCache: cjsPackageCache,
-  });
+  // const _resolveRequire = config.createResolver({
+  //   asSrc: false,
+  //   isRequire: true,
+  //   scan: true,
+  //   packageCache: cjsPackageCache,
+  // });
 
-  const resolve = (
-    id: string,
-    importer: string,
-    kind: ImportKind,
-    resolveDir?: string
-  ): Promise<string | undefined> => {
-    let _importer: string;
-    if (resolveDir) {
-      _importer = normalizePath(path.join(resolveDir, "*"));
-    } else {
-      _importer = importer in qualified ? qualified[importer] : importer;
-    }
-    const resolver = kind.startsWith("require") ? _resolveRequire : _resolve;
-    return resolver(id, _importer, undefined, ssr);
-  };
+  // const resolve = (
+  //   id: string,
+  //   importer: string,
+  //   kind: ImportKind,
+  //   resolveDir?: string
+  // ): Promise<string | undefined> => {
+  //   let _importer: string;
+  //   if (resolveDir) {
+  //     _importer = normalizePath(path.join(resolveDir, "*"));
+  //   } else {
+  //     _importer = importer in qualified ? qualified[importer] : importer;
+  //   }
+  //   const resolver = kind.startsWith("require") ? _resolveRequire : _resolve;
+  //   return resolver(id, _importer, undefined, ssr);
+  // };
 
-  const resolveResult = (id: string, resolved: string) => {
-    if (resolved.startsWith(browserExternalId)) {
-      return {
-        path: id,
-        namespace: "browser-external",
-      };
-    }
-    if (resolved.startsWith(optionalPeerDepId)) {
-      return {
-        path: resolved,
-        namespace: "optional-peer-dep",
-      };
-    }
-    if (ssr && isBuiltin(resolved)) {
-      return;
-    }
-    if (isExternalUrl(resolved)) {
-      return {
-        path: resolved,
-        external: true,
-      };
-    }
-    return {
-      path: path.resolve(resolved),
-    };
-  };
+  // const resolveResult = (id: string, resolved: string) => {
+  //   if (resolved.startsWith(browserExternalId)) {
+  //     return {
+  //       path: id,
+  //       namespace: "browser-external",
+  //     };
+  //   }
+  //   if (resolved.startsWith(optionalPeerDepId)) {
+  //     return {
+  //       path: resolved,
+  //       namespace: "optional-peer-dep",
+  //     };
+  //   }
+  //   // if (ssr && isBuiltin(resolved)) {
+  //   //   return;
+  //   // }
+  //   if (isExternalUrl(resolved)) {
+  //     return {
+  //       path: resolved,
+  //       external: true,
+  //     };
+  //   }
+  //   return {
+  //     path: path.resolve(resolved),
+  //   };
+  // };
 
   return {
     name: "vite:dep-pre-bundle",
@@ -127,19 +128,19 @@ export function esbuildDepPlugin(
             };
           }
 
-          const resolved = await resolve(id, importer, kind);
-          if (resolved) {
-            if (kind === "require-call") {
-              return {
-                path: resolved,
-                namespace: externalWithConversionNamespace,
-              };
-            }
-            return {
-              path: resolved,
-              external: true,
-            };
-          }
+          // const resolved = await resolve(id, importer, kind);
+          // if (resolved) {
+          //   // if (kind === "require-call") {
+          //   //   return {
+          //   //     path: resolved,
+          //   //     namespace: externalWithConversionNamespace,
+          //   //   };
+          //   // }
+          //   return {
+          //     path: resolved,
+          //     external: true,
+          //   };
+          // }
         }
       );
       build.onLoad(
@@ -184,10 +185,10 @@ export function esbuildDepPlugin(
             }
           }
 
-          const resolved = await resolve(id, importer, kind);
-          if (resolved) {
-            return resolveResult(id, resolved);
-          }
+          // const resolved = await resolve(id, importer, kind);
+          // if (resolved) {
+          //   return resolveResult(id, resolved);
+          // }
         }
       );
 

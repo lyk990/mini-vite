@@ -62,7 +62,7 @@ import type { ServerOptions as HttpsServerOptions } from "node:https";
 import type { ProxyOptions } from "./server/middlewares/proxy";
 import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
 import { loadEnv, resolveEnvPrefix } from "./env";
-import { resolveSSROptions } from "./ssr";
+// import { resolveSSROptions } from "./ssr";
 import { RollupOptions } from "rollup";
 
 const debug = createDebugger("vite:config");
@@ -377,11 +377,11 @@ export async function resolveConfig(
       : "";
 
   const server = resolveServerOptions(resolvedRoot, config.server);
-  const ssr = resolveSSROptions(
-    config.ssr,
-    resolveOptions.preserveSymlinks,
-    config.legacy?.buildSsrCjsExternalHeuristics
-  );
+  // const ssr = resolveSSROptions(
+  //   config.ssr,
+  //   resolveOptions.preserveSymlinks,
+  //   config.legacy?.buildSsrCjsExternalHeuristics
+  // );
 
   const middlewareMode = config?.server?.middlewareMode;
 
@@ -425,7 +425,7 @@ export async function resolveConfig(
     cacheDir,
     command,
     mode,
-    ssr,
+    // ssr,
     isWorker: false,
     mainConfig: null,
     isProduction,

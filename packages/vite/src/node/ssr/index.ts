@@ -13,40 +13,41 @@ export interface SSROptions {
   optimizeDeps?: SsrDepOptimizationOptions;
 }
 
-export interface ResolvedSSROptions extends SSROptions {
-  target: SSRTarget;
-  format: SSRFormat;
-  optimizeDeps: SsrDepOptimizationOptions;
-}
+// DELETE
+// export interface ResolvedSSROptions extends SSROptions {
+//   target: SSRTarget;
+//   format: SSRFormat;
+//   optimizeDeps: SsrDepOptimizationOptions;
+// }
 
-export function resolveSSROptions(
-  ssr: SSROptions | undefined,
-  preserveSymlinks: boolean,
-  buildSsrCjsExternalHeuristics?: boolean
-): ResolvedSSROptions {
-  ssr ??= {};
-  const optimizeDeps = ssr.optimizeDeps ?? {};
-  let format: SSRFormat = "esm";
-  let target: SSRTarget = "node";
-  if (buildSsrCjsExternalHeuristics) {
-    if (ssr) {
-      format = "cjs";
-    } else {
-      target = "node";
-      format = "cjs";
-    }
-  }
-  return {
-    format,
-    target,
-    ...ssr,
-    optimizeDeps: {
-      disabled: true,
-      ...optimizeDeps,
-      esbuildOptions: {
-        preserveSymlinks,
-        ...optimizeDeps.esbuildOptions,
-      },
-    },
-  };
-}
+// export function resolveSSROptions(
+//   ssr: SSROptions | undefined,
+//   preserveSymlinks: boolean,
+//   buildSsrCjsExternalHeuristics?: boolean
+// ): ResolvedSSROptions {
+//   ssr ??= {};
+//   const optimizeDeps = ssr.optimizeDeps ?? {};
+//   let format: SSRFormat = "esm";
+//   let target: SSRTarget = "node";
+//   if (buildSsrCjsExternalHeuristics) {
+//     if (ssr) {
+//       format = "cjs";
+//     } else {
+//       target = "node";
+//       format = "cjs";
+//     }
+//   }
+//   return {
+//     format,
+//     target,
+//     ...ssr,
+//     optimizeDeps: {
+//       disabled: true,
+//       ...optimizeDeps,
+//       esbuildOptions: {
+//         preserveSymlinks,
+//         ...optimizeDeps.esbuildOptions,
+//       },
+//     },
+//   };
+// }
