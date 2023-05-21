@@ -56,7 +56,7 @@ async function createDepsOptimizer(
     }
 
     const knownDeps = prepareKnownDeps();
-    // core: 通过调用runOptimizeDeps方法将依赖信息写入metadata.json文件中
+    //  通过调用runOptimizeDeps方法将依赖信息写入metadata.json文件中
     (await runOptimizeDeps(config, knownDeps).result).commit();
   }
 

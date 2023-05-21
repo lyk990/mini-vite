@@ -528,7 +528,7 @@ async function prepareEsbuildOptimizerRun(
   const external = [...(optimizeDeps?.exclude ?? [])];
   const plugins = [...pluginsFromConfig];
   plugins.push(esbuildDepPlugin(flatIdDeps, external, config));
-  // core: 扫描依赖
+  // 扫描依赖
   const context = await esbuild.context({
     absWorkingDir: process.cwd(),
     entryPoints: Object.keys(flatIdDeps),
