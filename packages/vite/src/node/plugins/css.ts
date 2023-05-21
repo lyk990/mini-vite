@@ -59,7 +59,7 @@ import type { Alias } from "dep-types/alias";
 import MagicString from "magic-string";
 import { createRequire } from "node:module";
 import fsp from "node:fs/promises";
-import { resolveUserExternal, toOutputFilePathInCss } from "../build"; // REMOVE
+import { toOutputFilePathInCss } from "../build";
 import { dataToEsm } from "@rollup/pluginutils";
 import {
   getCodeWithSourcemap,
@@ -259,22 +259,22 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
         if (resolved) {
           return fileToUrl(resolved, config, this);
         }
-        if (config.command === "build") {
-          const isExternal = config.build.rollupOptions.external
-            ? resolveUserExternal(
-                config.build.rollupOptions.external,
-                url,
-                id,
-                false
-              )
-            : false;
+        // if (config.command === "build") {
+        //   const isExternal = config.build.rollupOptions.external
+        //     ? resolveUserExternal(
+        //         config.build.rollupOptions.external,
+        //         url,
+        //         id,
+        //         false
+        //       )
+        //     : false;
 
-          if (!isExternal) {
-            config.logger.warnOnce(
-              `\n${url} referenced in ${id} didn't resolve at build time, it will remain unchanged to be resolved at runtime`
-            );
-          }
-        }
+        //   if (!isExternal) {
+        //     config.logger.warnOnce(
+        //       `\n${url} referenced in ${id} didn't resolve at build time, it will remain unchanged to be resolved at runtime`
+        //     );
+        //   }
+        // }
         return url;
       };
 
@@ -288,11 +288,11 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
         moduleCache.set(id, modules);
       }
 
-      if (config.command === "build" && config.build.watch && deps) {
-        for (const file of deps) {
-          this.addWatchFile(file);
-        }
-      }
+      // if (config.command === "build" && config.build.watch && deps) {
+      //   for (const file of deps) {
+      //     this.addWatchFile(file);
+      //   }
+      // }
 
       if (server) {
         const { moduleGraph } = server;
@@ -1436,9 +1436,9 @@ export function cssPostPlugin(config: ResolvedConfig): Plugin {
           return null;
         }
         // server only
-        if (options?.ssr) {
-          return modulesCode || `export default ${JSON.stringify(css)}`;
-        }
+        // if (options?.ssr) {
+        //   return modulesCode || `export default ${JSON.stringify(css)}`;
+        // }
         if (inlined) {
           return `export default ${JSON.stringify(css)}`;
         }

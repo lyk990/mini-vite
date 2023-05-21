@@ -205,9 +205,9 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         const resolved = await this.resolve(url, importerFile);
 
         if (!resolved) {
-          if (ssr) {
-            return [url, url];
-          }
+          // if (ssr) {
+          //   return [url, url];
+          // }
           importerModule.isSelfAccepting = false;
           return this.error(
             `Failed to resolve import "${url}" from "${path.relative(
@@ -422,7 +422,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                   depsOptimizer.metadata,
                   file,
                   config,
-                  ssr
+                  // ssr
                 );
 
                 if (needsInterop === undefined) {

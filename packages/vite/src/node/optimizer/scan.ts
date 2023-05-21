@@ -24,7 +24,7 @@ import {
 } from "../utils";
 import path from "node:path";
 import fsp from "node:fs/promises";
-import { transformGlobImport } from '../plugins/importMetaGlob'
+import { transformGlobImport } from "../plugins/importMetaGlob";
 
 const htmlTypesRE = /\.(html|vue|svelte|astro|imba)$/;
 export const commentRE = /<!--.*?-->/gs;
@@ -50,22 +50,18 @@ export function scanImports(config: ResolvedConfig): {
   const deps: Record<string, string> = {};
   const missing: Record<string, string> = {};
   let entries: string[];
-  const scanContext = { cancelled: false }; // REMOVE 移除scanContext
+  // const scanContext = { cancelled: false }; // REMOVE 移除scanContext
 
   const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
     config
   ).then((computedEntries) => {
     entries = computedEntries;
-    return prepareEsbuildScanner(config, entries, deps, missing, scanContext);
+    return prepareEsbuildScanner(config, entries, deps, missing);
   });
 
   // 依赖打包
   const result = esbuildContext.then((context) => {
-    //  如果没有扫描到入口文件，直接返回
-    if (!context || scanContext?.cancelled) {
-      return { deps: {}, missing: {} };
-    }
-    return context.rebuild().then(() => {
+    return context!.rebuild().then(() => {
       return {
         deps: orderedDependencies(deps),
         missing,
@@ -74,7 +70,7 @@ export function scanImports(config: ResolvedConfig): {
   });
   return {
     cancel: async () => {
-      scanContext.cancelled = true;
+      // scanContext.cancelled = true;
       return esbuildContext.then((context) => context?.cancel());
     },
     result,
@@ -420,8 +416,8 @@ async function prepareEsbuildScanner(
   config: ResolvedConfig,
   entries: string[],
   deps: Record<string, string>,
-  missing: Record<string, string>,
-  _scanContext?: { cancelled: boolean } // REMOVE
+  missing: Record<string, string>
+  // scanContext?: { cancelled: boolean } // REMOVE
 ): Promise<BuildContext | undefined> {
   const container = await createPluginContainer(config);
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);

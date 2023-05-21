@@ -13,7 +13,7 @@ import {
   addOptimizedDepInfo,
   OptimizedDepInfo,
   DepsOptimizer,
-  DepOptimizationResult,
+  // DepOptimizationResult,
 } from "./index";
 
 const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
@@ -29,14 +29,14 @@ export function getDepsOptimizer(
 
 /**初始化预构建依赖 */
 export async function initDepsOptimizer(
-  config: ResolvedConfig,
+  config: ResolvedConfig
   // server?: ViteDevServer
 ): Promise<void> {
   await createDepsOptimizer(config);
 }
 
 async function createDepsOptimizer(
-  config: ResolvedConfig,
+  config: ResolvedConfig
   // server?: ViteDevServer
 ): Promise<void> {
   const sessionTimestamp = Date.now().toString();
@@ -57,16 +57,7 @@ async function createDepsOptimizer(
 
     const knownDeps = prepareKnownDeps();
     // core: 通过调用runOptimizeDeps方法将依赖信息写入metadata.json文件中
-    let optimizationResult:
-      | {
-          cancel: () => Promise<void>;
-          result: Promise<DepOptimizationResult>;
-        }
-      | undefined = runOptimizeDeps(config, knownDeps);
-
-    let processingResult: DepOptimizationResult =
-      await optimizationResult.result;
-    await processingResult.commit();
+    (await runOptimizeDeps(config, knownDeps).result).commit();
   }
 
   function addMissingDep(id: string, resolved: string) {

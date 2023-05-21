@@ -301,12 +301,12 @@ export function runOptimizeDeps(
   const preparedRun = prepareEsbuildOptimizerRun(
     resolvedConfig,
     depsInfo,
-    ssr,
+    // ssr,
     processingCacheDir,
     optimizerContext
   );
 
-  const runResult = preparedRun.then(({ context }) => {
+  const runResult = preparedRun.then(({ context, idToExports }) => {
     function disposeContext() {
       return context?.dispose().catch((e) => {
         config.logger.error("Failed to dispose esbuild context", { error: e });
@@ -341,12 +341,7 @@ export function runOptimizeDeps(
               metadata.hash + depsInfo[id].file + JSON.stringify(output.imports)
             ),
             browserHash: metadata.browserHash,
-            needsInterop: needsInterop(),
-            // config,
-            // ssr,
-            // id,
-            // idToExports[id],
-            // output
+            needsInterop: needsInterop(config, id, idToExports[id], output),
           });
         }
 
@@ -404,7 +399,7 @@ export function runOptimizeDeps(
     result: runResult,
   };
 }
-// TODO  getDepsCacheSuffix 是否直接返回""
+
 function getProcessingDepsCacheDir(config: ResolvedConfig) {
   return getDepsCacheDirPrefix(config) + getDepsCacheSuffix() + getTempSuffix();
 }
@@ -412,6 +407,7 @@ function getDepsCacheDirPrefix(config: ResolvedConfig): string {
   return normalizePath(path.resolve(config.cacheDir, "deps"));
 }
 
+// TODO  getDepsCacheSuffix 是否直接返回""
 function getDepsCacheSuffix(): string {
   let suffix = "";
   // if (config.command === "build") {
@@ -477,7 +473,7 @@ function stringifyDepsOptimizerMetadata(
 async function prepareEsbuildOptimizerRun(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
-  ssr: boolean,
+  // ssr: boolean,
   processingCacheDir: string,
   optimizerContext: { cancelled: boolean }
 ): Promise<{
@@ -724,39 +720,37 @@ function esbuildOutputFromId(
     }
   }
 }
+/** NOTE: 帮助解析模块，生成互操作代码，确保模块之间的交互能正常进行 */
+function needsInterop(
+  config: ResolvedConfig,
+  id: string,
+  exportsData: ExportsData,
+  output?: { exports: string[] }
+): boolean {
+  if (getDepOptimizationConfig(config)?.needsInterop?.includes(id)) {
+    return true;
+  }
+  const { hasImports, exports } = exportsData;
+  if (!exports.length && !hasImports) {
+    return true;
+  }
 
-// DELETE
-function needsInterop(): boolean {
-  // config: ResolvedConfig,
-  // ssr: boolean,
-  // id: string,
-  // exportsData: ExportsData,
-  // output?: { exports: string[] }
-  // if (getDepOptimizationConfig(config)?.needsInterop?.includes(id)) {
-  //   return true;
-  // }
-  // const { hasImports, exports } = exportsData;
-  // if (!exports.length && !hasImports) {
-  //   return true;
-  // }
-
-  // if (output) {
-  //   const generatedExports: string[] = output.exports;
-
-  //   if (
-  //     !generatedExports ||
-  //     (isSingleDefaultExport(generatedExports) &&
-  //       !isSingleDefaultExport(exports))
-  //   ) {
-  //     return true;
-  //   }
-  // }
+  if (output) {
+    const generatedExports: string[] = output.exports;
+    if (
+      !generatedExports ||
+      (isSingleDefaultExport(generatedExports) &&
+        !isSingleDefaultExport(exports))
+    ) {
+      return true;
+    }
+  }
   return false;
 }
 
-// function isSingleDefaultExport(exports: readonly string[]) {
-//   return exports.length === 1 && exports[0] === "default";
-// }
+function isSingleDefaultExport(exports: readonly string[]) {
+  return exports.length === 1 && exports[0] === "default";
+}
 
 const lockfileFormats = [
   { name: "package-lock.json", checkPatches: true, manager: "npm" },
@@ -825,17 +819,16 @@ export function optimizedDepInfoFromId(
 export async function optimizedDepNeedsInterop(
   metadata: DepOptimizationMetadata,
   file: string,
-  config: ResolvedConfig,
-  ssr: boolean
+  config: ResolvedConfig
 ): Promise<boolean | undefined> {
   const depInfo = optimizedDepInfoFromFile(metadata, file);
   if (depInfo?.src && depInfo.needsInterop === undefined) {
     depInfo.exportsData ??= extractExportsData(depInfo.src, config);
-    depInfo.needsInterop = needsInterop();
-    // config,
-    // ssr,
-    // depInfo.id,
-    // await depInfo.exportsData
+    depInfo.needsInterop = needsInterop(
+      config,
+      depInfo.id,
+      await depInfo.exportsData
+    );
   }
   return depInfo?.needsInterop;
 }
