@@ -62,10 +62,6 @@ export function resolveHtmlTransforms(
     if (typeof hook === "function") {
       normalHooks.push(hook);
     } else {
-      // `enforce` had only two possible values for the `transformIndexHtml` hook
-      // `'pre'` and `'post'` (the default). `order` now works with three values
-      // to align with other hooks (`'pre'`, normal, and `'post'`). We map
-      // both `enforce: 'post'` to `order: undefined` to avoid a breaking change
       const order = hook.order ?? (hook.enforce === "pre" ? "pre" : undefined);
       // @ts-expect-error union type
       const handler = hook.handler ?? hook.transform;
@@ -213,14 +209,12 @@ function injectToBody(
   if (tags.length === 0) return html;
 
   if (prepend) {
-    // inject after body open
     if (bodyPrependInjectRE.test(html)) {
       return html.replace(
         bodyPrependInjectRE,
         (match, p1) => `${match}\n${serializeTags(tags, incrementIndent(p1))}`
       );
     }
-    // if no there is no body tag, inject after head or fallback to prepend in html
     if (headInjectRE.test(html)) {
       return html.replace(
         headInjectRE,
@@ -229,14 +223,12 @@ function injectToBody(
     }
     return prependInjectFallback(html, tags);
   } else {
-    // inject before body close
     if (bodyInjectRE.test(html)) {
       return html.replace(
         bodyInjectRE,
         (match, p1) => `${serializeTags(tags, incrementIndent(p1))}${match}`
       );
     }
-    // if no body tag is present, append to the html tag, or at the end of the file
     if (htmlInjectRE.test(html)) {
       return html.replace(htmlInjectRE, `${serializeTags(tags)}\n$&`);
     }
@@ -245,7 +237,6 @@ function injectToBody(
 }
 
 function prependInjectFallback(html: string, tags: HtmlTagDescriptor[]) {
-  // prepend to the html tag, append after doctype, or the document start
   if (htmlPrependInjectRE.test(html)) {
     return html.replace(htmlPrependInjectRE, `$&\n${serializeTags(tags)}`);
   }
@@ -284,7 +275,7 @@ export function htmlEnvHook(config: ResolvedConfig): IndexHtmlTransformHook {
   const pattern = /%(\S+?)%/g;
   const envPrefix = resolveEnvPrefix({ envPrefix: config.envPrefix });
   const env: Record<string, any> = { ...config.env };
-  // account for user env defines
+
   for (const key in config.define) {
     if (key.startsWith(`import.meta.env.`)) {
       const val = config.define[key];
@@ -357,7 +348,6 @@ export async function traverseHtml(
   filePath: string,
   visitor: (node: DefaultTreeAdapterMap["node"]) => void
 ): Promise<void> {
-  // lazy load compiler
   const { parse } = await import("parse5");
   const ast = parse(html, {
     scriptingEnabled: false, // parse inside <noscript>
@@ -376,17 +366,12 @@ function handleParseError(
 ) {
   switch (parserError.code) {
     case "missing-doctype":
-      // ignore missing DOCTYPE
       return;
     case "abandoned-head-element-child":
-      // Accept elements without closing tag in <head>
       return;
     case "duplicate-attribute":
-      // Accept duplicate attributes #9566
-      // The first attribute is used, browsers silently ignore duplicates
       return;
     case "non-void-html-element-start-tag-with-trailing-solidus":
-      // Allow self closing on non-void elements #10439
       return;
   }
   const parseError = formatParseError(parserError, filePath, html);
@@ -470,7 +455,6 @@ export function overwriteAttrValue(
   );
   const valueStart = srcString.match(attrValueStartRE);
   if (!valueStart) {
-    // overwrite attr value can only be called for a well-defined value
     throw new Error(
       `[vite:html] internal error, failed to overwrite attribute value`
     );

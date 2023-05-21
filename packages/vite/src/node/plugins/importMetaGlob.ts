@@ -208,7 +208,6 @@ export async function parseImportGlob(
       validateLiteral(arg1);
     }
 
-    // arg2
     let options: GeneralImportGlobOptions = {};
     if (arg2) {
       if (arg2.type !== "ObjectExpression")

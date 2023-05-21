@@ -421,7 +421,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 const needsInterop = await optimizedDepNeedsInterop(
                   depsOptimizer.metadata,
                   file,
-                  config,
+                  config
                   // ssr
                 );
 
@@ -544,7 +544,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       const acceptedExports = mergeAcceptedUrls(orderedAcceptedExports);
 
       if (hasEnv) {
-        // inject import.meta.env
         str().prepend(getEnv(ssr));
       }
 
@@ -560,7 +559,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               : `[detected api usage]`
           } ${prettyImporter}`
         );
-        // inject hot context
         str().prepend(
           `import { createHotContext as __vite__createHotContext } from "${clientPublicPath}";` +
             `import.meta.hot = __vite__createHotContext(${JSON.stringify(
@@ -599,9 +597,9 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
           ).forEach(([url]) => importedUrls.add(url));
         }
 
-        if (ssr && importerModule.isSelfAccepting) {
-          isSelfAccepting = true;
-        }
+        // if (ssr && importerModule.isSelfAccepting) {
+        //   isSelfAccepting = true;
+        // }
 
         if (
           !isSelfAccepting &&
@@ -668,7 +666,6 @@ export function interopNamedImports(
     d: dynamicIndex,
   } = importSpecifier;
   if (dynamicIndex > -1) {
-    // rewrite `import('package')` to expose the default directly
     str.overwrite(
       expStart,
       expEnd,
@@ -689,7 +686,6 @@ export function interopNamedImports(
     if (rewritten) {
       str.overwrite(expStart, expEnd, rewritten, { contentOnly: true });
     } else {
-      // #1439 export * from '...'
       str.overwrite(start, end, rewrittenUrl, { contentOnly: true });
     }
   }
@@ -769,8 +765,6 @@ export function transformCjsImport(
       }
     }
 
-    // If there is multiple import for same id in one file,
-    // importIndex will prevent the cjsModuleName to be duplicate
     const cjsModuleName = makeLegalIdentifier(
       `__vite__cjsImport${importIndex}_${rawUrl}`
     );
@@ -812,7 +806,6 @@ function extractImportedBindings(
   const isDynamic = importSpec.d > -1;
   const isMeta = importSpec.d === -2;
   if (isDynamic || isMeta) {
-    // this basically means the module will be impacted by any change in its dep
     bindings.add("*");
     return;
   }

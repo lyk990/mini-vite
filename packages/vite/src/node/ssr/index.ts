@@ -1,17 +1,17 @@
-import type { DepOptimizationConfig } from "../optimizer";
+// import type { DepOptimizationConfig } from "../optimizer";
 
-export type SSRTarget = "node" | "webworker";
-export type SSRFormat = "esm" | "cjs";
+// export type SSRTarget = "node" | "webworker";
+// export type SSRFormat = "esm" | "cjs";
 
-export type SsrDepOptimizationOptions = DepOptimizationConfig;
+// export type SsrDepOptimizationOptions = DepOptimizationConfig;
 
-export interface SSROptions {
-  noExternal?: string | RegExp | (string | RegExp)[] | true;
-  external?: string[];
-  target?: SSRTarget;
-  format?: SSRFormat;
-  optimizeDeps?: SsrDepOptimizationOptions;
-}
+// export interface SSROptions {
+//   noExternal?: string | RegExp | (string | RegExp)[] | true;
+//   external?: string[];
+//   target?: SSRTarget;
+//   format?: SSRFormat;
+//   optimizeDeps?: SsrDepOptimizationOptions;
+// }
 
 // DELETE
 // export interface ResolvedSSROptions extends SSROptions {

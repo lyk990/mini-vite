@@ -15,7 +15,7 @@ import {
   createDebugger,
   createFilter,
   generateCodeFrame,
-  timeFrom,
+  // timeFrom,
 } from "../utils";
 import { ViteDevServer } from "../server";
 import { searchForWorkspaceRoot } from "../server/searchRoot";
@@ -301,7 +301,7 @@ function prettifyMessage(m: Message, code: string): string {
 }
 
 async function initTSConfckParseOptions(workspaceRoot: string) {
-  const start = debug ? performance.now() : 0;
+  // const start = debug ? performance.now() : 0;
 
   const options: TSConfckParseOptions = {
     cache: new Map(),
@@ -313,9 +313,7 @@ async function initTSConfckParseOptions(workspaceRoot: string) {
     ),
     resolveWithEmptyIfConfigNotFound: true,
   };
-
-  debug?.(timeFrom(start), "tsconfck init", colors.dim(workspaceRoot));
-
+  // debug?.(timeFrom(start), "tsconfck init", colors.dim(workspaceRoot));
   return options;
 }
 
@@ -349,13 +347,10 @@ export function ensureWatchedFile(
 ): void {
   if (
     file &&
-    // only need to watch if out of root
     !file.startsWith(root + "/") &&
-    // some rollup plugins use null bytes for private resolved Ids
     !file.includes("\0") &&
     fs.existsSync(file)
   ) {
-    // resolve file to normalized system path
     watcher.add(path.resolve(file));
   }
 }
