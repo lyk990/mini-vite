@@ -61,7 +61,7 @@ import {
 import type { ServerOptions as HttpsServerOptions } from "node:https";
 import type { ProxyOptions } from "./server/middlewares/proxy";
 import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
-import { loadEnv, resolveEnvPrefix } from "./env";
+// import { loadEnv, resolveEnvPrefix } from "./env";
 // import { resolveSSROptions } from "./ssr";
 import { RollupOptions } from "rollup";
 
@@ -275,9 +275,9 @@ export async function resolveConfig(
   const envDir = config.envDir
     ? normalizePath(path.resolve(resolvedRoot, config.envDir))
     : resolvedRoot;
-  const userEnv =
-    inlineConfig.envFile !== false &&
-    loadEnv(mode, envDir, resolveEnvPrefix(config));
+  const userEnv = {};
+  // inlineConfig.envFile !== false &&
+  // loadEnv(mode, envDir, resolveEnvPrefix(config));
   // DELETE
   // const userNodeEnv = process.env.VITE_USER_NODE_ENV;
   // if (!isNodeEnvSet && userNodeEnv) {
@@ -304,9 +304,9 @@ export async function resolveConfig(
     : resolveBaseUrl(config.base, isBuild, logger) ?? "/";
 
   const resolvedBuildOptions = resolveBuildOptions(
-    config.build,
-    logger,
-    resolvedRoot
+    config.build
+    // logger,
+    // resolvedRoot
   );
 
   const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir;
@@ -383,7 +383,7 @@ export async function resolveConfig(
   //   config.legacy?.buildSsrCjsExternalHeuristics
   // );
 
-  const middlewareMode = config?.server?.middlewareMode;
+  // const middlewareMode = config?.server?.middlewareMode;
 
   const optimizeDeps = config.optimizeDeps || {};
 
@@ -462,7 +462,7 @@ export async function resolveConfig(
       },
     },
     worker: resolvedWorkerOptions,
-    appType: config.appType ?? (middlewareMode === "ssr" ? "custom" : "spa"),
+    appType: config.appType ?? "spa",
     experimental: {
       importGlobRestoreExtension: false,
       hmrPartialAccept: false,
@@ -562,25 +562,25 @@ export async function resolveConfig(
   //   );
   // }
 
-//   const outputOption = config.build?.rollupOptions?.output ?? [];
-//   if (Array.isArray(outputOption)) {
-//     const assetFileNamesList = outputOption.map(
-//       (output) => output.assetFileNames
-//     );
-//     if (assetFileNamesList.length > 1) {
-//       const firstAssetFileNames = assetFileNamesList[0];
-//       const hasDifferentReference = assetFileNamesList.some(
-//         (assetFileNames) => assetFileNames !== firstAssetFileNames
-//       );
-//       if (hasDifferentReference) {
-//         resolved.logger.warn(
-//           colors.yellow(`
-// assetFileNames isn't equal for every build.rollupOptions.output. A single pattern across all outputs is supported by Vite.
-// `)
-//         );
-//       }
-//     }
-//   }
+  //   const outputOption = config.build?.rollupOptions?.output ?? [];
+  //   if (Array.isArray(outputOption)) {
+  //     const assetFileNamesList = outputOption.map(
+  //       (output) => output.assetFileNames
+  //     );
+  //     if (assetFileNamesList.length > 1) {
+  //       const firstAssetFileNames = assetFileNamesList[0];
+  //       const hasDifferentReference = assetFileNamesList.some(
+  //         (assetFileNames) => assetFileNames !== firstAssetFileNames
+  //       );
+  //       if (hasDifferentReference) {
+  //         resolved.logger.warn(
+  //           colors.yellow(`
+  // assetFileNames isn't equal for every build.rollupOptions.output. A single pattern across all outputs is supported by Vite.
+  // `)
+  //         );
+  //       }
+  //     }
+  //   }
 
   return resolved;
 }
@@ -653,8 +653,7 @@ export async function loadConfigFromFile(
       const pkg = lookupFile(configRoot, ["package.json"]);
       isESM =
         !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   try {
@@ -728,7 +727,6 @@ async function bundleConfigFile(
             packageCache: new Map(),
           };
 
-          // externalize bare imports
           build.onResolve(
             { filter: /^[^.].*/ },
             async ({ path: id, importer, kind }) => {
@@ -808,7 +806,7 @@ async function loadConfigFromBundledFile(
     try {
       return (await dynamicImport(fileUrl)).default;
     } finally {
-      fs.unlink(fileNameTmp, () => {}); // Ignore errors
+      fs.unlink(fileNameTmp, () => {});
     }
   } else {
     const extension = path.extname(fileName);
@@ -830,7 +828,7 @@ async function loadConfigFromBundledFile(
 }
 
 export function getDepOptimizationConfig(
-  config: ResolvedConfig,
+  config: ResolvedConfig
   // ssr: boolean
 ): DepOptimizationConfig {
   return config.optimizeDeps;

@@ -1,6 +1,6 @@
 import { HookHandler } from "vite";
 import { ResolvedConfig, PluginHookUtils } from "../config";
-import { watchPackageDataPlugin } from "../package";
+// import { watchPackageDataPlugin } from "../packages";
 import { Plugin } from "../plugin";
 import { clientInjectionsPlugin } from "./clientInjections";
 import { cssPlugin, cssPostPlugin } from "./css";
@@ -23,7 +23,7 @@ export async function resolvePlugins(
   // const buildPlugins = { pre: [], post: [] }; // DELETE
 
   return [
-    watchPackageDataPlugin(config.packageCache),
+    // watchPackageDataPlugin(config.packageCache),
     // preAliasPlugin(config), // DELETE
     aliasPlugin({ entries: config.resolve.alias }),
     ...prePlugins,

@@ -6,9 +6,9 @@ import {
 import { ResolvedConfig } from "../config";
 import { Plugin } from "../plugin";
 import { cleanUrl, generateCodeFrame, normalizePath } from "../utils";
-import path from "node:path";
-import colors from "picocolors";
-import { resolveEnvPrefix } from "../env";
+// import path from "node:path";
+// import colors from "picocolors";
+// import { resolveEnvPrefix } from "../env";
 import { RollupError, SourceMapInput } from "rollup";
 import { DefaultTreeAdapterMap, ParserError, Token } from "parse5";
 import MagicString from "magic-string";
@@ -28,16 +28,16 @@ const unaryTags = new Set(["link", "meta", "base"]);
 
 const htmlProxyRE = /\?html-proxy=?(?:&inline-css)?&index=(\d+)\.(js|css)$/;
 
-const importMapRE =
-  /[ \t]*<script[^>]*type\s*=\s*(?:"importmap"|'importmap'|importmap)[^>]*>.*?<\/script>/is;
-const moduleScriptRE =
-  /[ \t]*<script[^>]*type\s*=\s*(?:"module"|'module'|module)[^>]*>/i;
-const modulePreloadLinkRE =
-  /[ \t]*<link[^>]*rel\s*=\s*(?:"modulepreload"|'modulepreload'|modulepreload)[\s\S]*?\/>/i;
-const importMapAppendRE = new RegExp(
-  [moduleScriptRE, modulePreloadLinkRE].map((r) => r.source).join("|"),
-  "i"
-);
+// const importMapRE =
+//   /[ \t]*<script[^>]*type\s*=\s*(?:"importmap"|'importmap'|importmap)[^>]*>.*?<\/script>/is;
+// const moduleScriptRE =
+//   /[ \t]*<script[^>]*type\s*=\s*(?:"module"|'module'|module)[^>]*>/i;
+// const modulePreloadLinkRE =
+  // /[ \t]*<link[^>]*rel\s*=\s*(?:"modulepreload"|'modulepreload'|modulepreload)[\s\S]*?\/>/i;
+// const importMapAppendRE = new RegExp(
+//   [moduleScriptRE, modulePreloadLinkRE].map((r) => r.source).join("|"),
+//   "i"
+// );
 
 export const htmlProxyMap = new WeakMap<
   ResolvedConfig,
@@ -246,87 +246,87 @@ function prependInjectFallback(html: string, tags: HtmlTagDescriptor[]) {
   return serializeTags(tags) + html;
 }
 
-export function preImportMapHook(
-  config: ResolvedConfig
-): IndexHtmlTransformHook {
-  return (html, ctx) => {
-    const importMapIndex = html.match(importMapRE)?.index;
-    if (importMapIndex === undefined) return;
+// export function preImportMapHook(
+//   config: ResolvedConfig
+// ): IndexHtmlTransformHook {
+//   return (html, ctx) => {
+//     const importMapIndex = html.match(importMapRE)?.index;
+//     if (importMapIndex === undefined) return;
 
-    const importMapAppendIndex = html.match(importMapAppendRE)?.index;
-    if (importMapAppendIndex === undefined) return;
+//     const importMapAppendIndex = html.match(importMapAppendRE)?.index;
+//     if (importMapAppendIndex === undefined) return;
 
-    if (importMapAppendIndex < importMapIndex) {
-      const relativeHtml = normalizePath(
-        path.relative(config.root, ctx.filename)
-      );
-      config.logger.warnOnce(
-        colors.yellow(
-          colors.bold(
-            `(!) <script type="importmap"> should come before <script type="module"> and <link rel="modulepreload"> in /${relativeHtml}`
-          )
-        )
-      );
-    }
-  };
-}
+//     if (importMapAppendIndex < importMapIndex) {
+//       const relativeHtml = normalizePath(
+//         path.relative(config.root, ctx.filename)
+//       );
+//       config.logger.warnOnce(
+//         colors.yellow(
+//           colors.bold(
+//             `(!) <script type="importmap"> should come before <script type="module"> and <link rel="modulepreload"> in /${relativeHtml}`
+//           )
+//         )
+//       );
+//     }
+//   };
+// }
 
-export function htmlEnvHook(config: ResolvedConfig): IndexHtmlTransformHook {
-  const pattern = /%(\S+?)%/g;
-  const envPrefix = resolveEnvPrefix({ envPrefix: config.envPrefix });
-  const env: Record<string, any> = { ...config.env };
+// export function htmlEnvHook(config: ResolvedConfig): IndexHtmlTransformHook {
+//   const pattern = /%(\S+?)%/g;
+//   // const envPrefix = resolveEnvPrefix({ envPrefix: config.envPrefix });
+//   const env: Record<string, any> = { ...config.env };
 
-  for (const key in config.define) {
-    if (key.startsWith(`import.meta.env.`)) {
-      const val = config.define[key];
-      env[key.slice(16)] = typeof val === "string" ? val : JSON.stringify(val);
-    }
-  }
-  return (html, ctx) => {
-    return html.replace(pattern, (text, key) => {
-      if (key in env) {
-        return env[key];
-      } else {
-        if (envPrefix.some((prefix) => key.startsWith(prefix))) {
-          const relativeHtml = normalizePath(
-            path.relative(config.root, ctx.filename)
-          );
-          config.logger.warn(
-            colors.yellow(
-              colors.bold(
-                `(!) ${text} is not defined in env variables found in /${relativeHtml}. ` +
-                  `Is the variable mistyped?`
-              )
-            )
-          );
-        }
+//   for (const key in config.define) {
+//     if (key.startsWith(`import.meta.env.`)) {
+//       const val = config.define[key];
+//       env[key.slice(16)] = typeof val === "string" ? val : JSON.stringify(val);
+//     }
+//   }
+//   return (html, ctx) => {
+//     return html.replace(pattern, (text, key) => {
+//       if (key in env) {
+//         return env[key];
+//       } else {
+//         // if (envPrefix.some((prefix) => key.startsWith(prefix))) {
+//         //   const relativeHtml = normalizePath(
+//         //     path.relative(config.root, ctx.filename)
+//         //   );
+//         //   config.logger.warn(
+//         //     colors.yellow(
+//         //       colors.bold(
+//         //         `(!) ${text} is not defined in env variables found in /${relativeHtml}. ` +
+//         //           `Is the variable mistyped?`
+//         //       )
+//         //     )
+//         //   );
+//         // }
 
-        return text;
-      }
-    });
-  };
-}
+//         return text;
+//       }
+//     });
+//   };
+// }
 
-export function postImportMapHook(): IndexHtmlTransformHook {
-  return (html) => {
-    if (!importMapAppendRE.test(html)) return;
+// export function postImportMapHook(): IndexHtmlTransformHook {
+//   return (html) => {
+//     if (!importMapAppendRE.test(html)) return;
 
-    let importMap: string | undefined;
-    html = html.replace(importMapRE, (match) => {
-      importMap = match;
-      return "";
-    });
+//     let importMap: string | undefined;
+//     html = html.replace(importMapRE, (match) => {
+//       importMap = match;
+//       return "";
+//     });
 
-    if (importMap) {
-      html = html.replace(
-        importMapAppendRE,
-        (match) => `${importMap}\n${match}`
-      );
-    }
+//     if (importMap) {
+//       html = html.replace(
+//         importMapAppendRE,
+//         (match) => `${importMap}\n${match}`
+//       );
+//     }
 
-    return html;
-  };
-}
+//     return html;
+//   };
+// }
 
 export function addToHTMLProxyCache(
   config: ResolvedConfig,

@@ -27,8 +27,6 @@ cli
         throw new Error("HTTP server not available");
       }
       await server.listen();
-      // 终端窗口展示信息 INFO
-      // MINI-VITE v0.0.1  ready in 936 ms
       const info = server.config.logger.info;
       const viteStartTime = global.__vite_start_time ?? false;
       const startupDurationString = viteStartTime
@@ -44,9 +42,6 @@ cli
         )}  ${startupDurationString}\n`,
         { clear: !server.config.logger.hasWarned }
       );
-      // 打印服务地址 INFO
-      // Local:   http://localhost:5173/
-      // Network: ipv4地址
       server.printUrls();
     } catch (e) {
       const logger = createLogger(options.logLevel);

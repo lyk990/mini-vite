@@ -19,7 +19,7 @@ import type {
 } from "rollup";
 import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
-import type { FSWatcher } from "chokidar";
+// import type { FSWatcher } from "chokidar";
 import { createPluginHookUtils } from "./plugins";
 import { join } from "path";
 import { VERSION as rollupVersion } from "rollup";
@@ -90,8 +90,8 @@ export interface PluginContainer {
 // 创建插件容器
 export async function createPluginContainer(
   config: ResolvedConfig,
-  moduleGraph?: ModuleGraph,
-  watcher?: FSWatcher
+  moduleGraph?: ModuleGraph
+  // watcher?: FSWatcher
 ): Promise<PluginContainer> {
   const {
     plugins,
@@ -333,7 +333,7 @@ export async function createPluginContainer(
     })(),
 
     getModuleInfo,
-    // REMOVE
+
     async buildStart() {
       await hookParallel(
         "buildStart",
@@ -361,7 +361,6 @@ export async function createPluginContainer(
         ctx._activePlugin = plugin;
 
         const pluginResolveStart = debugPluginResolve ? performance.now() : 0;
-        // DEBUG handler error 
         const handler =
           "handler" in plugin.resolveId
             ? plugin.resolveId.handler
@@ -448,8 +447,7 @@ export async function createPluginContainer(
             : plugin.transform;
         try {
           result = await handler.call(ctx as any, code, id, { ssr });
-        } catch (e) {
-        }
+        } catch (e) {}
 
         if (!result) continue;
         if (isObject(result)) {

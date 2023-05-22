@@ -17,7 +17,7 @@ import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
 import {
   diffDnsOrderChange,
-  isInNodeModules,
+  // isInNodeModules,
   isParentDirectory,
   normalizePath,
   resolveServerUrls,
@@ -42,8 +42,8 @@ import {
   serveRawFsMiddleware,
   serveStaticMiddleware,
 } from "./middlewares/static";
-import picomatch from "picomatch";
-import type { Matcher } from "picomatch";
+// import picomatch from "picomatch";
+// import type { Matcher } from "picomatch";
 import { proxyMiddleware } from "./middlewares/proxy";
 import path from "node:path";
 import { resolveChokidarOptions } from "../watch";
@@ -60,10 +60,10 @@ export interface ResolvedServerUrls {
 export interface ResolvedServerOptions extends ServerOptions {
   fs: Required<FileSystemServeOptions>;
   middlewareMode: boolean;
-  sourcemapIgnoreList: Exclude<
-    ServerOptions["sourcemapIgnoreList"],
-    false | undefined
-  >;
+  // sourcemapIgnoreList: Exclude<
+  //   ServerOptions["sourcemapIgnoreList"],
+  //   false | undefined
+  // >;
 }
 
 export interface ViteDevServer {
@@ -103,7 +103,7 @@ export interface ViteDevServer {
     url: string,
     options?: TransformOptions
   ): Promise<TransformResult | null>;
-  _fsDenyGlob: Matcher;
+  // _fsDenyGlob: Matcher;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -304,7 +304,7 @@ export async function _createServer(
     _importGlobMap: new Map(),
     _forceOptimizeOnRestart: false,
     _pendingRequests: new Map(),
-    _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
+    // _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
     _shortcutsOptions: undefined,
   };
   server.transformIndexHtml = createDevHtmlTransformFn(server);
@@ -451,10 +451,10 @@ export function resolveServerOptions(
   const server: ResolvedServerOptions = {
     preTransformRequests: true,
     ...(raw as Omit<ResolvedServerOptions, "sourcemapIgnoreList">),
-    sourcemapIgnoreList:
-      raw?.sourcemapIgnoreList === false
-        ? () => false
-        : raw?.sourcemapIgnoreList || isInNodeModules,
+    // sourcemapIgnoreList:
+    //   raw?.sourcemapIgnoreList === false
+    //     ? () => false
+    //     : raw?.sourcemapIgnoreList || isInNodeModules,
     middlewareMode: !!raw?.middlewareMode,
   };
   let allowDirs = server.fs?.allow;

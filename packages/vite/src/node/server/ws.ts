@@ -19,38 +19,17 @@ import { Socket } from "node:net";
 
 export const HMR_HEADER = "vite-hmr";
 export interface WebSocketServer {
-  /**
-   * Listen on port and host
-   */
   listen(): void;
-  /**
-   * Get all connected clients.
-   */
   clients: Set<WebSocketClient>;
-  /**
-   * Broadcast events to all clients
-   */
   send(payload: HMRPayload): void;
-  /**
-   * Send custom event
-   */
   send<T extends string>(event: T, payload?: InferCustomEventPayload<T>): void;
-  /**
-   * Disconnect all clients and terminate the server.
-   */
   close(): Promise<void>;
-  /**
-   * Handle custom event emitted by `import.meta.hot.send`
-   */
   on: WebSocketTypes.Server["on"] & {
     <T extends string>(
       event: T,
       listener: WebSocketCustomListener<InferCustomEventPayload<T>>
     ): void;
   };
-  /**
-   * Unregister event listener.
-   */
   off: WebSocketTypes.Server["off"] & {
     (event: string, listener: Function): void;
   };
@@ -217,7 +196,6 @@ export function createWebSocketServer(
 
       const stringified = JSON.stringify(payload);
       wss.clients.forEach((client) => {
-        // readyState 1 means the connection is open
         if (client.readyState === 1) {
           client.send(stringified);
         }

@@ -20,7 +20,7 @@ import { ModuleNode } from "./moduleGraph";
 import colors from "picocolors";
 import path from "node:path";
 import { checkPublicFile } from "../plugins/asset";
-import { applySourcemapIgnoreList, injectSourcesContent } from "./sourcemap";
+// import { applySourcemapIgnoreList, injectSourcesContent } from "./sourcemap";
 
 const debugLoad = createDebugger("vite:load");
 const debugTransform = createDebugger("vite:transform");
@@ -213,17 +213,17 @@ async function loadAndTransform(
 
   if (map && mod.file) {
     map = (typeof map === "string" ? JSON.parse(map) : map) as SourceMap;
-    if (map.mappings && !map.sourcesContent) {
-      await injectSourcesContent(map, mod.file, logger);
-    }
+    // if (map.mappings && !map.sourcesContent) {
+    //   await injectSourcesContent(map, mod.file, logger);
+    // }
 
-    const sourcemapPath = `${mod.file}.map`;
-    applySourcemapIgnoreList(
-      map,
-      sourcemapPath,
-      config.server.sourcemapIgnoreList,
-      logger
-    );
+    // const sourcemapPath = `${mod.file}.map`;
+    // applySourcemapIgnoreList(
+    //   map,
+    //   sourcemapPath,
+    //   config.server.sourcemapIgnoreList,
+    //   logger
+    // );
 
     if (path.isAbsolute(mod.file)) {
       for (
@@ -251,8 +251,9 @@ async function loadAndTransform(
   } as TransformResult;
 
   if (timestamp > mod.lastInvalidationTimestamp) {
-    if (ssr) mod.ssrTransformResult = result;
-    else mod.transformResult = result;
+    // if (ssr) mod.ssrTransformResult = result;
+    // else 
+    mod.transformResult = result;
   }
 
   return result;

@@ -34,7 +34,7 @@ import {
 } from "../../plugins/optimizedDeps";
 import { getDepsOptimizer } from "../../optimizer/optimizer";
 import { ViteDevServer } from "../..";
-import { applySourcemapIgnoreList } from "../sourcemap";
+// import { applySourcemapIgnoreList } from "../sourcemap";
 import { isHTMLProxy } from "../../plugins/html";
 
 const knownIgnoreList = new Set(["/", "/favicon.ico"]);
@@ -78,12 +78,12 @@ export function transformMiddleware(
               await fsp.readFile(sourcemapPath, "utf-8")
             ) as ExistingRawSourceMap;
 
-            applySourcemapIgnoreList(
-              map,
-              sourcemapPath,
-              server.config.server.sourcemapIgnoreList,
-              logger
-            );
+            // applySourcemapIgnoreList(
+            //   map,
+            //   sourcemapPath,
+            //   server.config.server.sourcemapIgnoreList,
+            //   logger
+            // );
 
             return send(req, res, JSON.stringify(map), "json", {
               headers: server.config.server.headers,

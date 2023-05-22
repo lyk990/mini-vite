@@ -12,6 +12,7 @@ import {
   CLIENT_PUBLIC_PATH,
   ENV_PUBLIC_PATH,
   FS_PREFIX,
+  loopbackHosts,
   NULL_BYTE_PLACEHOLDER,
   OPTIMIZABLE_ENTRY_RE,
   VALID_ID_PREFIX,
@@ -26,7 +27,7 @@ import type { DecodedSourceMap, RawSourceMap } from "@ampproject/remapping";
 import remapping from "@ampproject/remapping";
 import { TransformResult } from "rollup";
 import type MagicString from "magic-string";
-import { resolvePackageData } from "./package";
+import { resolvePackageData } from "./packages";
 import { fileURLToPath } from "node:url";
 import { promises as dns } from "node:dns";
 import type { Alias, AliasOptions } from "dep-types/alias";
@@ -48,7 +49,6 @@ export function cleanUrl(url: string): string {
 }
 
 export const isWindows = os.platform() === "win32";
-/**处理操作系统的兼容性问题,将\\替换成/ */
 export function normalizePath(id: string): string {
   return path.posix.normalize(isWindows ? slash(id) : id);
 }
@@ -63,14 +63,46 @@ export async function resolveServerUrls(
   if (!isAddressInfo(address)) {
     return { local: [], network: [] };
   }
-  const protocol = options.https ? "https" : "http";
-  const hostnameName = "localhost";
-  const base = "/";
-  const port = address.port;
+
   const local: string[] = [];
   const network: string[] = [];
-  local.push(`${protocol}://${hostnameName}:${port}${base}`);
-  network.push("ipv4地址");
+  const hostname = await resolveHostname(options.host);
+  const protocol = options.https ? "https" : "http";
+  const port = address.port;
+  const base =
+    config.rawBase === "./" || config.rawBase === "" ? "/" : config.rawBase;
+
+  if (hostname.host && loopbackHosts.has(hostname.host)) {
+    let hostnameName = hostname.name;
+    if (hostnameName.includes(":")) {
+      hostnameName = `[${hostnameName}]`;
+    }
+    local.push(`${protocol}://${hostnameName}:${port}${base}`);
+  } else {
+    Object.values(os.networkInterfaces())
+      .flatMap((nInterface) => nInterface ?? [])
+      .filter(
+        (detail) =>
+          detail &&
+          detail.address &&
+          (detail.family === "IPv4" ||
+            // @ts-expect-error Node 18.0- 18.3 returns number
+            detail.family === 4)
+      )
+      .forEach((detail) => {
+        let host = detail.address.replace("127.0.0.1", hostname.name);
+        // ipv6 host
+        if (host.includes(":")) {
+          host = `[${host}]`;
+        }
+        const url = `${protocol}://${host}:${port}${base}`;
+        if (detail.address.includes("127.0.0.1")) {
+          local.push(url);
+        } else {
+          network.push(url);
+        }
+      });
+  }
   return { local, network };
 }
 export type ViteDebugScope = `vite:${string}`;
@@ -114,13 +146,10 @@ export function ensureWatchedFile(
 ): void {
   if (
     file &&
-    // only need to watch if out of root
     !file.startsWith(root + "/") &&
-    // some rollup plugins use null bytes for private resolved Ids
     !file.includes("\0") &&
     fs.existsSync(file)
   ) {
-    // resolve file to normalized system path
     watcher.add(path.resolve(file));
   }
 }
@@ -243,7 +272,6 @@ export function generateCodeFrame(
         );
         const lineLength = lines[j].length;
         if (j === i) {
-          // push underline
           const pad = Math.max(start - (count - lineLength) + 1, 0);
           const length = Math.max(
             1,
@@ -266,8 +294,6 @@ export function generateCodeFrame(
 
 const replacePercentageRE = /%/g;
 export function injectQuery(url: string, queryToInject: string): string {
-  // encode percents for consistent behavior with pathToFileURL
-  // see #2614 for details
   const resolvedUrl = new URL(
     url.replace(replacePercentageRE, "%25"),
     "relative:///"
@@ -579,7 +605,7 @@ export function combineSourcemaps(
   });
   const escapedFilename = escapeToLinuxLikePath(filename);
 
-  let map; //: SourceMap
+  let map;
   let mapIndex = 1;
   const useArrayInterface =
     sourcemapList.slice(0, -1).find((m) => m.sources.length !== 1) ===
@@ -638,15 +664,16 @@ export function fsPathFromUrl(url: string): string {
 
 export function transformStableResult(
   s: MagicString,
-  id: string,
-  config: ResolvedConfig
+  // id: string,
+  // config: ResolvedConfig
 ): TransformResult {
   return {
     code: s.toString(),
     map:
-      config.command === "build" && config.build.sourcemap
-        ? s.generateMap({ hires: true, source: id })
-        : null,
+      // config.command === "build" && config.build.sourcemap
+      //   ? s.generateMap({ hires: true, source: id })
+      //   :
+      null,
   };
 }
 

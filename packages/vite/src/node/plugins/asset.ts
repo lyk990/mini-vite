@@ -93,7 +93,7 @@ export async function fileToUrl(
   ctx: PluginContext
 ): Promise<string> {
   // if (config.command === "serve") {
-    return fileToDevUrl(id, config);
+  return fileToDevUrl(id, config);
   // } else {
   //   return fileToBuiltUrl(id, config, ctx);
   // }
@@ -221,7 +221,8 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
       if (s) {
         return {
           code: s.toString(),
-          map: config.build.sourcemap ? s.generateMap({ hires: true }) : null,
+          // map: config.build.sourcemap ? s.generateMap({ hires: true }) : null,
+          map: null,
         };
       } else {
         return null;

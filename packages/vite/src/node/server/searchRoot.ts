@@ -1,12 +1,8 @@
 import fs from "node:fs";
 import { dirname, join } from "node:path";
-import { isFileReadable } from '../utils'
+import { isFileReadable } from "../utils";
 
-const ROOT_FILES = [
-  "pnpm-workspace.yaml",
-
-  "lerna.json",
-];
+const ROOT_FILES = ["pnpm-workspace.yaml", "lerna.json"];
 
 function hasPackageJSON(root: string) {
   const path = join(root, "package.json");
@@ -17,7 +13,6 @@ export function searchForPackageRoot(current: string, root = current): string {
   if (hasPackageJSON(current)) return current;
 
   const dir = dirname(current);
-  // reach the fs root
   if (!dir || dir === current) return root;
 
   return searchForPackageRoot(dir, root);
@@ -31,7 +26,6 @@ export function searchForWorkspaceRoot(
   if (hasWorkspacePackageJSON(current)) return current;
 
   const dir = dirname(current);
-  // reach the fs root
   if (!dir || dir === current) return root;
 
   return searchForWorkspaceRoot(dir, root);

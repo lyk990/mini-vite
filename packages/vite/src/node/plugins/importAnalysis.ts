@@ -630,7 +630,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       );
 
       if (s) {
-        return transformStableResult(s, importer, config);
+        return transformStableResult(s);
       } else {
         return source;
       }

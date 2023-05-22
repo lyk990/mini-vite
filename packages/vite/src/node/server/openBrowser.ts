@@ -73,7 +73,6 @@ async function startBrowserProcess(
           ? preferredOSXBrowser
           : supportedChromiumBrowsers.find((b) => ps.includes(b));
       if (openedBrowser) {
-        // Try our best to reuse existing tab with AppleScript
         await execAsync(
           `osascript openChrome.applescript "${encodeURI(
             url

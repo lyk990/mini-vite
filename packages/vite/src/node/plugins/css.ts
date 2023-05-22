@@ -61,10 +61,10 @@ import { createRequire } from "node:module";
 import fsp from "node:fs/promises";
 import { toOutputFilePathInCss } from "../build";
 import { dataToEsm } from "@rollup/pluginutils";
-import {
-  getCodeWithSourcemap,
-  injectSourcesContent,
-} from "../server/sourcemap";
+// import {
+//   // getCodeWithSourcemap,
+//   // injectSourcesContent,
+// } from "../server/sourcemap";
 import { addToHTMLProxyTransformResult } from "./html";
 import { formatMessages, transform, TransformOptions } from "esbuild";
 import { ESBuildOptions } from "./esbuild";
@@ -1418,17 +1418,17 @@ export function cssPostPlugin(config: ResolvedConfig): Plugin {
 
       if (config.command === "serve") {
         const getContentWithSourcemap = async (content: string) => {
-          if (config.css?.devSourcemap) {
-            const sourcemap = this.getCombinedSourcemap();
-            if (sourcemap.mappings && !sourcemap.sourcesContent) {
-              await injectSourcesContent(
-                sourcemap,
-                cleanUrl(id),
-                config.logger
-              );
-            }
-            return getCodeWithSourcemap("css", content, sourcemap);
-          }
+          // if (config.css?.devSourcemap) {
+          //   const sourcemap = this.getCombinedSourcemap();
+          //   if (sourcemap.mappings && !sourcemap.sourcesContent) {
+          //     await injectSourcesContent(
+          //       sourcemap,
+          //       cleanUrl(id),
+          //       config.logger
+          //     );
+          //   }
+          //   return getCodeWithSourcemap("css", content, sourcemap);
+          // }
           return content;
         };
 

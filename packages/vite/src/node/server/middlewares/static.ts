@@ -199,7 +199,7 @@ export function isFileServingAllowed(
 
   const file = fsPathFromUrl(url);
 
-  if (server._fsDenyGlob(file)) return false;
+  // if (server._fsDenyGlob(file)) return false;
 
   if (server.moduleGraph.safeModulesPath.has(file)) return true;
 
@@ -210,7 +210,6 @@ export function isFileServingAllowed(
 }
 
 function renderRestrictedErrorHTML(msg: string): string {
-  // to have syntax highlighting and autocompletion in IDE
   const html = String.raw;
   return html`
     <body>

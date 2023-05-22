@@ -343,7 +343,6 @@ export function lexAcceptedHmrDeps(
   urls: Set<{ url: string; start: number; end: number }>
 ): boolean {
   let state: LexerState = LexerState.inCall;
-  // the state can only be 2 levels deep so no need for a stack
   let prevState: LexerState = LexerState.inCall;
   let currentDep: string = "";
 

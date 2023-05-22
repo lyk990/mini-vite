@@ -42,9 +42,6 @@ const BASE_SHORTCUTS: CLIShortcut[] = [
 ];
 
 export type BindShortcutsOptions = {
-  /**
-   * Print a one line hint to the terminal.
-   */
   print?: boolean;
   customShortcuts?: (CLIShortcut | undefined | null)[];
 };
@@ -80,7 +77,6 @@ export function bindShortcuts(
   let actionRunning = false;
 
   const onInput = async (input: string) => {
-    // ctrl+c or ctrl+d
     if (input === "\x03" || input === "\x04") {
       await server.close().finally(() => process.exit(1));
       return;

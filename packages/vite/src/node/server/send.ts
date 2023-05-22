@@ -5,7 +5,7 @@ import type {
 } from "node:http";
 import type { SourceMap } from "rollup";
 import getEtag from "etag";
-import { getCodeWithSourcemap } from "./sourcemap";
+// import { getCodeWithSourcemap } from "./sourcemap";
 
 export interface SendOptions {
   etag?: string;
@@ -32,7 +32,7 @@ export function send(
     etag = getEtag(content, { weak: true }),
     cacheControl = "no-cache",
     headers,
-    map,
+    // map,
   } = options;
 
   if (res.writableEnded) {
@@ -56,11 +56,11 @@ export function send(
   }
 
   // inject source map reference
-  if (map && map.mappings) {
-    if (type === "js" || type === "css") {
-      content = getCodeWithSourcemap(type, content.toString(), map);
-    }
-  }
+  // if (map && map.mappings) {
+  //   if (type === "js" || type === "css") {
+  //     content = getCodeWithSourcemap(type, content.toString(), map);
+  //   }
+  // }
 
   res.statusCode = 200;
   res.end(content);

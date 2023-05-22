@@ -56,11 +56,6 @@ export class ModuleGraph {
     Promise<ModuleNode> | ModuleNode
   >();
 
-  _ssrUnresolvedUrlToModuleMap = new Map<
-    string,
-    Promise<ModuleNode> | ModuleNode
-  >();
-
   constructor(
     private resolveId: (
       url: string,
@@ -73,7 +68,7 @@ export class ModuleGraph {
     ssr?: boolean
   ): Promise<ModuleNode | undefined> {
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl));
-    const mod = this._getUnresolvedUrlToModule(rawUrl, ssr);
+    const mod = this._getUnresolvedUrlToModule(rawUrl);
     if (mod) {
       return mod;
     }
@@ -151,7 +146,6 @@ export class ModuleGraph {
     let resolvePromises = [];
     let resolveResults = new Array(importedModules.size);
     let index = 0;
-    // update import graph
     for (const imported of importedModules) {
       const nextIndex = index++;
       if (typeof imported === "string") {
@@ -224,7 +218,7 @@ export class ModuleGraph {
     resolved?: PartialResolvedId
   ): Promise<ModuleNode> {
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl));
-    let mod = this._getUnresolvedUrlToModule(rawUrl, ssr);
+    let mod = this._getUnresolvedUrlToModule(rawUrl);
     if (mod) {
       return mod;
     }
@@ -251,11 +245,11 @@ export class ModuleGraph {
       } else if (!this.urlToModuleMap.has(url)) {
         this.urlToModuleMap.set(url, mod);
       }
-      this._setUnresolvedUrlToModule(rawUrl, mod, ssr);
+      this._setUnresolvedUrlToModule(rawUrl, mod);
       return mod;
     })();
 
-    this._setUnresolvedUrlToModule(rawUrl, modPromise, ssr);
+    this._setUnresolvedUrlToModule(rawUrl, modPromise);
     return modPromise;
   }
 
@@ -282,7 +276,7 @@ export class ModuleGraph {
 
   async resolveUrl(url: string, ssr?: boolean): Promise<ResolvedUrl> {
     url = removeImportQuery(removeTimestampQuery(url));
-    const mod = await this._getUnresolvedUrlToModule(url, ssr);
+    const mod = await this._getUnresolvedUrlToModule(url);
     if (mod?.id) {
       return [mod.url, mod.id, mod.meta];
     }
@@ -290,23 +284,16 @@ export class ModuleGraph {
   }
 
   _getUnresolvedUrlToModule(
-    url: string,
-    ssr?: boolean
+    url: string
   ): Promise<ModuleNode> | ModuleNode | undefined {
-    return (
-      ssr ? this._ssrUnresolvedUrlToModuleMap : this._unresolvedUrlToModuleMap
-    ).get(url);
+    return this._unresolvedUrlToModuleMap.get(url);
   }
 
   _setUnresolvedUrlToModule(
     url: string,
-    mod: Promise<ModuleNode> | ModuleNode,
-    ssr?: boolean
+    mod: Promise<ModuleNode> | ModuleNode
   ): void {
-    (ssr
-      ? this._ssrUnresolvedUrlToModuleMap
-      : this._unresolvedUrlToModuleMap
-    ).set(url, mod);
+    this._unresolvedUrlToModuleMap.set(url, mod);
   }
 
   async _resolveUrl(

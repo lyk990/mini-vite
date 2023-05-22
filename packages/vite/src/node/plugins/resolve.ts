@@ -42,7 +42,7 @@ import {
 import colors from "picocolors";
 import { optimizedDepInfoFromFile, optimizedDepInfoFromId } from "../optimizer";
 import fs from "node:fs";
-import { findNearestMainPackageData, resolvePackageData } from "../package";
+import { findNearestMainPackageData, resolvePackageData } from "../packages";
 import { exports, imports } from "resolve.exports";
 import { hasESMSyntax } from "mlly";
 import type { DepsOptimizer } from "../optimizer";

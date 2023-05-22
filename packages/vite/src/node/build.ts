@@ -1,14 +1,14 @@
 import path from "node:path";
 import { BuildOptions, ResolvedBuildOptions } from "vite";
-import { Logger } from "./logger";
+// import { Logger } from "./logger";
 import type { ExternalOption, InternalModuleFormat } from "rollup";
 import { joinUrlSegments } from "./utils";
 import { ResolvedConfig } from "./config";
 
 export function resolveBuildOptions(
-  raw: BuildOptions | undefined,
-  logger: Logger,
-  root: string
+  raw: BuildOptions | undefined
+  // logger: Logger,
+  // root: string
 ): ResolvedBuildOptions {
   const defaultBuildOptions: BuildOptions = {
     outDir: "dist",
@@ -17,7 +17,7 @@ export function resolveBuildOptions(
     cssCodeSplit: !raw?.lib,
     sourcemap: false,
     rollupOptions: {},
-    minify: raw?.ssr ? false : "esbuild",
+    minify: "esbuild",
     terserOptions: {},
     write: true,
     emptyOutDir: null,
@@ -32,7 +32,7 @@ export function resolveBuildOptions(
     watch: null,
   };
   const userBuildOptions = defaultBuildOptions;
-  const modulePreload = raw?.modulePreload;
+  // const modulePreload = raw?.modulePreload;
   const defaultModulePreload = {
     polyfill: true,
   };
@@ -51,16 +51,16 @@ export function resolveBuildOptions(
       exclude: [/node_modules/],
       ...userBuildOptions.dynamicImportVarsOptions,
     },
-    // Resolve to false | object
     modulePreload:
-      modulePreload === false
-        ? false
-        : typeof modulePreload === "object"
-        ? {
-            ...defaultModulePreload,
-            ...modulePreload,
-          }
-        : defaultModulePreload,
+      // modulePreload === false
+      //   ? false
+      //   : typeof modulePreload === "object"
+      //   ? {
+      //       ...defaultModulePreload,
+      //       ...modulePreload,
+      //     }
+      //   : 
+        defaultModulePreload,
   };
 
   return resolved;

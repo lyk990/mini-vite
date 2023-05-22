@@ -19,9 +19,9 @@ import fsp from "node:fs/promises";
 import { send } from "../send";
 import {
   applyHtmlTransforms,
-  htmlEnvHook,
-  postImportMapHook,
-  preImportMapHook,
+  // htmlEnvHook,
+  // postImportMapHook,
+  // preImportMapHook,
   resolveHtmlTransforms,
   addToHTMLProxyCache,
   traverseHtml,
@@ -92,20 +92,20 @@ export function createDevHtmlTransformFn(
     return applyHtmlTransforms(
       html,
       [
-        preImportMapHook(server.config),
+        // preImportMapHook(server.config),
         ...preHooks,
-        htmlEnvHook(server.config),
+        // htmlEnvHook(server.config),
         devHtmlHook, // 主要调用这个钩子
         ...normalHooks,
         ...postHooks,
-        postImportMapHook(),
+        // postImportMapHook(),
       ],
       {
         path: url,
         filename: getHtmlFilename(url, server),
         server,
         originalUrl,
-      } as any // TODO ts类型不正确
+      } as any
     );
   };
 }
@@ -233,7 +233,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
     styleUrl.map(async ({ start, end, code }, index) => {
       const url = `${proxyModulePath}?html-proxy&direct&index=${index}.css`;
 
-      // ensure module in graph after successful load
       const mod = await moduleGraph.ensureEntryFromUrl(url, false);
       ensureWatchedFile(watcher, mod.file, config.root);
 
@@ -290,7 +289,6 @@ const processNodeUrl = (
   }
   const devBase = config.base;
   if (url[0] === "/" && url[1] !== "/") {
-    // prefix with base (dev only, base is never relative)
     const fullUrl = path.posix.join(devBase, url);
     overwriteAttrValue(s, sourceCodeLocation, fullUrl);
     if (server && !checkPublicFile(url, config)) {
@@ -302,7 +300,6 @@ const processNodeUrl = (
     originalUrl !== "/" &&
     htmlPath === "/index.html"
   ) {
-    // prefix with base (dev only, base is never relative)
     const replacer = (url: string) => {
       const fullUrl = path.posix.join(devBase, url);
       if (server && !checkPublicFile(url, config)) {
