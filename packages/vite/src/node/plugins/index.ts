@@ -30,7 +30,7 @@ export async function resolvePlugins(
     resolvePlugin({
       ...config.resolve,
       root: config.root,
-      isProduction: config.isProduction,
+      // isProduction: false,
       isBuild,
       packageCache: config.packageCache,
       // ssrConfig: config.ssr, // DELETE

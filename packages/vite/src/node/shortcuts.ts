@@ -25,13 +25,13 @@ const BASE_SHORTCUTS: CLIShortcut[] = [
       server.openBrowser();
     },
   },
-  {
-    key: "c",
-    description: "clear console",
-    action(server) {
-      server.config.logger.clearScreen("error");
-    },
-  },
+  // {
+  //   key: "c",
+  //   description: "clear console",
+  //   action(server) {
+  //     server.config.logger.clearScreen("error");
+  //   },
+  // },
   {
     key: "q",
     description: "quit",

@@ -7,9 +7,6 @@ import { createLogger } from "vite";
 const cli = cac("mini-vite");
 cli
   .command("[root]", "Run the development server")
-  .option("--dev", `development`)
-  .option("--prod", `production`)
-  .option("--port <port>", `[number] specify port`)
   .action(async (root, options) => {
     const { createServer } = await import("./server");
     try {
@@ -19,7 +16,7 @@ cli
         mode: options.mode,
         configFile: options.config,
         logLevel: options.logLevel,
-        clearScreen: options.clearScreen,
+        // clearScreen: options.clearScreen,
         optimizeDeps: { force: options.force },
         server: {},
       });

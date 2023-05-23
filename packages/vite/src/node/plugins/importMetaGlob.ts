@@ -264,7 +264,7 @@ export async function transformGlobImport(
   id: string,
   root: string,
   resolveId: IdResolver,
-  isProduction: boolean,
+  // isProduction: boolean,
   restoreQueryExtension = false
 ): Promise<TransformGlobImportResult | null> {
   id = slash(id);
@@ -385,7 +385,7 @@ export async function transformGlobImport(
               staticImports.push(
                 `import ${expression} from ${JSON.stringify(importPath)}`
               );
-              if (!isProduction && isCSS) {
+              if (isCSS) {
                 objectProps.push(
                   `get ${JSON.stringify(
                     filePath
@@ -405,7 +405,7 @@ export async function transformGlobImport(
                 importStatement += `.then(m => m[${JSON.stringify(
                   importKey
                 )}])`;
-              if (!isProduction && isCSS) {
+              if (isCSS) {
                 objectProps.push(
                   `${JSON.stringify(
                     filePath
@@ -432,7 +432,7 @@ export async function transformGlobImport(
               : "";
 
           let replacement: string;
-          if (!isProduction && includesCSS) {
+          if (includesCSS) {
             replacement =
               "/* #__PURE__ */ Object.assign(" +
               "(() => {" +

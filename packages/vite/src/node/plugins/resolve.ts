@@ -59,7 +59,7 @@ export interface ResolveOptions {
 export interface InternalResolveOptions extends Required<ResolveOptions> {
   root: string;
   isBuild: boolean;
-  isProduction: boolean;
+  // isProduction: boolean;
   // ssrConfig?: SSROptions;
   packageCache?: PackageCache;
   asSrc?: boolean;
@@ -575,9 +575,9 @@ function resolveExportsOrImports(
   const conditions = [...additionalConditions].filter((condition) => {
     switch (condition) {
       case "production":
-        return options.isProduction;
+        return false;
       case "development":
-        return !options.isProduction;
+        return true;
       case "module":
         return !options.isRequire;
     }

@@ -144,7 +144,7 @@ async function reloadOnTsconfigChange(changedFile: string) {
   ) {
     server.config.logger.info(
       `changed tsconfig file detected: ${changedFile} - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.`,
-      { clear: server.config.clearScreen, timestamp: true }
+      { timestamp: true }
     );
 
     server.moduleGraph.invalidateAll();

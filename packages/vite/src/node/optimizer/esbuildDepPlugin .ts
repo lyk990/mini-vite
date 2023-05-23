@@ -194,13 +194,13 @@ export function esbuildDepPlugin(
       build.onLoad(
         { filter: /.*/, namespace: "browser-external" },
         ({ path }) => {
-          if (config.isProduction) {
-            return {
-              contents: "module.exports = {}",
-            };
-          } else {
-            return {
-              contents: `\
+          // if (config.isProduction) {
+          //   return {
+          //     contents: "module.exports = {}",
+          //   };
+          // } else {
+          return {
+            contents: `\
 module.exports = Object.create(new Proxy({}, {
   get(_, key) {
     if (
@@ -213,24 +213,24 @@ module.exports = Object.create(new Proxy({}, {
     }
   }
 }))`,
-            };
-          }
+          };
+          // }
         }
       );
 
       build.onLoad(
         { filter: /.*/, namespace: "optional-peer-dep" },
         ({ path }) => {
-          if (config.isProduction) {
-            return {
-              contents: "module.exports = {}",
-            };
-          } else {
-            const [, peerDep, parentDep] = path.split(":");
-            return {
-              contents: `throw new Error(\`Could not resolve "${peerDep}" imported by "${parentDep}". Is it installed?\`)`,
-            };
-          }
+          // if (config.isProduction) {
+          //   return {
+          //     contents: "module.exports = {}",
+          //   };
+          // } else {
+          const [, peerDep, parentDep] = path.split(":");
+          return {
+            contents: `throw new Error(\`Could not resolve "${peerDep}" imported by "${parentDep}". Is it installed?\`)`,
+          };
+          // }
         }
       );
     },

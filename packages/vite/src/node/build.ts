@@ -59,8 +59,8 @@ export function resolveBuildOptions(
       //       ...defaultModulePreload,
       //       ...modulePreload,
       //     }
-      //   : 
-        defaultModulePreload,
+      //   :
+      defaultModulePreload,
   };
 
   return resolved;
@@ -117,9 +117,9 @@ const customRelativeUrlMechanisms = {
 
 export function createToImportMetaURLBasedRelativeRuntime(
   format: InternalModuleFormat,
-  isWorker: boolean
+  // isWorker: boolean
 ): (filename: string, importer: string) => { runtime: string } {
-  const formatLong = isWorker && format === "iife" ? "worker-iife" : format;
+  const formatLong = format;
   const toRelativePath = customRelativeUrlMechanisms[formatLong];
   return (filename, importer) => ({
     runtime: toRelativePath(

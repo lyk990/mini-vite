@@ -137,7 +137,7 @@ function esbuildScanPlugin(
       id,
       config.root,
       resolve,
-      config.isProduction
+      // config.isProduction
     );
 
     return result?.s.toString() || transpiledContents;

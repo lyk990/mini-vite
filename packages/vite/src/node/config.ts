@@ -138,22 +138,22 @@ export type ResolvedConfig = Readonly<
     plugins: readonly Plugin[];
     define?: Record<string, any>;
     env: Record<string, any>;
-    envPrefix?: string | string[];
+    // envPrefix?: string | string[];
     base: string;
     publicDir: string;
     command: "build" | "serve";
     createResolver: (options?: Partial<InternalResolveOptions>) => ResolveFn;
-    isProduction: boolean;
+    // isProduction: boolean;
     assetsInclude: (file: string) => boolean;
     packageCache: PackageCache;
     envDir: string;
-    isWorker: boolean; // FEATURE worker打包
+    // isWorker: boolean; // FEATURE worker打包
     experimental: ExperimentalOptions;
     mode: string;
     esbuild: ESBuildOptions | false;
     rawBase: string; // REMOVE
     mainConfig: ResolvedConfig | null; // REMOVE
-    worker: ResolveWorkerOptions; // REMOVE
+    // worker: ResolveWorkerOptions; // REMOVE
   } & PluginHookUtils
 >;
 
@@ -215,9 +215,9 @@ export async function resolveConfig(
     }
   };
 
-  const rawWorkerUserPlugins = (
-    (await asyncFlatten(config.worker?.plugins || [])) as Plugin[]
-  ).filter(filterPlugin);
+  // const rawWorkerUserPlugins = (
+  //   (await asyncFlatten(config.worker?.plugins || [])) as Plugin[]
+  // ).filter(filterPlugin);
 
   const rawUserPlugins = (
     (await asyncFlatten(config.plugins || [])) as Plugin[]
@@ -239,7 +239,7 @@ export async function resolveConfig(
   // }
 
   const logger = createLogger(config.logLevel, {
-    allowClearScreen: config.clearScreen,
+    // allowClearScreen: config.clearScreen,
     customLogger: config.customLogger,
   });
 
@@ -292,7 +292,7 @@ export async function resolveConfig(
   //   }
   // }
 
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = false;
 
   const isBuild = command === "build";
   const relativeBaseShortcut = config.base === "" || config.base === "./";
@@ -389,27 +389,27 @@ export async function resolveConfig(
 
   const BASE_URL = resolvedBase;
 
-  let workerConfig = mergeConfig({}, config);
-  const [workerPrePlugins, workerNormalPlugins, workerPostPlugins] =
-    sortUserPlugins(rawWorkerUserPlugins);
+  // let workerConfig = mergeConfig({}, config);
+  // const [workerPrePlugins, workerNormalPlugins, workerPostPlugins] =
+  //   sortUserPlugins(rawWorkerUserPlugins);
 
-  const workerUserPlugins = [
-    ...workerPrePlugins,
-    ...workerNormalPlugins,
-    ...workerPostPlugins,
-  ];
-  workerConfig = await runConfigHook(
-    workerConfig,
-    workerUserPlugins,
-    configEnv
-  );
-  const resolvedWorkerOptions: ResolveWorkerOptions = {
-    format: workerConfig.worker?.format || "iife",
-    plugins: [],
-    rollupOptions: workerConfig.worker?.rollupOptions || {},
-    getSortedPlugins: undefined!,
-    getSortedPluginHooks: undefined!,
-  };
+  // const workerUserPlugins = [
+  // ...workerPrePlugins,
+  // ...workerNormalPlugins,
+  // ...workerPostPlugins,
+  // ];
+  // workerConfig = await runConfigHook(
+  //   workerConfig,
+  //   workerUserPlugins,
+  //   configEnv
+  // );
+  // const resolvedWorkerOptions: ResolveWorkerOptions = {
+  //   format: "iife",
+  //   plugins: [],
+  //   rollupOptions: {},
+  //   getSortedPlugins: undefined!,
+  //   getSortedPluginHooks: undefined!,
+  // };
 
   const resolvedConfig: ResolvedConfig = {
     configFile: configFile ? normalizePath(configFile) : undefined,
@@ -426,9 +426,9 @@ export async function resolveConfig(
     command,
     mode,
     // ssr,
-    isWorker: false,
+    // isWorker: false,
     mainConfig: null,
-    isProduction,
+    // isProduction,
     plugins: userPlugins,
     esbuild:
       config.esbuild === false
@@ -461,7 +461,7 @@ export async function resolveConfig(
         ...optimizeDeps.esbuildOptions,
       },
     },
-    worker: resolvedWorkerOptions,
+    // worker: resolvedWorkerOptions,
     appType: config.appType ?? "spa",
     experimental: {
       importGlobRestoreExtension: false,
@@ -714,7 +714,7 @@ async function bundleConfigFile(
           const options: InternalResolveOptionsWithOverrideConditions = {
             root: path.dirname(fileName),
             isBuild: true,
-            isProduction: true,
+            // isProduction: true,
             preferRelative: false,
             tryIndex: true,
             mainFields: [],

@@ -265,8 +265,7 @@ export function renderAssetUrlInJS(
   code: string
 ): MagicString | undefined {
   const toRelativeRuntime = createToImportMetaURLBasedRelativeRuntime(
-    opts.format,
-    false
+    opts.format
   );
 
   let match: RegExpExecArray | null;
