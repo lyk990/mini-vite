@@ -134,7 +134,7 @@ export type ResolvedConfig = Readonly<
     configFileDependencies: string[];
     inlineConfig: InlineConfig;
     cacheDir: string;
-    appType: AppType;
+    // appType: AppType;
     plugins: readonly Plugin[];
     define?: Record<string, any>;
     env: Record<string, any>;
@@ -275,7 +275,6 @@ export async function resolveConfig(
   const envDir = config.envDir
     ? normalizePath(path.resolve(resolvedRoot, config.envDir))
     : resolvedRoot;
-  const userEnv = {};
   // inlineConfig.envFile !== false &&
   // loadEnv(mode, envDir, resolveEnvPrefix(config));
   // DELETE
@@ -441,7 +440,6 @@ export async function resolveConfig(
     build: resolvedBuildOptions,
     envDir,
     env: {
-      ...userEnv,
       BASE_URL,
       MODE: mode,
       DEV: !isProduction,
@@ -462,7 +460,7 @@ export async function resolveConfig(
       },
     },
     // worker: resolvedWorkerOptions,
-    appType: config.appType ?? "spa",
+    appType: "spa",
     experimental: {
       importGlobRestoreExtension: false,
       hmrPartialAccept: false,

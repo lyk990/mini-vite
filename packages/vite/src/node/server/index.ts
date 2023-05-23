@@ -328,21 +328,16 @@ export async function _createServer(
   middlewares.use(transformMiddleware(server));
   middlewares.use(serveRawFsMiddleware(server));
   middlewares.use(serveStaticMiddleware(root, server));
-
-  if (config.appType === "spa" || config.appType === "mpa") {
-    middlewares.use(htmlFallbackMiddleware(root, config.appType === "spa"));
-  }
+  middlewares.use(htmlFallbackMiddleware(root));
 
   postHooks.forEach((fn) => fn && fn());
 
-  if (config.appType === "spa" || config.appType === "mpa") {
-    middlewares.use(indexHtmlMiddleware(server));
+  middlewares.use(indexHtmlMiddleware(server));
 
-    middlewares.use(function vite404Middleware(_, res) {
-      res.statusCode = 404;
-      res.end();
-    });
-  }
+  middlewares.use(function vite404Middleware(_, res) {
+    res.statusCode = 404;
+    res.end();
+  });
 
   middlewares.use(errorMiddleware(server, middlewareMode));
   // 是否正在初始化服务器
