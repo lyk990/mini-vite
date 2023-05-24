@@ -27,3 +27,4 @@ pnpm run dev # 使用vite启动示例项目
 pnpm run dev  # 调试vite源码
 pnpm run serve # 调试mini-vite源码
 ````
+![image](https://github.com/lyk990/mini-vite/assets/83712416/15bb9617-0b2e-42c7-8dcd-ee9d8001c23c)
