@@ -24,7 +24,7 @@ import {
   isWindows,
   normalizePath,
   safeRealpathSync,
-  slash,
+  // slash,
   tryStatSync,
 } from "../utils";
 import path from "path";
@@ -44,12 +44,12 @@ import { optimizedDepInfoFromFile, optimizedDepInfoFromId } from "../optimizer";
 import fs from "node:fs";
 import { findNearestMainPackageData, resolvePackageData } from "../packages";
 import { exports, imports } from "resolve.exports";
-import { hasESMSyntax } from "mlly";
+// import { hasESMSyntax } from "mlly";
 import type { DepsOptimizer } from "../optimizer";
 
 export interface ResolveOptions {
   mainFields?: string[];
-  browserField?: boolean;
+  // browserField?: boolean;
   conditions?: string[];
   extensions?: string[];
   dedupe?: string[];
@@ -202,13 +202,13 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
           return normalizedFsPath;
         }
 
-        if (
-          targetWeb &&
-          options.browserField &&
-          (res = tryResolveBrowserMapping(fsPath, importer, options, true))
-        ) {
-          return res;
-        }
+        // if (
+        //   targetWeb &&
+        //   options.browserField &&
+        //   (res = tryResolveBrowserMapping(fsPath, importer, options, true))
+        // ) {
+        //   return res;
+        // }
 
         if ((res = tryFsResolve(fsPath, options))) {
           res = ensureVersionQuery(res, id, options, depsOptimizer);
@@ -278,19 +278,19 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
           return res;
         }
 
-        if (
-          targetWeb &&
-          options.browserField &&
-          (res = tryResolveBrowserMapping(
-            id,
-            importer,
-            options,
-            false,
-            external
-          ))
-        ) {
-          return res;
-        }
+        // if (
+        //   targetWeb &&
+        //   options.browserField &&
+        //   (res = tryResolveBrowserMapping(
+        //     id,
+        //     importer,
+        //     options,
+        //     false,
+        //     external
+        //   ))
+        // ) {
+        //   return res;
+        // }
 
         if (
           (res = tryNodeResolve(
@@ -688,72 +688,72 @@ function tryFsResolve(
   if (res) return res + postfix;
 }
 
-function equalWithoutSuffix(path: string, key: string, suffix: string) {
-  return key.endsWith(suffix) && key.slice(0, -suffix.length) === path;
-}
+// function equalWithoutSuffix(path: string, key: string, suffix: string) {
+//   return key.endsWith(suffix) && key.slice(0, -suffix.length) === path;
+// }
 
-function mapWithBrowserField(
-  relativePathInPkgDir: string,
-  map: Record<string, string | false>
-): string | false | undefined {
-  const normalizedPath = path.posix.normalize(relativePathInPkgDir);
+// function mapWithBrowserField(
+//   relativePathInPkgDir: string,
+//   map: Record<string, string | false>
+// ): string | false | undefined {
+//   const normalizedPath = path.posix.normalize(relativePathInPkgDir);
 
-  for (const key in map) {
-    const normalizedKey = path.posix.normalize(key);
-    if (
-      normalizedPath === normalizedKey ||
-      equalWithoutSuffix(normalizedPath, normalizedKey, ".js") ||
-      equalWithoutSuffix(normalizedPath, normalizedKey, "/index.js")
-    ) {
-      return map[key];
-    }
-  }
-}
+//   for (const key in map) {
+//     const normalizedKey = path.posix.normalize(key);
+//     if (
+//       normalizedPath === normalizedKey ||
+//       equalWithoutSuffix(normalizedPath, normalizedKey, ".js") ||
+//       equalWithoutSuffix(normalizedPath, normalizedKey, "/index.js")
+//     ) {
+//       return map[key];
+//     }
+//   }
+// }
 
-function tryResolveBrowserMapping(
-  id: string,
-  importer: string | undefined,
-  options: InternalResolveOptions,
-  isFilePath: boolean,
-  externalize?: boolean
-) {
-  let res: string | undefined;
-  const pkg =
-    importer &&
-    findNearestPackageData(path.dirname(importer), options.packageCache);
-  if (pkg && isObject(pkg.data.browser)) {
-    const mapId = isFilePath ? "./" + slash(path.relative(pkg.dir, id)) : id;
-    const browserMappedPath = mapWithBrowserField(mapId, pkg.data.browser);
-    if (browserMappedPath) {
-      if (
-        (res = bareImportRE.test(browserMappedPath)
-          ? tryNodeResolve(browserMappedPath, importer, options, true)?.id
-          : tryFsResolve(path.join(pkg.dir, browserMappedPath), options))
-      ) {
-        debug?.(`[browser mapped] ${colors.cyan(id)} -> ${colors.dim(res)}`);
-        let result: PartialResolvedId = { id: res };
-        if (options.idOnly) {
-          return result;
-        }
-        // if (!options.scan && options.isBuild) {
-        //   const resPkg = findNearestPackageData(
-        //     path.dirname(res),
-        //     options.packageCache
-        //   );
-        //   if (resPkg) {
-        //     result = {
-        //       id: res,
-        //       moduleSideEffects: resPkg.hasSideEffects(res),
-        //     };
-        //   }
-        // }
-        return externalize ? { ...result, external: true } : result;
-      }
-    } else if (browserMappedPath === false) {
-      return browserExternalId;
-    }
-  }
-}
+// function tryResolveBrowserMapping(
+//   id: string,
+//   importer: string | undefined,
+//   options: InternalResolveOptions,
+//   isFilePath: boolean,
+//   externalize?: boolean
+// ) {
+//   let res: string | undefined;
+//   const pkg =
+//     importer &&
+//     findNearestPackageData(path.dirname(importer), options.packageCache);
+//   if (pkg && isObject(pkg.data.browser)) {
+//     const mapId = isFilePath ? "./" + slash(path.relative(pkg.dir, id)) : id;
+//     const browserMappedPath = mapWithBrowserField(mapId, pkg.data.browser);
+//     if (browserMappedPath) {
+//       if (
+//         (res = bareImportRE.test(browserMappedPath)
+//           ? tryNodeResolve(browserMappedPath, importer, options, true)?.id
+//           : tryFsResolve(path.join(pkg.dir, browserMappedPath), options))
+//       ) {
+//         debug?.(`[browser mapped] ${colors.cyan(id)} -> ${colors.dim(res)}`);
+//         let result: PartialResolvedId = { id: res };
+//         if (options.idOnly) {
+//           return result;
+//         }
+//         // if (!options.scan && options.isBuild) {
+//         //   const resPkg = findNearestPackageData(
+//         //     path.dirname(res),
+//         //     options.packageCache
+//         //   );
+//         //   if (resPkg) {
+//         //     result = {
+//         //       id: res,
+//         //       moduleSideEffects: resPkg.hasSideEffects(res),
+//         //     };
+//         //   }
+//         // }
+//         return externalize ? { ...result, external: true } : result;
+//       }
+//     } else if (browserMappedPath === false) {
+//       return browserExternalId;
+//     }
+//   }
+// }
 
 export async function tryOptimizedResolve(
   depsOptimizer: DepsOptimizer,
@@ -816,7 +816,7 @@ function resolveDeepImport(
   }
 
   let relativeId: string | undefined | void = id;
-  const { exports: exportsField, browser: browserField } = data;
+  const { exports: exportsField } = data;
 
   if (exportsField) {
     if (isObject(exportsField) && !Array.isArray(exportsField)) {
@@ -842,15 +842,16 @@ function resolveDeepImport(
           `${path.join(dir, "package.json")}.`
       );
     }
-  } else if (targetWeb && options.browserField && isObject(browserField)) {
-    const { file, postfix } = splitFileAndPostfix(relativeId);
-    const mapped = mapWithBrowserField(file, browserField);
-    if (mapped) {
-      relativeId = mapped + postfix;
-    } else if (mapped === false) {
-      return (webResolvedImports[id] = browserExternalId);
-    }
   }
+  // else if (targetWeb && options.browserField && isObject(browserField)) {
+  //   const { file, postfix } = splitFileAndPostfix(relativeId);
+  //   const mapped = mapWithBrowserField(file, browserField);
+  //   if (mapped) {
+  //     relativeId = mapped + postfix;
+  //   } else if (mapped === false) {
+  //     return (webResolvedImports[id] = browserExternalId);
+  //   }
+  // }
 
   if (relativeId) {
     const resolved = tryFsResolve(
@@ -894,39 +895,39 @@ export function resolvePackageEntry(
 
     const resolvedFromExports = !!entryPoint;
 
-    if (
-      targetWeb &&
-      options.browserField &&
-      (!entryPoint || entryPoint.endsWith(".mjs"))
-    ) {
-      const browserEntry =
-        typeof data.browser === "string"
-          ? data.browser
-          : isObject(data.browser) && data.browser["."];
-      if (browserEntry) {
-        if (
-          !options.isRequire &&
-          options.mainFields.includes("module") &&
-          typeof data.module === "string" &&
-          data.module !== browserEntry
-        ) {
-          const resolvedBrowserEntry = tryFsResolve(
-            path.join(dir, browserEntry),
-            options
-          );
-          if (resolvedBrowserEntry) {
-            const content = fs.readFileSync(resolvedBrowserEntry, "utf-8");
-            if (hasESMSyntax(content)) {
-              entryPoint = browserEntry;
-            } else {
-              entryPoint = data.module;
-            }
-          }
-        } else {
-          entryPoint = browserEntry;
-        }
-      }
-    }
+    // if (
+    //   targetWeb &&
+    //   options.browserField &&
+    //   (!entryPoint || entryPoint.endsWith(".mjs"))
+    // ) {
+    //   const browserEntry =
+    //     typeof data.browser === "string"
+    //       ? data.browser
+    //       : isObject(data.browser) && data.browser["."];
+    //   if (browserEntry) {
+    //     if (
+    //       !options.isRequire &&
+    //       options.mainFields.includes("module") &&
+    //       typeof data.module === "string" &&
+    //       data.module !== browserEntry
+    //     ) {
+    //       const resolvedBrowserEntry = tryFsResolve(
+    //         path.join(dir, browserEntry),
+    //         options
+    //       );
+    //       if (resolvedBrowserEntry) {
+    //         const content = fs.readFileSync(resolvedBrowserEntry, "utf-8");
+    //         if (hasESMSyntax(content)) {
+    //           entryPoint = browserEntry;
+    //         } else {
+    //           entryPoint = data.module;
+    //         }
+    //       }
+    //     } else {
+    //       entryPoint = browserEntry;
+    //     }
+    //   }
+    // }
 
     if (!resolvedFromExports && (!entryPoint || entryPoint.endsWith(".mjs"))) {
       for (const field of options.mainFields) {
@@ -951,12 +952,13 @@ export function resolvePackageEntry(
       ) {
         entry = "";
         skipPackageJson = true;
-      } else {
-        const { browser: browserField } = data;
-        if (targetWeb && options.browserField && isObject(browserField)) {
-          entry = mapWithBrowserField(entry, browserField) || entry;
-        }
       }
+      //  else {
+      //   const { browser: browserField } = data;
+      //   if (targetWeb && options.browserField && isObject(browserField)) {
+      //     entry = mapWithBrowserField(entry, browserField) || entry;
+      //   }
+      // }
 
       const entryPointPath = path.join(dir, entry);
       const resolvedEntryPoint = tryFsResolve(

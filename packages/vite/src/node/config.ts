@@ -28,7 +28,7 @@ import {
 } from "./constants";
 import { Logger, LogLevel } from "./logger";
 import { Plugin } from "./plugin";
-import { createRequire } from "node:module";
+// import { createRequire } from "node:module";
 import { ResolvedServerOptions, resolveServerOptions } from "./server";
 import {
   asyncFlatten,
@@ -51,7 +51,7 @@ import { pathToFileURL } from "node:url";
 import { findNearestPackageData, PackageCache } from "./packages";
 import { PluginContainer, createPluginContainer } from "./pluginContainer";
 import aliasPlugin from "@rollup/plugin-alias";
-import { promisify } from "node:util";
+// import { promisify } from "node:util";
 import { resolvePlugin, tryNodeResolve } from "./plugins/resolve";
 import {
   createPluginHookUtils,
@@ -66,7 +66,7 @@ import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
 import { RollupOptions } from "rollup";
 
 const debug = createDebugger("vite:config");
-const promisifiedRealpath = promisify(fs.realpath);
+// const promisifiedRealpath = promisify(fs.realpath);
 
 export type CorsOrigin = boolean | string | RegExp | (string | RegExp)[];
 export interface ResolveWorkerOptions extends PluginHookUtils {
@@ -106,13 +106,13 @@ export type ResolveFn = (
   ssr?: boolean
 ) => Promise<string | undefined>;
 
-interface NodeModuleWithCompile extends NodeModule {
-  _compile(code: string, filename: string): any;
-}
+// interface NodeModuleWithCompile extends NodeModule {
+//   _compile(code: string, filename: string): any;
+// }
 
 export interface ResolveOptions {
   mainFields?: string[];
-  browserField?: boolean;
+  // browserField?: boolean;
   conditions?: string[];
   extensions?: string[];
   dedupe?: string[];
@@ -172,24 +172,25 @@ export async function resolveConfig(
   let config = inlineConfig;
   let configFileDependencies: string[] = [];
   let mode = inlineConfig.mode || defaultMode;
-  const isNodeEnvSet = !!process.env.NODE_ENV;
+  // const isNodeEnvSet = !!process.env.NODE_ENV;
   const packageCache: PackageCache = new Map();
 
-  if (!isNodeEnvSet) {
-    process.env.NODE_ENV = defaultNodeEnv;
-  }
+  // if (!isNodeEnvSet) {
+  process.env.NODE_ENV = defaultNodeEnv;
+  // }
 
   const configEnv = {
     mode,
     command,
-    ssrBuild: !!config.build?.ssr,
+    // ssrBuild: !!config.build?.ssr,
   };
 
   let { configFile } = config;
+  // configFile为undefined时，会在loadConfigFromFile中自动寻找
   if (configFile !== false) {
     const loadResult = await loadConfigFromFile(
       configEnv,
-      configFile,
+      // configFile,
       config.root,
       config.logLevel
     );
@@ -200,7 +201,6 @@ export async function resolveConfig(
     }
   }
 
-  mode = inlineConfig.mode || config.mode || mode;
   configEnv.mode = mode;
 
   const filterPlugin = (p: Plugin) => {
@@ -263,18 +263,20 @@ export async function resolveConfig(
   );
 
   const resolveOptions: ResolvedConfig["resolve"] = {
-    mainFields: config.resolve?.mainFields ?? DEFAULT_MAIN_FIELDS,
-    browserField: config.resolve?.browserField ?? true,
-    conditions: config.resolve?.conditions ?? [],
-    extensions: config.resolve?.extensions ?? DEFAULT_EXTENSIONS,
-    dedupe: config.resolve?.dedupe ?? [],
-    preserveSymlinks: config.resolve?.preserveSymlinks ?? false,
+    mainFields: DEFAULT_MAIN_FIELDS,
+    // browserField: config.resolve?.browserField ?? true,
+    conditions: [],
+    extensions: DEFAULT_EXTENSIONS,
+    dedupe: [],
+    preserveSymlinks: false,
     alias: resolvedAlias,
   };
 
-  const envDir = config.envDir
-    ? normalizePath(path.resolve(resolvedRoot, config.envDir))
-    : resolvedRoot;
+  const envDir =
+    //  config.envDir
+    //   ? normalizePath(path.resolve(resolvedRoot, config.envDir))
+    // :
+    resolvedRoot;
   // inlineConfig.envFile !== false &&
   // loadEnv(mode, envDir, resolveEnvPrefix(config));
   // DELETE
@@ -612,7 +614,7 @@ export function sortUserPlugins(
 /**根据相关目录获取配置文件 */
 export async function loadConfigFromFile(
   configEnv: ConfigEnv,
-  configFile?: string,
+  // configFile?: string,
   configRoot: string = process.cwd(),
   logLevel?: LogLevel
 ): Promise<{
@@ -622,44 +624,44 @@ export async function loadConfigFromFile(
 } | null> {
   let resolvedPath: string | undefined;
   // configFile === undefined, 有配置文件就直接解析出路径
-  if (configFile) {
-    resolvedPath = path.resolve(configFile);
-  } else {
-    // entry point
-    // 没有配置文件，就遍历默认配置文件 DEFAULT_CONFIG_FILES  'vite.config.js',
-    for (const filename of DEFAULT_CONFIG_FILES) {
-      const filePath = path.resolve(configRoot, filename);
-      //fs.existsSync() 同步方法用于检测文件是否存在，返回布尔值类型
-      if (!fs.existsSync(filePath)) continue;
-      resolvedPath = filePath;
-      break;
-    }
+  // if (configFile) {
+  //   resolvedPath = path.resolve(configFile);
+  // } else {
+  // entry point
+  // 没有配置文件，就遍历默认配置文件 DEFAULT_CONFIG_FILES  'vite.config.js',
+  for (const filename of DEFAULT_CONFIG_FILES) {
+    const filePath = path.resolve(configRoot, filename);
+    //fs.existsSync() 同步方法用于检测文件是否存在，返回布尔值类型
+    if (!fs.existsSync(filePath)) continue;
+    resolvedPath = filePath;
+    break;
   }
+  // }
   if (!resolvedPath) {
     debug?.("no config file found.");
     return null;
   }
   // 判断是否是esm模块
   let isESM = false;
-  if (/\.m[jt]s$/.test(resolvedPath)) {
-    isESM = true;
-  } else if (/\.c[jt]s$/.test(resolvedPath)) {
-    isESM = false;
-  } else {
-    // entry point
-    try {
-      const pkg = lookupFile(configRoot, ["package.json"]);
-      isESM =
-        !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
-    } catch (e) {}
-  }
+  // if (/\.m[jt]s$/.test(resolvedPath)) {
+  //   isESM = true;
+  // } else if (/\.c[jt]s$/.test(resolvedPath)) {
+  //   isESM = false;
+  // } else {
+  // entry point
+  try {
+    const pkg = lookupFile(configRoot, ["package.json"]);
+    isESM =
+      !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
+  } catch (e) {}
+  // }
 
   try {
     const bundled = await bundleConfigFile(resolvedPath, isESM);
     const userConfig = await loadConfigFromBundledFile(
       resolvedPath,
       bundled.code,
-      isESM
+      // isESM
     );
     const config = await (typeof userConfig === "function"
       ? userConfig(configEnv)
@@ -716,7 +718,7 @@ async function bundleConfigFile(
             preferRelative: false,
             tryIndex: true,
             mainFields: [],
-            browserField: false,
+            // browserField: false,
             conditions: [],
             overrideConditions: ["node"],
             dedupe: [],
@@ -788,41 +790,41 @@ async function bundleConfigFile(
   };
 }
 
-const _require = createRequire(import.meta.url);
+// const _require = createRequire(import.meta.url);
 async function loadConfigFromBundledFile(
   fileName: string,
   bundledCode: string,
-  isESM: boolean
+  // isESM: boolean
 ): Promise<UserConfigExport> {
-  if (isESM) {
-    const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
-      .toString(16)
-      .slice(2)}`;
-    const fileNameTmp = `${fileBase}.mjs`;
-    const fileUrl = `${pathToFileURL(fileBase)}.mjs`;
-    await fsp.writeFile(fileNameTmp, bundledCode);
-    try {
-      return (await dynamicImport(fileUrl)).default;
-    } finally {
-      fs.unlink(fileNameTmp, () => {});
-    }
-  } else {
-    const extension = path.extname(fileName);
-    const realFileName = await promisifiedRealpath(fileName);
-    const loaderExt = extension in _require.extensions ? extension : ".js";
-    const defaultLoader = _require.extensions[loaderExt]!;
-    _require.extensions[loaderExt] = (module: NodeModule, filename: string) => {
-      if (filename === realFileName) {
-        (module as NodeModuleWithCompile)._compile(bundledCode, filename);
-      } else {
-        defaultLoader(module, filename);
-      }
-    };
-    delete _require.cache[_require.resolve(fileName)];
-    const raw = _require(fileName);
-    _require.extensions[loaderExt] = defaultLoader;
-    return raw.__esModule ? raw.default : raw;
+  // if (isESM) {
+  const fileBase = `${fileName}.timestamp-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}`;
+  const fileNameTmp = `${fileBase}.mjs`;
+  const fileUrl = `${pathToFileURL(fileBase)}.mjs`;
+  await fsp.writeFile(fileNameTmp, bundledCode);
+  try {
+    return (await dynamicImport(fileUrl)).default;
+  } finally {
+    fs.unlink(fileNameTmp, () => {});
   }
+  // } else {
+  //   const extension = path.extname(fileName);
+  //   const realFileName = await promisifiedRealpath(fileName);
+  //   const loaderExt = extension in _require.extensions ? extension : ".js";
+  //   const defaultLoader = _require.extensions[loaderExt]!;
+  //   _require.extensions[loaderExt] = (module: NodeModule, filename: string) => {
+  //     if (filename === realFileName) {
+  //       (module as NodeModuleWithCompile)._compile(bundledCode, filename);
+  //     } else {
+  //       defaultLoader(module, filename);
+  //     }
+  //   };
+  //   delete _require.cache[_require.resolve(fileName)];
+  //   const raw = _require(fileName);
+  //   _require.extensions[loaderExt] = defaultLoader;
+  //   return raw.__esModule ? raw.default : raw;
+  // }
 }
 
 export function getDepOptimizationConfig(

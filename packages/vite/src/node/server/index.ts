@@ -31,7 +31,7 @@ import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
 import { bindShortcuts, BindShortcutsOptions } from "../shortcuts";
 import { getDepsOptimizer, initDepsOptimizer } from "../optimizer/optimizer";
 import type * as net from "node:net";
-import { openBrowser as _openBrowser } from "./openBrowser";
+// import { openBrowser as _openBrowser } from "./openBrowser";
 import { transformRequest } from "./transformRequest";
 import {
   createDevHtmlTransformFn,
@@ -93,7 +93,7 @@ export interface ViteDevServer {
   _importGlobMap: Map<string, string[][]>;
   _shortcutsOptions: any | undefined;
   close(): Promise<void>;
-  openBrowser(): void;
+  // openBrowser(): void;
   transformIndexHtml(
     url: string,
     html: string,
@@ -238,7 +238,7 @@ export async function _createServer(
       return transformRequest(url, server, options);
     },
     transformIndexHtml: null!,
-    async listen(port?: number, isRestart?: boolean) {
+    async listen(port?: number) {
       await startServer(server, port);
       if (httpServer) {
         server.resolvedUrls = await resolveServerUrls(
@@ -258,20 +258,20 @@ export async function _createServer(
         );
       }
     },
-    openBrowser() {
-      const options = server.config.server;
-      const url = server.resolvedUrls?.local[0];
-      if (url) {
-        const path =
-          typeof options.open === "string"
-            ? new URL(options.open, url).href
-            : url;
+    // openBrowser() {
+    //   const options = server.config.server;
+    //   const url = server.resolvedUrls?.local[0];
+    //   if (url) {
+    //     const path =
+    //       typeof options.open === "string"
+    //         ? new URL(options.open, url).href
+    //         : url;
 
-        _openBrowser(path, true, server.config.logger);
-      } else {
-        server.config.logger.warn("No URL available to open in browser");
-      }
-    },
+    //     _openBrowser(path, true, server.config.logger);
+    //   } else {
+    //     server.config.logger.warn("No URL available to open in browser");
+    //   }
+    // },
     async close() {
       if (!middlewareMode) {
         process.off("SIGTERM", exitProcess);
@@ -340,7 +340,7 @@ export async function _createServer(
   });
 
   middlewares.use(errorMiddleware(server, middlewareMode));
-  // 是否正在初始化服务器
+  // 初始化服务器
   let initingServer: Promise<void> | undefined;
   let serverInited = false;
   const initServer = async () => {

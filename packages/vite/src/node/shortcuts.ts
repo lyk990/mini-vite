@@ -18,13 +18,13 @@ const BASE_SHORTCUTS: CLIShortcut[] = [
       server.printUrls();
     },
   },
-  {
-    key: "o",
-    description: "open in browser",
-    action(server) {
-      server.openBrowser();
-    },
-  },
+  // {
+  //   key: "o",
+  //   description: "open in browser",
+  //   action(server) {
+  //     server.openBrowser();
+  //   },
+  // },
   // {
   //   key: "c",
   //   description: "clear console",
