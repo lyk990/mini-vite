@@ -63,17 +63,17 @@ import type { ProxyOptions } from "./server/middlewares/proxy";
 import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
 // import { loadEnv, resolveEnvPrefix } from "./env";
 // import { resolveSSROptions } from "./ssr";
-import { RollupOptions } from "rollup";
+// import { RollupOptions } from "rollup";
 
 const debug = createDebugger("vite:config");
 // const promisifiedRealpath = promisify(fs.realpath);
 
 export type CorsOrigin = boolean | string | RegExp | (string | RegExp)[];
-export interface ResolveWorkerOptions extends PluginHookUtils {
-  format: "es" | "iife";
-  plugins: Plugin[];
-  rollupOptions: RollupOptions;
-}
+// export interface ResolveWorkerOptions extends PluginHookUtils {
+//   format: "es" | "iife";
+//   plugins: Plugin[];
+//   rollupOptions: RollupOptions;
+// }
 
 export interface CorsOptions {
   origin?:
