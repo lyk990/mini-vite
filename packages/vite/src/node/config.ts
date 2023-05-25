@@ -660,7 +660,7 @@ export async function loadConfigFromFile(
     const bundled = await bundleConfigFile(resolvedPath, isESM);
     const userConfig = await loadConfigFromBundledFile(
       resolvedPath,
-      bundled.code,
+      bundled.code
       // isESM
     );
     const config = await (typeof userConfig === "function"
@@ -698,7 +698,7 @@ async function bundleConfigFile(
     target: ["node14.18", "node16"],
     platform: "node",
     bundle: true,
-    format: isESM ? "esm" : "cjs",
+    format: "esm",
     mainFields: ["main"],
     sourcemap: "inline",
     metafile: true,
@@ -793,7 +793,7 @@ async function bundleConfigFile(
 // const _require = createRequire(import.meta.url);
 async function loadConfigFromBundledFile(
   fileName: string,
-  bundledCode: string,
+  bundledCode: string
   // isESM: boolean
 ): Promise<UserConfigExport> {
   // if (isESM) {
