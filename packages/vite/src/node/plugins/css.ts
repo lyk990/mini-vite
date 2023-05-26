@@ -325,9 +325,9 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
               isSelfAccepting,
               ssr
             );
-            for (const file of deps) {
-              this.addWatchFile(file);
-            }
+            // for (const file of deps) {
+            //   this.addWatchFile(file);
+            // }
           } else {
             thisModule.isSelfAccepting = isSelfAccepting;
           }

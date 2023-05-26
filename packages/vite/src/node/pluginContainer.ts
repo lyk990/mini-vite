@@ -25,7 +25,7 @@ import { join } from "path";
 import { VERSION as rollupVersion } from "rollup";
 import { Plugin } from "./plugin";
 import {
-  arraify,
+  // arraify,
   cleanUrl,
   combineSourcemaps,
   createDebugger,
@@ -35,17 +35,17 @@ import {
   prettifyUrl,
   timeFrom,
 } from "./utils";
-import { FS_PREFIX } from "./constants";
-import MagicString from "magic-string";
+// import { FS_PREFIX } from "./constants";
+// import MagicString from "magic-string";
 import * as acorn from "acorn";
-import colors from "picocolors";
+// import colors from "picocolors";
 import type { RawSourceMap } from "@ampproject/remapping";
 
 type PluginContext = Omit<RollupPluginContext, "cache" | "moduleIds">;
-const debugResolve = createDebugger("vite:resolve");
-const debugSourcemapCombine = createDebugger("vite:sourcemap-combine", {
-  onlyWhenFocused: true,
-});
+// const debugResolve = createDebugger("vite:resolve");
+// const debugSourcemapCombine = createDebugger("vite:sourcemap-combine", {
+//   onlyWhenFocused: true,
+// });
 
 const debugPluginResolve = createDebugger("vite:plugin-resolve", {
   onlyWhenFocused: "vite:plugin",
@@ -53,8 +53,8 @@ const debugPluginResolve = createDebugger("vite:plugin-resolve", {
 
 export let parser = acorn.Parser;
 
-const debugSourcemapCombineFilter =
-  process.env.DEBUG_VITE_SOURCEMAP_COMBINE_FILTER;
+// const debugSourcemapCombineFilter =
+//   process.env.DEBUG_VITE_SOURCEMAP_COMBINE_FILTER;
 export interface PluginContainer {
   options: InputOptions;
   getModuleInfo(id: string): ModuleInfo | null;
@@ -101,7 +101,7 @@ export async function createPluginContainer(
   const { getSortedPlugins, getSortedPluginHooks } =
     createPluginHookUtils(plugins);
 
-  const seenResolves: Record<string, true | undefined> = {};
+  // const seenResolves: Record<string, true | undefined> = {};
 
   const minimalContext: MinimalPluginContext = {
     meta: {
@@ -254,24 +254,24 @@ export async function createPluginContainer(
       this.filename = filename;
       this.originalCode = code;
       if (inMap) {
-        if (debugSourcemapCombine) {
-          // @ts-expect-error inject name for debug purpose
-          inMap.name = "$inMap";
-        }
+        // if (debugSourcemapCombine) {
+        //   // @ts-expect-error inject name for debug purpose
+        //   inMap.name = "$inMap";
+        // }
         this.sourcemapChain.push(inMap);
       }
     }
 
     _getCombinedSourcemap(createIfNull = false) {
-      if (
-        debugSourcemapCombine &&
-        debugSourcemapCombineFilter &&
-        this.filename.includes(debugSourcemapCombineFilter)
-      ) {
-        debugSourcemapCombine("----------", this.filename);
-        debugSourcemapCombine(this.combinedMap);
-        debugSourcemapCombine(this.sourcemapChain);
-      }
+      // if (
+      //   debugSourcemapCombine &&
+      //   debugSourcemapCombineFilter &&
+      //   this.filename.includes(debugSourcemapCombineFilter)
+      // ) {
+      //   debugSourcemapCombine("----------", this.filename);
+      //   debugSourcemapCombine(this.combinedMap);
+      //   debugSourcemapCombine(this.sourcemapChain);
+      // }
 
       let combinedMap = this.combinedMap;
       for (let m of this.sourcemapChain) {
@@ -294,13 +294,14 @@ export async function createPluginContainer(
         }
       }
       if (!combinedMap) {
-        return createIfNull
-          ? new MagicString(this.originalCode).generateMap({
-              includeContent: true,
-              hires: true,
-              source: cleanUrl(this.filename),
-            })
-          : null;
+        return null;
+        // createIfNull
+        //   ? new MagicString(this.originalCode).generateMap({
+        //       includeContent: true,
+        //       hires: true,
+        //       source: cleanUrl(this.filename),
+        //     })
+        //   :
       }
       if (combinedMap !== this.combinedMap) {
         this.combinedMap = combinedMap;
@@ -309,9 +310,9 @@ export async function createPluginContainer(
       return this.combinedMap;
     }
 
-    getCombinedSourcemap() {
-      return this._getCombinedSourcemap(true) as SourceMap;
-    }
+    // getCombinedSourcemap() {
+    //   return this._getCombinedSourcemap(true) as SourceMap;
+    // }
   }
 
   const container: PluginContainer = {
@@ -320,14 +321,14 @@ export async function createPluginContainer(
       for (const optionsHook of getSortedPluginHooks("options")) {
         options = (await optionsHook.call(minimalContext, options)) || options;
       }
-      if (options.acornInjectPlugins) {
-        parser = acorn.Parser.extend(
-          ...(arraify(options.acornInjectPlugins) as any)
-        );
-      }
+      // if (options.acornInjectPlugins) {
+      //   parser = acorn.Parser.extend(
+      //     ...(arraify(options.acornInjectPlugins) as any)
+      //   );
+      // }
       return {
         acorn,
-        acornInjectPlugins: [],
+        // acornInjectPlugins: [],
         ...options,
       };
     })(),
@@ -350,7 +351,7 @@ export async function createPluginContainer(
       ctx.ssr = !!ssr;
       ctx._scan = scan;
       ctx._resolveSkips = skip;
-      const resolveStart = debugResolve ? performance.now() : 0;
+      // const resolveStart = debugResolve ? performance.now() : 0;
 
       let id: string | null = null;
       const partial: Partial<PartialResolvedId> = {};
@@ -390,17 +391,17 @@ export async function createPluginContainer(
         break;
       }
 
-      if (debugResolve && rawId !== id && !rawId.startsWith(FS_PREFIX)) {
-        const key = rawId + id;
-        if (!seenResolves[key]) {
-          seenResolves[key] = true;
-          debugResolve(
-            `${timeFrom(resolveStart)} ${colors.cyan(rawId)} -> ${colors.dim(
-              id
-            )}`
-          );
-        }
-      }
+      // if (debugResolve && rawId !== id && !rawId.startsWith(FS_PREFIX)) {
+      //   const key = rawId + id;
+      //   if (!seenResolves[key]) {
+      //     seenResolves[key] = true;
+      //     debugResolve(
+      //       `${timeFrom(resolveStart)} ${colors.cyan(rawId)} -> ${colors.dim(
+      //         id
+      //       )}`
+      //     );
+      //   }
+      // }
 
       if (id) {
         partial.id = isExternalUrl(id) ? id : normalizePath(id);
@@ -454,10 +455,10 @@ export async function createPluginContainer(
           if (result.code !== undefined) {
             code = result.code;
             if (result.map) {
-              if (debugSourcemapCombine) {
-                // @ts-expect-error inject plugin name for debug purpose
-                result.map.name = plugin.name;
-              }
+              // if (debugSourcemapCombine) {
+              //   // @ts-expect-error inject plugin name for debug purpose
+              //   result.map.name = plugin.name;
+              // }
               ctx.sourcemapChain.push(result.map);
             }
           }

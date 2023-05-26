@@ -55,6 +55,7 @@ export async function resolvePlugins(
 export function createPluginHookUtils(
   plugins: readonly Plugin[]
 ): PluginHookUtils {
+  
   const sortedPluginsCache = new Map<keyof Plugin, Plugin[]>();
   function getSortedPlugins(hookName: keyof Plugin): Plugin[] {
     if (sortedPluginsCache.has(hookName))
@@ -63,6 +64,7 @@ export function createPluginHookUtils(
     sortedPluginsCache.set(hookName, sorted);
     return sorted;
   }
+
   function getSortedPluginHooks<K extends keyof Plugin>(
     hookName: K
   ): NonNullable<HookHandler<Plugin[K]>>[] {

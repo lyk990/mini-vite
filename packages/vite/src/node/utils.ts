@@ -195,9 +195,9 @@ export async function asyncFlatten<T>(arr: T[]): Promise<T[]> {
   return arr;
 }
 
-export function arraify<T>(target: T | T[]): T[] {
-  return Array.isArray(target) ? target : [target];
-}
+// export function arraify<T>(target: T | T[]): T[] {
+//   return Array.isArray(target) ? target : [target];
+// }
 
 export function joinUrlSegments(a: string, b: string): string {
   if (!a || !b) {
