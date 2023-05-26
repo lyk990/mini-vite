@@ -506,7 +506,7 @@ function windowsMappedRealpathSync(path: string) {
   }
   return realPath;
 }
-
+/**NOTE:优化获取真实路径 */
 function optimizeSafeRealPathSync() {
   const nodeVersion = process.versions.node.split(".").map(Number);
   if (nodeVersion[0] < 16 || (nodeVersion[0] === 16 && nodeVersion[1] < 18)) {
@@ -663,7 +663,7 @@ export function fsPathFromUrl(url: string): string {
 }
 
 export function transformStableResult(
-  s: MagicString,
+  s: MagicString
   // id: string,
   // config: ResolvedConfig
 ): TransformResult {

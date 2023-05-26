@@ -10,7 +10,7 @@ import {
   bareImportRE,
   cleanUrl,
   createDebugger,
-  deepImportRE,
+  // deepImportRE,
   fsPathFromId,
   injectQuery,
   isBuiltin,
@@ -18,7 +18,7 @@ import {
   isExternalUrl,
   isInNodeModules,
   isNonDriveRelativeAbsolutePath,
-  isObject,
+  // isObject,
   isOptimizable,
   isTsRequest,
   isWindows,
@@ -31,18 +31,18 @@ import path from "path";
 import { PartialResolvedId } from "rollup";
 import {
   CLIENT_ENTRY,
-  DEFAULT_EXTENSIONS,
-  DEFAULT_MAIN_FIELDS,
+  // DEFAULT_EXTENSIONS,
+  // DEFAULT_MAIN_FIELDS,
   DEP_VERSION_RE,
   ENV_ENTRY,
   FS_PREFIX,
-  OPTIMIZABLE_ENTRY_RE,
-  SPECIAL_QUERY_RE,
+  // OPTIMIZABLE_ENTRY_RE,
+  // SPECIAL_QUERY_RE,
 } from "../constants";
 import colors from "picocolors";
 import { optimizedDepInfoFromFile, optimizedDepInfoFromId } from "../optimizer";
 import fs from "node:fs";
-import { findNearestMainPackageData, resolvePackageData } from "../packages";
+import { resolvePackageData } from "../packages";
 import { exports, imports } from "resolve.exports";
 // import { hasESMSyntax } from "mlly";
 import type { DepsOptimizer } from "../optimizer";
@@ -297,10 +297,10 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
             id,
             importer,
             options,
-            targetWeb,
-            depsOptimizer,
-            ssr,
-            external
+            targetWeb
+            // depsOptimizer
+            // ssr,
+            // external
           ))
         ) {
           return res;
@@ -374,21 +374,24 @@ export function tryNodeResolve(
   id: string,
   importer: string | null | undefined,
   options: InternalResolveOptionsWithOverrideConditions,
-  targetWeb: boolean,
-  depsOptimizer?: DepsOptimizer,
-  ssr: boolean = false,
-  externalize?: boolean,
-  allowLinkedExternal: boolean = true
+  targetWeb: boolean
+  // depsOptimizer?: DepsOptimizer
+  // ssr: boolean = false,
+  // externalize?: boolean,
+  // allowLinkedExternal: boolean = true
 ): PartialResolvedId | undefined {
-  const { root, dedupe, isBuild, preserveSymlinks, packageCache } = options;
+  const { root, preserveSymlinks, packageCache } = options;
 
-  const deepMatch = id.match(deepImportRE);
-  const pkgId = deepMatch ? deepMatch[1] || deepMatch[2] : id;
+  // const deepMatch = id.match(deepImportRE);
+  const pkgId =
+    // deepMatch ? deepMatch[1] || deepMatch[2] :
+    id;
 
   let basedir: string;
-  if (dedupe?.includes(pkgId)) {
-    basedir = root;
-  } else if (
+  // if (dedupe?.includes(pkgId)) {
+  //   basedir = root;
+  // } else
+  if (
     importer &&
     path.isAbsolute(importer) &&
     (importer[importer.length - 1] === "*" || fs.existsSync(cleanUrl(importer)))
@@ -404,30 +407,35 @@ export function tryNodeResolve(
     preserveSymlinks,
     packageCache
   );
-  if (!pkg) {
-    if (
-      basedir !== root &&
-      !isBuiltin(id) &&
-      !id.includes("\0") &&
-      bareImportRE.test(id)
-    ) {
-      const mainPkg = findNearestMainPackageData(basedir, packageCache)?.data;
-      if (mainPkg) {
-        if (
-          mainPkg.peerDependencies?.[id] &&
-          mainPkg.peerDependenciesMeta?.[id]?.optional
-        ) {
-          return {
-            id: `${optionalPeerDepId}:${id}:${mainPkg.name}`,
-          };
-        }
-      }
-    }
-    return;
-  }
-
-  const resolveId = deepMatch ? resolveDeepImport : resolvePackageEntry;
-  const unresolvedId = deepMatch ? "." + id.slice(pkgId.length) : pkgId;
+  if (!pkg)
+    throw new Error(`cannot find package.json for module ${id} in ${basedir}`);
+  // if (!pkg) {
+  //   if (
+  //     basedir !== root &&
+  //     !isBuiltin(id) &&
+  //     !id.includes("\0") &&
+  //     bareImportRE.test(id)
+  //   ) {
+  //     const mainPkg = findNearestMainPackageData(basedir, packageCache)?.data;
+  //     if (mainPkg) {
+  //       if (
+  //         mainPkg.peerDependencies?.[id] &&
+  //         mainPkg.peerDependenciesMeta?.[id]?.optional
+  //       ) {
+  //         return {
+  //           id: `${optionalPeerDepId}:${id}:${mainPkg.name}`,
+  //         };
+  //       }
+  //     }
+  //   }
+  //   return;
+  // }
+  const resolveId =
+    // deepMatch ? resolveDeepImport :
+    resolvePackageEntry;
+  const unresolvedId =
+    // deepMatch ? "." + id.slice(pkgId.length) :
+    pkgId;
 
   let resolved: string | undefined;
   try {
@@ -437,114 +445,114 @@ export function tryNodeResolve(
       throw err;
     }
   }
-  if (!resolved && options.tryEsmOnly) {
-    resolved = resolveId(unresolvedId, pkg, targetWeb, {
-      ...options,
-      isRequire: false,
-      mainFields: DEFAULT_MAIN_FIELDS,
-      extensions: DEFAULT_EXTENSIONS,
-    });
-  }
-  if (!resolved) {
-    return;
-  }
-
-  const processResult = (resolved: PartialResolvedId) => {
-    if (!externalize) {
-      return resolved;
-    }
-    if (!allowLinkedExternal && !isInNodeModules(resolved.id)) {
-      return resolved;
-    }
-    const resolvedExt = path.extname(resolved.id);
-    if (
-      resolvedExt &&
-      resolvedExt !== ".js" &&
-      resolvedExt !== ".mjs" &&
-      resolvedExt !== ".cjs"
-    ) {
-      return resolved;
-    }
-    let resolvedId = id;
-    if (deepMatch && !pkg?.data.exports && path.extname(id) !== resolvedExt) {
-      const index = resolved.id.indexOf(id);
-      if (index > -1) {
-        resolvedId = resolved.id.slice(index);
-        debug?.(
-          `[processResult] ${colors.cyan(id)} -> ${colors.dim(resolvedId)}`
-        );
-      }
-    }
-    return { ...resolved, id: resolvedId, external: true };
-  };
-
-  if (
-    !options.idOnly &&
-    ((!options.scan && isBuild && !depsOptimizer) || externalize)
-  ) {
-    return processResult({
-      id: resolved,
-      moduleSideEffects: pkg.hasSideEffects(resolved),
-    });
-  }
-
-  const ext = path.extname(resolved);
-
-  if (
-    !options.ssrOptimizeCheck &&
-    (!isInNodeModules(resolved) || !depsOptimizer || options.scan)
-  ) {
-    return { id: resolved };
-  }
-
-  const isJsType = depsOptimizer
-    ? isOptimizable(resolved, depsOptimizer.options)
-    : OPTIMIZABLE_ENTRY_RE.test(resolved);
-
-  let exclude = depsOptimizer?.options.exclude;
-  let include = depsOptimizer?.options.include;
-  // DELETE
-  // if (options.ssrOptimizeCheck) {
-  //   exclude = options.ssrConfig?.optimizeDeps?.exclude;
-  //   include = options.ssrConfig?.optimizeDeps?.include;
+  // if (!resolved && options.tryEsmOnly) {
+  //   resolved = resolveId(unresolvedId, pkg, targetWeb, {
+  //     ...options,
+  //     isRequire: false,
+  //     mainFields: DEFAULT_MAIN_FIELDS,
+  //     extensions: DEFAULT_EXTENSIONS,
+  //   });
   // }
-  //  REMOVE 有没有可能将这一段逻辑移除
-  const skipOptimization =
-    depsOptimizer?.options.noDiscovery ||
-    !isJsType ||
-    (importer && isInNodeModules(importer)) ||
-    exclude?.includes(pkgId) ||
-    exclude?.includes(id) ||
-    SPECIAL_QUERY_RE.test(resolved) ||
-    (!options.ssrOptimizeCheck && !isBuild && ssr) ||
-    (ssr &&
-      !(
-        ext === ".cjs" ||
-        (ext === ".js" &&
-          findNearestPackageData(path.dirname(resolved), options.packageCache)
-            ?.data.type !== "module")
-      ) &&
-      !(include?.includes(pkgId) || include?.includes(id)));
-
-  if (options.ssrOptimizeCheck) {
-    return {
-      id: skipOptimization
-        ? injectQuery(resolved, `__vite_skip_optimization`)
-        : resolved,
-    };
+  if (!resolved) {
+    throw new Error(`cannot resolve PackageData`);
   }
 
-  if (skipOptimization) {
-    if (!isBuild) {
-      const versionHash = depsOptimizer!.metadata.browserHash;
-      if (versionHash && isJsType) {
-        resolved = injectQuery(resolved, `v=${versionHash}`);
-      }
-    }
-  } else {
-    const optimizedInfo = depsOptimizer!.registerMissingImport(id, resolved);
-    resolved = depsOptimizer!.getOptimizedDepId(optimizedInfo);
-  }
+  // const processResult = (resolved: PartialResolvedId) => {
+  //   if (!externalize) {
+  //     return resolved;
+  //   }
+  //   if (!allowLinkedExternal && !isInNodeModules(resolved.id)) {
+  //     return resolved;
+  //   }
+  //   const resolvedExt = path.extname(resolved.id);
+  //   if (
+  //     resolvedExt &&
+  //     resolvedExt !== ".js" &&
+  //     resolvedExt !== ".mjs" &&
+  //     resolvedExt !== ".cjs"
+  //   ) {
+  //     return resolved;
+  //   }
+  //   let resolvedId = id;
+  //   if (deepMatch && !pkg?.data.exports && path.extname(id) !== resolvedExt) {
+  //     const index = resolved.id.indexOf(id);
+  //     if (index > -1) {
+  //       resolvedId = resolved.id.slice(index);
+  //       debug?.(
+  //         `[processResult] ${colors.cyan(id)} -> ${colors.dim(resolvedId)}`
+  //       );
+  //     }
+  //   }
+  //   return { ...resolved, id: resolvedId, external: true };
+  // };
+
+  // if (
+  //   !options.idOnly &&
+  //   ((!options.scan && isBuild && !depsOptimizer) || externalize)
+  // ) {
+  //   return processResult({
+  //     id: resolved,
+  //     moduleSideEffects: pkg.hasSideEffects(resolved),
+  //   });
+  // }
+
+  // const ext = path.extname(resolved);
+
+  // if (
+  //   !options.ssrOptimizeCheck &&
+  //   (!isInNodeModules(resolved) || !depsOptimizer || options.scan)
+  // ) {
+  return { id: resolved };
+  // }
+
+  // const isJsType = depsOptimizer
+  //   ? isOptimizable(resolved, depsOptimizer.options)
+  //   : OPTIMIZABLE_ENTRY_RE.test(resolved);
+
+  // let exclude = depsOptimizer?.options.exclude;
+  // // let include = depsOptimizer?.options.include;
+  // // DELETE
+  // // if (options.ssrOptimizeCheck) {
+  // //   exclude = options.ssrConfig?.optimizeDeps?.exclude;
+  // //   include = options.ssrConfig?.optimizeDeps?.include;
+  // // }
+  // const skipOptimization =
+  //   depsOptimizer?.options.noDiscovery ||
+  //   !isJsType ||
+  //   (importer && isInNodeModules(importer)) ||
+  //   exclude?.includes(pkgId) ||
+  //   exclude?.includes(id) ||
+  //   SPECIAL_QUERY_RE.test(resolved);
+  // ||
+  // (!options.ssrOptimizeCheck && !isBuild && ssr) ||
+  // (ssr &&
+  //   !(
+  //     ext === ".cjs" ||
+  //     (ext === ".js" &&
+  //       findNearestPackageData(path.dirname(resolved), options.packageCache)
+  //         ?.data.type !== "module")
+  //   ) &&
+  //   !(include?.includes(pkgId) || include?.includes(id)));
+
+  // if (options.ssrOptimizeCheck) {
+  //   return {
+  //     id: skipOptimization
+  //       ? injectQuery(resolved, `__vite_skip_optimization`)
+  //       : resolved,
+  //   };
+  // }
+
+  // if (skipOptimization) {
+  //   if (!isBuild) {
+  //     const versionHash = depsOptimizer!.metadata.browserHash;
+  //     if (versionHash && isJsType) {
+  //       resolved = injectQuery(resolved, `v=${versionHash}`);
+  //     }
+  //   }
+  // } else {
+  //   const optimizedInfo = depsOptimizer!.registerMissingImport(id, resolved);
+  //   resolved = depsOptimizer!.getOptimizedDepId(optimizedInfo);
+  // }
 
   // if (!options.idOnly && !options.scan && isBuild) {
   //   return {
@@ -552,7 +560,7 @@ export function tryNodeResolve(
   //     moduleSideEffects: pkg.hasSideEffects(resolved),
   //   };
   // } else {
-  return { id: resolved! };
+  // return { id: resolved! };
   // }
 }
 const subpathImportsPrefix = "#";
@@ -798,77 +806,77 @@ export async function tryOptimizedResolve(
   }
 }
 
-function resolveDeepImport(
-  id: string,
-  {
-    webResolvedImports,
-    setResolvedCache,
-    getResolvedCache,
-    dir,
-    data,
-  }: PackageData,
-  targetWeb: boolean,
-  options: InternalResolveOptions
-): string | undefined {
-  const cache = getResolvedCache(id, targetWeb);
-  if (cache) {
-    return cache;
-  }
+// function resolveDeepImport(
+//   id: string,
+//   {
+//     webResolvedImports,
+//     setResolvedCache,
+//     getResolvedCache,
+//     dir,
+//     data,
+//   }: PackageData,
+//   targetWeb: boolean,
+//   options: InternalResolveOptions
+// ): string | undefined {
+//   const cache = getResolvedCache(id, targetWeb);
+//   if (cache) {
+//     return cache;
+//   }
 
-  let relativeId: string | undefined | void = id;
-  const { exports: exportsField } = data;
+//   let relativeId: string | undefined | void = id;
+//   const { exports: exportsField } = data;
 
-  if (exportsField) {
-    if (isObject(exportsField) && !Array.isArray(exportsField)) {
-      const { file, postfix } = splitFileAndPostfix(relativeId);
-      const exportsId = resolveExportsOrImports(
-        data,
-        file,
-        options,
-        targetWeb,
-        "exports"
-      );
-      if (exportsId !== undefined) {
-        relativeId = exportsId + postfix;
-      } else {
-        relativeId = undefined;
-      }
-    } else {
-      relativeId = undefined;
-    }
-    if (!relativeId) {
-      throw new Error(
-        `Package subpath '${relativeId}' is not defined by "exports" in ` +
-          `${path.join(dir, "package.json")}.`
-      );
-    }
-  }
-  // else if (targetWeb && options.browserField && isObject(browserField)) {
-  //   const { file, postfix } = splitFileAndPostfix(relativeId);
-  //   const mapped = mapWithBrowserField(file, browserField);
-  //   if (mapped) {
-  //     relativeId = mapped + postfix;
-  //   } else if (mapped === false) {
-  //     return (webResolvedImports[id] = browserExternalId);
-  //   }
-  // }
+//   if (exportsField) {
+//     if (isObject(exportsField) && !Array.isArray(exportsField)) {
+//       const { file, postfix } = splitFileAndPostfix(relativeId);
+//       const exportsId = resolveExportsOrImports(
+//         data,
+//         file,
+//         options,
+//         targetWeb,
+//         "exports"
+//       );
+//       if (exportsId !== undefined) {
+//         relativeId = exportsId + postfix;
+//       } else {
+//         relativeId = undefined;
+//       }
+//     } else {
+//       relativeId = undefined;
+//     }
+//     if (!relativeId) {
+//       throw new Error(
+//         `Package subpath '${relativeId}' is not defined by "exports" in ` +
+//           `${path.join(dir, "package.json")}.`
+//       );
+//     }
+//   }
+//   // else if (targetWeb && options.browserField && isObject(browserField)) {
+//   //   const { file, postfix } = splitFileAndPostfix(relativeId);
+//   //   const mapped = mapWithBrowserField(file, browserField);
+//   //   if (mapped) {
+//   //     relativeId = mapped + postfix;
+//   //   } else if (mapped === false) {
+//   //     return (webResolvedImports[id] = browserExternalId);
+//   //   }
+//   // }
 
-  if (relativeId) {
-    const resolved = tryFsResolve(
-      path.join(dir, relativeId),
-      options,
-      !exportsField,
-      targetWeb
-    );
-    if (resolved) {
-      debug?.(
-        `[node/deep-import] ${colors.cyan(id)} -> ${colors.dim(resolved)}`
-      );
-      setResolvedCache(id, resolved, targetWeb);
-      return resolved;
-    }
-  }
-}
+//   if (relativeId) {
+//     const resolved = tryFsResolve(
+//       path.join(dir, relativeId),
+//       options,
+//       !exportsField,
+//       targetWeb
+//     );
+//     if (resolved) {
+//       debug?.(
+//         `[node/deep-import] ${colors.cyan(id)} -> ${colors.dim(resolved)}`
+//       );
+//       setResolvedCache(id, resolved, targetWeb);
+//       return resolved;
+//     }
+//   }
+// }
 
 export function resolvePackageEntry(
   id: string,
@@ -946,13 +954,13 @@ export function resolvePackageEntry(
 
     for (let entry of entryPoints) {
       let skipPackageJson = false;
-      if (
-        options.mainFields[0] === "sass" &&
-        !options.extensions.includes(path.extname(entry))
-      ) {
-        entry = "";
-        skipPackageJson = true;
-      }
+      // if (
+      //   options.mainFields[0] === "sass" &&
+      //   !options.extensions.includes(path.extname(entry))
+      // ) {
+      //   entry = "";
+      //   skipPackageJson = true;
+      // }
       //  else {
       //   const { browser: browserField } = data;
       //   if (targetWeb && options.browserField && isObject(browserField)) {
