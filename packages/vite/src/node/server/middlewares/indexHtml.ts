@@ -3,16 +3,16 @@ import type { Connect } from "dep-types/connect";
 import {
   cleanUrl,
   ensureWatchedFile,
-  fsPathFromId,
-  injectQuery,
+  // fsPathFromId,
+  // injectQuery,
   joinUrlSegments,
   normalizePath,
-  processSrcSetSync,
+  // processSrcSetSync,
   stripBase,
   unwrapId,
   wrapId,
 } from "../../utils";
-import { CLIENT_PUBLIC_PATH, FS_PREFIX } from "../../constants";
+import { CLIENT_PUBLIC_PATH } from "../../constants";
 import path from "node:path";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
@@ -23,7 +23,7 @@ import {
   // postImportMapHook,
   // preImportMapHook,
   resolveHtmlTransforms,
-  addToHTMLProxyCache,
+  // addToHTMLProxyCache,
   traverseHtml,
   nodeIsElement,
   getScriptInfo,
@@ -34,9 +34,9 @@ import {
 import { IndexHtmlTransformHook } from "vite";
 import MagicString from "magic-string";
 import type { DefaultTreeAdapterMap, Token } from "parse5";
-import type { SourceMapInput } from "rollup";
+// import type { SourceMapInput } from "rollup";
 import { ResolvedConfig } from "../../config";
-import { checkPublicFile } from "../../plugins/asset";
+// import { checkPublicFile } from "../../plugins/asset";
 
 interface AssetNode {
   start: number;
@@ -73,13 +73,13 @@ export function indexHtmlMiddleware(
 }
 
 function getHtmlFilename(url: string, server: ViteDevServer) {
-  if (url.startsWith(FS_PREFIX)) {
-    return decodeURIComponent(fsPathFromId(url));
-  } else {
-    return decodeURIComponent(
-      normalizePath(path.join(server.config.root, url.slice(1)))
-    );
-  }
+  // if (url.startsWith(FS_PREFIX)) {
+  //   return decodeURIComponent(fsPathFromId(url));
+  // } else {
+  return decodeURIComponent(
+    normalizePath(path.join(server.config.root, url.slice(1)))
+  );
+  // }
 }
 /**改造index.html */
 export function createDevHtmlTransformFn(
@@ -112,12 +112,13 @@ export function createDevHtmlTransformFn(
 
 const devHtmlHook: IndexHtmlTransformHook = async (
   html,
-  { path: htmlPath, filename, server, originalUrl }
+  { path: htmlPath, filename, server }
 ) => {
   const { config, moduleGraph, watcher } = server!;
   const base = config.base || "/";
 
   let proxyModulePath: string;
+  // @ts-ignore
   let proxyModuleUrl: string;
 
   const trailingSlash = htmlPath.endsWith("/");
@@ -131,53 +132,53 @@ const devHtmlHook: IndexHtmlTransformHook = async (
   }
 
   const s = new MagicString(html);
-  let inlineModuleIndex = -1;
-  const proxyCacheUrl = cleanUrl(proxyModulePath).replace(
-    normalizePath(config.root),
-    ""
-  );
+  // let inlineModuleIndex = -1;
+  // const proxyCacheUrl = cleanUrl(proxyModulePath).replace(
+  //   normalizePath(config.root),
+  //   ""
+  // );
   const styleUrl: AssetNode[] = [];
 
-  const addInlineModule = (
-    node: DefaultTreeAdapterMap["element"],
-    ext: "js"
-  ) => {
-    inlineModuleIndex++;
+  // const addInlineModule = (
+  //   node: DefaultTreeAdapterMap["element"],
+  //   ext: "js"
+  // ) => {
+  //   inlineModuleIndex++;
 
-    const contentNode = node.childNodes[0] as DefaultTreeAdapterMap["textNode"];
+  //   const contentNode = node.childNodes[0] as DefaultTreeAdapterMap["textNode"];
 
-    const code = contentNode.value;
+  //   const code = contentNode.value;
 
-    let map: SourceMapInput | undefined;
-    if (proxyModulePath[0] !== "\0") {
-      map = new MagicString(html)
-        .snip(
-          contentNode.sourceCodeLocation!.startOffset,
-          contentNode.sourceCodeLocation!.endOffset
-        )
-        .generateMap({ hires: true });
-      map.sources = [filename];
-      map.file = filename;
-    }
+  //   let map: SourceMapInput | undefined;
+  //   // if (proxyModulePath[0] !== "\0") {
+  //   //   map = new MagicString(html)
+  //   //     .snip(
+  //   //       contentNode.sourceCodeLocation!.startOffset,
+  //   //       contentNode.sourceCodeLocation!.endOffset
+  //   //     )
+  //   //     .generateMap({ hires: true });
+  //   //   map.sources = [filename];
+  //   //   map.file = filename;
+  //   // }
 
-    addToHTMLProxyCache(config as any, proxyCacheUrl, inlineModuleIndex, {
-      code,
-      map,
-    });
+  //   addToHTMLProxyCache(config as any, proxyCacheUrl, inlineModuleIndex, {
+  //     code,
+  //     map,
+  //   });
 
-    const modulePath = `${proxyModuleUrl}?html-proxy&index=${inlineModuleIndex}.${ext}`;
+  //   const modulePath = `${proxyModuleUrl}?html-proxy&index=${inlineModuleIndex}.${ext}`;
 
-    const module = server?.moduleGraph.getModuleById(modulePath);
-    if (module) {
-      server?.moduleGraph.invalidateModule(module);
-    }
-    s.update(
-      node.sourceCodeLocation!.startOffset,
-      node.sourceCodeLocation!.endOffset,
-      `<script type="module" src="${modulePath}"></script>`
-    );
-    preTransformRequest(server! as any, modulePath, base);
-  };
+  //   // const module = server?.moduleGraph.getModuleById(modulePath);
+  //   // if (module) {
+  //   //   server?.moduleGraph.invalidateModule(module);
+  //   // }
+  //   s.update(
+  //     node.sourceCodeLocation!.startOffset,
+  //     node.sourceCodeLocation!.endOffset,
+  //     `<script type="module" src="${modulePath}"></script>`
+  //   );
+  //   preTransformRequest(server! as any, modulePath, base);
+  // };
 
   await traverseHtml(html, filename, (node) => {
     if (!nodeIsElement(node)) {
@@ -185,7 +186,7 @@ const devHtmlHook: IndexHtmlTransformHook = async (
     }
 
     if (node.nodeName === "script") {
-      const { src, sourceCodeLocation, isModule } = getScriptInfo(node);
+      const { src, sourceCodeLocation } = getScriptInfo(node);
 
       if (src) {
         processNodeUrl(
@@ -193,13 +194,14 @@ const devHtmlHook: IndexHtmlTransformHook = async (
           sourceCodeLocation!,
           s,
           config as any,
-          htmlPath,
-          originalUrl,
+          // htmlPath,
+          // originalUrl,
           server as any
         );
-      } else if (isModule && node.childNodes.length) {
-        addInlineModule(node, "js");
       }
+      // else if (isModule && node.childNodes.length) {
+      //   addInlineModule(node, "js");
+      // }
     }
 
     if (node.nodeName === "style" && node.childNodes.length) {
@@ -220,9 +222,9 @@ const devHtmlHook: IndexHtmlTransformHook = async (
             p,
             node.sourceCodeLocation!.attrs![attrKey],
             s,
-            config as any,
-            htmlPath,
-            originalUrl
+            config as any
+            // htmlPath,
+            // originalUrl
           );
         }
       }
@@ -275,42 +277,43 @@ const processNodeUrl = (
   sourceCodeLocation: Token.Location,
   s: MagicString,
   config: ResolvedConfig,
-  htmlPath: string,
-  originalUrl?: string,
+  // htmlPath: string,
+  // originalUrl?: string,
   server?: ViteDevServer
 ) => {
   let url = attr.value || "";
 
-  if (server?.moduleGraph) {
-    const mod = server.moduleGraph.urlToModuleMap.get(url);
-    if (mod && mod.lastHMRTimestamp > 0) {
-      url = injectQuery(url, `t=${mod.lastHMRTimestamp}`);
-    }
-  }
+  // if (server?.moduleGraph) {
+  //   // const mod = server.moduleGraph.urlToModuleMap.get(url);
+  //   // if (mod && mod.lastHMRTimestamp > 0) {
+  //   //   url = injectQuery(url, `t=${mod.lastHMRTimestamp}`);
+  //   // }
+  // }
   const devBase = config.base;
   if (url[0] === "/" && url[1] !== "/") {
     const fullUrl = path.posix.join(devBase, url);
     overwriteAttrValue(s, sourceCodeLocation, fullUrl);
-    if (server && !checkPublicFile(url, config)) {
+    if (server) {
       preTransformRequest(server, fullUrl, devBase);
     }
-  } else if (
-    url[0] === "." &&
-    originalUrl &&
-    originalUrl !== "/" &&
-    htmlPath === "/index.html"
-  ) {
-    const replacer = (url: string) => {
-      const fullUrl = path.posix.join(devBase, url);
-      if (server && !checkPublicFile(url, config)) {
-        preTransformRequest(server, fullUrl, devBase);
-      }
-      return fullUrl;
-    };
-    const processedUrl =
-      attr.name === "srcset" && attr.prefix === undefined
-        ? processSrcSetSync(url, ({ url }) => replacer(url))
-        : replacer(url);
-    overwriteAttrValue(s, sourceCodeLocation, processedUrl);
   }
+  // else if (
+  //   url[0] === "." &&
+  //   originalUrl &&
+  //   originalUrl !== "/" &&
+  //   htmlPath === "/index.html"
+  // ) {
+  //   const replacer = (url: string) => {
+  //     const fullUrl = path.posix.join(devBase, url);
+  //     if (server) {
+  //       preTransformRequest(server, fullUrl, devBase);
+  //     }
+  //     return fullUrl;
+  //   };
+  //   const processedUrl =
+  //     attr.name === "srcset" && attr.prefix === undefined
+  //       ? processSrcSetSync(url, ({ url }) => replacer(url))
+  //       : replacer(url);
+  //   overwriteAttrValue(s, sourceCodeLocation, processedUrl);
+  // }
 };

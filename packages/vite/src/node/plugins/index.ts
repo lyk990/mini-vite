@@ -40,7 +40,7 @@ export async function resolvePlugins(
     }),
     htmlInlineProxyPlugin(config),
     cssPlugin(config),
-    config.esbuild !== false ? esbuildPlugin(config) : null,
+    esbuildPlugin(config),
     assetPlugin(config),
     ...normalPlugins,
     cssPostPlugin(config),

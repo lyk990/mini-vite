@@ -120,7 +120,7 @@ function createNodePlugins(
       ignore: ["bufferutil", "utf-8-validate"],
     }),
     json(),
-    cjsPatchPlugin(),
+    // cjsPatchPlugin(),
   ];
 }
 
@@ -252,36 +252,36 @@ function shimDepsPlugin(deps: Record<string, ShimOptions>): Plugin {
   };
 }
 
-function cjsPatchPlugin(): Plugin {
-  const cjsPatch = `
-import { fileURLToPath as __cjs_fileURLToPath } from 'node:url';
-import { dirname as __cjs_dirname } from 'node:path';
-import { createRequire as __cjs_createRequire } from 'node:module';
+// function cjsPatchPlugin(): Plugin {
+//   const cjsPatch = `
+// import { fileURLToPath as __cjs_fileURLToPath } from 'node:url';
+// import { dirname as __cjs_dirname } from 'node:path';
+// import { createRequire as __cjs_createRequire } from 'node:module';
 
-const __filename = __cjs_fileURLToPath(import.meta.url);
-const __dirname = __cjs_dirname(__filename);
-const require = __cjs_createRequire(import.meta.url);
-const __require = require;
-`.trimStart();
+// const __filename = __cjs_fileURLToPath(import.meta.url);
+// const __dirname = __cjs_dirname(__filename);
+// const require = __cjs_createRequire(import.meta.url);
+// const __require = require;
+// `.trimStart();
 
-  return {
-    name: "cjs-chunk-patch",
-    renderChunk(code, chunk) {
-      if (!chunk.fileName.includes("chunks/dep-")) return;
+//   return {
+//     name: "cjs-chunk-patch",
+//     renderChunk(code, chunk) {
+//       if (!chunk.fileName.includes("chunks/dep-")) return;
 
-      const match = code.match(/^(?:import[\s\S]*?;\s*)+/);
-      const index = match ? match.index! + match[0].length : 0;
-      const s = new MagicString(code);
-      s.appendRight(index, cjsPatch);
-      console.log("patched cjs context: " + chunk.fileName);
+//       const match = code.match(/^(?:import[\s\S]*?;\s*)+/);
+//       const index = match ? match.index! + match[0].length : 0;
+//       const s = new MagicString(code);
+//       s.appendRight(index, cjsPatch);
+//       console.log("patched cjs context: " + chunk.fileName);
 
-      return {
-        code: s.toString(),
-        map: s.generateMap({ hires: true }),
-      };
-    },
-  };
-}
+//       return {
+//         code: s.toString(),
+//         map: s.generateMap({ hires: true }),
+//       };
+//     },
+//   };
+// }
 
 // function bundleSizeLimit(limit: number): Plugin {
 //   return {

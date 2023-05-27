@@ -2,23 +2,23 @@ import { ViteDevServer } from "../..";
 import type { Connect } from "dep-types/connect";
 import { Options } from "sirv"; // NOTE patchedDependencies
 import sirv from "sirv";
-import { FS_PREFIX } from "../../constants";
+// import { FS_PREFIX } from "../../constants";
 import {
   cleanUrl,
-  fsPathFromId,
+  // fsPathFromId,
   fsPathFromUrl,
-  isFileReadable,
+  // isFileReadable,
   isImportRequest,
   isInternalRequest,
   isParentDirectory,
-  isWindows,
+  // isWindows,
   removeLeadingSlash,
   shouldServeFile,
-  slash,
+  // slash,
 } from "../../utils";
-import type { OutgoingHttpHeaders, ServerResponse } from "node:http";
+import type { OutgoingHttpHeaders } from "node:http";
 import path from "node:path";
-import escapeHtml from "escape-html";
+// import escapeHtml from "escape-html";
 
 const knownJavascriptExtensionRE = /\.[tj]sx?$/;
 
@@ -70,35 +70,35 @@ export function servePublicMiddleware(
 export function serveRawFsMiddleware(
   server: ViteDevServer
 ): Connect.NextHandleFunction {
-  const serveFromRoot = sirv(
-    "/",
-    sirvOptions({ headers: server.config.server.headers })
-  );
+  // const serveFromRoot = sirv(
+  //   "/",
+  //   sirvOptions({ headers: server.config.server.headers })
+  // );
 
   return function viteServeRawFsMiddleware(req, res, next) {
-    const url = new URL(req.url!, "http://example.com");
-    if (url.pathname.startsWith(FS_PREFIX)) {
-      const pathname = decodeURIComponent(url.pathname);
-      if (
-        !ensureServingAccess(
-          slash(path.resolve(fsPathFromId(pathname))),
-          server,
-          res,
-          next
-        )
-      ) {
-        return;
-      }
+    // const url = new URL(req.url!, "http://example.com");
+    // if (url.pathname.startsWith(FS_PREFIX)) {
+    //   const pathname = decodeURIComponent(url.pathname);
+    //   // if (
+    //   //   !ensureServingAccess(
+    //   //     slash(path.resolve(fsPathFromId(pathname))),
+    //   //     server,
+    //   //     res,
+    //   //     next
+    //   //   )
+    //   // ) {
+    //   //   return;
+    //   // }
 
-      let newPathname = pathname.slice(FS_PREFIX.length);
-      if (isWindows) newPathname = newPathname.replace(/^[A-Z]:/i, "");
+    //   let newPathname = pathname.slice(FS_PREFIX.length);
+    //   if (isWindows) newPathname = newPathname.replace(/^[A-Z]:/i, "");
 
-      url.pathname = encodeURIComponent(newPathname);
-      req.url = url.href.slice(url.origin.length);
-      serveFromRoot(req, res, next);
-    } else {
+    //   url.pathname = encodeURIComponent(newPathname);
+    //   req.url = url.href.slice(url.origin.length);
+    //   serveFromRoot(req, res, next);
+    // } else {
       next();
-    }
+    // }
   };
 }
 
@@ -137,11 +137,11 @@ export function serveStaticMiddleware(
         break;
       }
     }
-    if (redirectedPathname) {
-      if (redirectedPathname.startsWith(dir)) {
-        redirectedPathname = redirectedPathname.slice(dir.length);
-      }
-    }
+    // if (redirectedPathname) {
+    //   if (redirectedPathname.startsWith(dir)) {
+    //     redirectedPathname = redirectedPathname.slice(dir.length);
+    //   }
+    // }
 
     const resolvedPathname = redirectedPathname || pathname;
     let fileUrl = path.resolve(dir, removeLeadingSlash(resolvedPathname));
@@ -151,45 +151,45 @@ export function serveStaticMiddleware(
     ) {
       fileUrl = fileUrl + "/";
     }
-    if (!ensureServingAccess(fileUrl, server, res, next)) {
-      return;
-    }
+    // if (!ensureServingAccess(fileUrl, server, res, next)) {
+    //   return;
+    // }
 
-    if (redirectedPathname) {
-      url.pathname = encodeURIComponent(redirectedPathname);
-      req.url = url.href.slice(url.origin.length);
-    }
+    // if (redirectedPathname) {
+    //   url.pathname = encodeURIComponent(redirectedPathname);
+    //   req.url = url.href.slice(url.origin.length);
+    // }
 
     serve(req, res, next);
   };
 }
 
-function ensureServingAccess(
-  url: string,
-  server: ViteDevServer,
-  res: ServerResponse,
-  next: Connect.NextFunction
-): boolean {
-  if (isFileServingAllowed(url, server)) {
-    return true;
-  }
-  if (isFileReadable(cleanUrl(url))) {
-    const urlMessage = `The request url "${url}" is outside of Vite serving allow list.`;
-    const hintMessage = `
-${server.config.server.fs.allow.map((i) => `- ${i}`).join("\n")}
+// function ensureServingAccess(
+//   url: string,
+//   server: ViteDevServer,
+//   res: ServerResponse,
+//   next: Connect.NextFunction
+// ): boolean {
+//   if (isFileServingAllowed(url, server)) {
+//     return true;
+//   }
+//   if (isFileReadable(cleanUrl(url))) {
+//     const urlMessage = `The request url "${url}" is outside of Vite serving allow list.`;
+//     const hintMessage = `
+// ${server.config.server.fs.allow.map((i) => `- ${i}`).join("\n")}
 
-Refer to docs https://vitejs.dev/config/server-options.html#server-fs-allow for configurations and more details.`;
+// Refer to docs https://vitejs.dev/config/server-options.html#server-fs-allow for configurations and more details.`;
 
-    server.config.logger.error(urlMessage);
-    server.config.logger.warnOnce(hintMessage + "\n");
-    res.statusCode = 403;
-    res.write(renderRestrictedErrorHTML(urlMessage + "\n" + hintMessage));
-    res.end();
-  } else {
-    next();
-  }
-  return false;
-}
+//     server.config.logger.error(urlMessage);
+//     server.config.logger.warnOnce(hintMessage + "\n");
+//     res.statusCode = 403;
+//     res.write(renderRestrictedErrorHTML(urlMessage + "\n" + hintMessage));
+//     res.end();
+//   } else {
+//     next();
+//   }
+//   return false;
+// }
 
 export function isFileServingAllowed(
   url: string,
@@ -209,17 +209,17 @@ export function isFileServingAllowed(
   return false;
 }
 
-function renderRestrictedErrorHTML(msg: string): string {
-  const html = String.raw;
-  return html`
-    <body>
-      <h1>403 Restricted</h1>
-      <p>${escapeHtml(msg).replace(/\n/g, "<br/>")}</p>
-      <style>
-        body {
-          padding: 1em 2em;
-        }
-      </style>
-    </body>
-  `;
-}
+// function renderRestrictedErrorHTML(msg: string): string {
+//   const html = String.raw;
+//   return html`
+//     <body>
+//       <h1>403 Restricted</h1>
+//       <p>${escapeHtml(msg).replace(/\n/g, "<br/>")}</p>
+//       <style>
+//         body {
+//           padding: 1em 2em;
+//         }
+//       </style>
+//     </body>
+//   `;
+// }

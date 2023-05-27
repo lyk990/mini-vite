@@ -13,7 +13,7 @@ import {
   injectQuery,
   isImportRequest,
   isJSRequest,
-  normalizePath,
+  // normalizePath,
   prettifyUrl,
   removeImportQuery,
   removeTimestampQuery,
@@ -27,7 +27,7 @@ import {
 // import path from "node:path";
 // import fsp from "node:fs/promises";
 // import type { ExistingRawSourceMap } from "rollup";
-import colors from "picocolors";
+// import colors from "picocolors";
 import {
   ERR_OPTIMIZE_DEPS_PROCESSING_ERROR,
   ERR_OUTDATED_OPTIMIZED_DEP,
@@ -116,34 +116,34 @@ export function transformMiddleware(
       //   }
       // }
 
-      const publicDir = normalizePath(server.config.publicDir);
-      const rootDir = normalizePath(server.config.root);
-      if (publicDir.startsWith(rootDir)) {
-        const publicPath = `${publicDir.slice(rootDir.length)}/`;
-        if (url.startsWith(publicPath)) {
-          let warning: string;
+      // const publicDir = normalizePath(server.config.publicDir);
+      // const rootDir = normalizePath(server.config.root);
+      // if (publicDir.startsWith(rootDir)) {
+      //   // const publicPath = `${publicDir.slice(rootDir.length)}/`;
+      //   // if (url.startsWith(publicPath)) {
+      //   //   // let warning: string;
 
-          if (isImportRequest(url)) {
-            const rawUrl = removeImportQuery(url);
+      //   //   // if (isImportRequest(url)) {
+      //   //   //   const rawUrl = removeImportQuery(url);
 
-            warning =
-              "Assets in public cannot be imported from JavaScript.\n" +
-              `Instead of ${colors.cyan(
-                rawUrl
-              )}, put the file in the src directory, and use ${colors.cyan(
-                rawUrl.replace(publicPath, "/src/")
-              )} instead.`;
-          } else {
-            warning =
-              `files in the public directory are served at the root path.\n` +
-              `Instead of ${colors.cyan(url)}, use ${colors.cyan(
-                url.replace(publicPath, "/")
-              )}.`;
-          }
+      //   //   //   warning =
+      //   //   //     "Assets in public cannot be imported from JavaScript.\n" +
+      //   //   //     `Instead of ${colors.cyan(
+      //   //   //       rawUrl
+      //   //   //     )}, put the file in the src directory, and use ${colors.cyan(
+      //   //   //       rawUrl.replace(publicPath, "/src/")
+      //   //   //     )} instead.`;
+      //   //   // } else {
+      //   //   //   warning =
+      //   //   //     `files in the public directory are served at the root path.\n` +
+      //   //   //     `Instead of ${colors.cyan(url)}, use ${colors.cyan(
+      //   //   //       url.replace(publicPath, "/")
+      //   //   //     )}.`;
+      //   //   // }
 
-          logger.warn(colors.yellow(warning));
-        }
-      }
+      //   //   logger.warn(colors.yellow(warning));
+      //   // }
+      // }
 
       if (
         isJSRequest(url) ||

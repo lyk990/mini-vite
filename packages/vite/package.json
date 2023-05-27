@@ -39,7 +39,6 @@
     "esbuild": "^0.17.16",
     "escape-html": "^1.0.3",
     "etag": "^1.8.1",
-    "http-proxy": "^1.18.1",
     "less": "^4.1.3",
     "magic-string": "^0.30.0",
     "micromatch": "^4.0.5",

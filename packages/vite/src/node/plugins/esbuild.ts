@@ -11,19 +11,19 @@ import type {
 } from "esbuild";
 import {
   cleanUrl,
-  combineSourcemaps,
+  // combineSourcemaps,
   createDebugger,
   createFilter,
   generateCodeFrame,
   // timeFrom,
 } from "../utils";
 import { ViteDevServer } from "../server";
-import { searchForWorkspaceRoot } from "../server/searchRoot";
+// import { searchForWorkspaceRoot } from "../server/searchRoot";
 import type { TSConfckParseOptions } from "tsconfck";
 import type { SourceMap } from "rollup";
-import { TSConfckParseError, findAll, parse } from "tsconfck";
+import { TSConfckParseError, parse } from "tsconfck";
 import { transform } from "esbuild";
-import type { RawSourceMap } from "@ampproject/remapping";
+// import type { RawSourceMap } from "@ampproject/remapping";
 import type { FSWatcher } from "chokidar";
 
 const debug = createDebugger("vite:esbuild");
@@ -60,7 +60,7 @@ type TSConfigJSON = {
 
 type TSCompilerOptions = NonNullable<TSConfigJSON["compilerOptions"]>;
 
-let tsconfckRoot: string | undefined;
+// let tsconfckRoot: string | undefined;
 let tsconfckParseOptions: TSConfckParseOptions | Promise<TSConfckParseOptions> =
   { resolveWithEmptyIfConfigNotFound: true };
 
@@ -86,16 +86,16 @@ export function esbuildPlugin(config: ResolvedConfig): Plugin {
     keepNames: false,
   };
 
-  initTSConfck(config.root);
+  // initTSConfck(config.root);
 
   return {
     name: "vite:esbuild",
     configureServer(_server) {
-      server = _server;
-      server.watcher
-        .on("add", reloadOnTsconfigChange)
-        .on("change", reloadOnTsconfigChange)
-        .on("unlink", reloadOnTsconfigChange);
+      // server = _server;
+      // server.watcher
+      //   .on("add", reloadOnTsconfigChange)
+      //   .on("change", reloadOnTsconfigChange)
+      //   .on("unlink", reloadOnTsconfigChange);
     },
     buildEnd() {
       server = null as any;
@@ -120,45 +120,45 @@ export function esbuildPlugin(config: ResolvedConfig): Plugin {
   };
 }
 
-function initTSConfck(root: string, force = false) {
-  if (!force && root === tsconfckRoot) return;
+// function initTSConfck(root: string, force = false) {
+//   if (!force && root === tsconfckRoot) return;
 
-  const workspaceRoot = searchForWorkspaceRoot(root);
+//   const workspaceRoot = searchForWorkspaceRoot(root);
 
-  tsconfckRoot = root;
-  tsconfckParseOptions = initTSConfckParseOptions(workspaceRoot);
+//   tsconfckRoot = root;
+//   tsconfckParseOptions = initTSConfckParseOptions(workspaceRoot);
 
-  tsconfckParseOptions.then((options) => {
-    if (root === tsconfckRoot) {
-      tsconfckParseOptions = options;
-    }
-  });
-}
+//   tsconfckParseOptions.then((options) => {
+//     if (root === tsconfckRoot) {
+//       tsconfckParseOptions = options;
+//     }
+//   });
+// }
 
-async function reloadOnTsconfigChange(changedFile: string) {
-  if (!server) return;
-  if (
-    path.basename(changedFile) === "tsconfig.json" ||
-    (changedFile.endsWith(".json") &&
-      (await tsconfckParseOptions)?.cache?.has(changedFile))
-  ) {
-    server.config.logger.info(
-      `changed tsconfig file detected: ${changedFile} - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.`,
-      { timestamp: true }
-    );
+// async function reloadOnTsconfigChange(changedFile: string) {
+//   if (!server) return;
+//   // if (
+//   //   path.basename(changedFile) === "tsconfig.json" ||
+//   //   (changedFile.endsWith(".json") &&
+//   //     (await tsconfckParseOptions)?.cache?.has(changedFile))
+//   // ) {
+//   //   server.config.logger.info(
+//   //     `changed tsconfig file detected: ${changedFile} - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.`,
+//   //     { timestamp: true }
+//   //   );
 
-    server.moduleGraph.invalidateAll();
+//   //   server.moduleGraph.invalidateAll();
 
-    initTSConfck(server.config.root, true);
+//   //   initTSConfck(server.config.root, true);
 
-    if (server) {
-      server.ws.send({
-        type: "full-reload",
-        path: "*",
-      });
-    }
-  }
-}
+//   //   if (server) {
+//   //     server.ws.send({
+//   //       type: "full-reload",
+//   //       path: "*",
+//   //     });
+//   //   }
+//   // }
+// }
 
 export async function transformWithEsbuild(
   code: string,
@@ -214,16 +214,16 @@ export async function transformWithEsbuild(
       ...tsconfigRaw?.compilerOptions,
     };
 
-    if (compilerOptions.useDefineForClassFields === undefined) {
-      const lowercaseTarget = compilerOptions.target?.toLowerCase() ?? "es3";
-      if (lowercaseTarget.startsWith("es")) {
-        const esVersion = lowercaseTarget.slice(2);
-        compilerOptions.useDefineForClassFields =
-          esVersion === "next" || +esVersion >= 2022;
-      } else {
-        compilerOptions.useDefineForClassFields = false;
-      }
-    }
+    // if (compilerOptions.useDefineForClassFields === undefined) {
+    //   const lowercaseTarget = compilerOptions.target?.toLowerCase() ?? "es3";
+    //   if (lowercaseTarget.startsWith("es")) {
+    //     const esVersion = lowercaseTarget.slice(2);
+    //     compilerOptions.useDefineForClassFields =
+    //       esVersion === "next" || +esVersion >= 2022;
+    //   } else {
+    //     compilerOptions.useDefineForClassFields = false;
+    //   }
+    // }
 
     if (options) {
       options.jsx && (compilerOptions.jsx = undefined);
@@ -254,19 +254,20 @@ export async function transformWithEsbuild(
   try {
     const result = await transform(code, resolvedOptions);
     let map: SourceMap;
-    if (inMap && resolvedOptions.sourcemap) {
-      const nextMap = JSON.parse(result.map);
-      nextMap.sourcesContent = [];
-      map = combineSourcemaps(filename, [
-        nextMap as RawSourceMap,
-        inMap as RawSourceMap,
-      ]) as SourceMap;
-    } else {
-      map =
-        resolvedOptions.sourcemap && resolvedOptions.sourcemap !== "inline"
-          ? JSON.parse(result.map)
-          : { mappings: "" };
-    }
+    // if (inMap && resolvedOptions.sourcemap) {
+    //   const nextMap = JSON.parse(result.map);
+    //   nextMap.sourcesContent = [];
+    //   map = combineSourcemaps(filename, [
+    //     nextMap as RawSourceMap,
+    //     inMap as RawSourceMap,
+    //   ]) as SourceMap;
+    // } else
+    // {
+    map =
+      resolvedOptions.sourcemap && resolvedOptions.sourcemap !== "inline"
+        ? JSON.parse(result.map)
+        : { mappings: "" };
+    // }
     return {
       ...result,
       map,
@@ -300,22 +301,22 @@ function prettifyMessage(m: Message, code: string): string {
   return res + `\n`;
 }
 
-async function initTSConfckParseOptions(workspaceRoot: string) {
-  // const start = debug ? performance.now() : 0;
+// async function initTSConfckParseOptions(workspaceRoot: string) {
+//   // const start = debug ? performance.now() : 0;
 
-  const options: TSConfckParseOptions = {
-    cache: new Map(),
-    root: workspaceRoot,
-    tsConfigPaths: new Set(
-      await findAll(workspaceRoot, {
-        skip: (dir) => dir === "node_modules" || dir === ".git",
-      })
-    ),
-    resolveWithEmptyIfConfigNotFound: true,
-  };
-  // debug?.(timeFrom(start), "tsconfck init", colors.dim(workspaceRoot));
-  return options;
-}
+//   const options: TSConfckParseOptions = {
+//     cache: new Map(),
+//     root: workspaceRoot,
+//     tsConfigPaths: new Set(
+//       await findAll(workspaceRoot, {
+//         skip: (dir) => dir === "node_modules" || dir === ".git",
+//       })
+//     ),
+//     resolveWithEmptyIfConfigNotFound: true,
+//   };
+//   // debug?.(timeFrom(start), "tsconfck init", colors.dim(workspaceRoot));
+//   return options;
+// }
 
 async function loadTsconfigJsonForFile(
   filename: string

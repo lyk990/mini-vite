@@ -12,8 +12,8 @@ import type {
   PluginContext,
   RenderedChunk,
 } from "rollup";
-import { FS_PREFIX } from "../constants";
-import fs, { promises as fsp } from "node:fs";
+// import { FS_PREFIX } from "../constants";
+// import fs, { promises as fsp } from "node:fs";
 // import colors from "picocolors";
 import * as mrmime from "mrmime";
 // import { parse as parseUrl } from "node:url";
@@ -43,50 +43,49 @@ export const publicAssetUrlCache = new WeakMap<
 >();
 const assetCache = new WeakMap<ResolvedConfig, Map<string, string>>();
 
-export function checkPublicFile(
-  url: string,
-  { publicDir }: ResolvedConfig
-): string | undefined {
-  if (!publicDir || url[0] !== "/") {
-    return;
-  }
-  const publicFile = path.join(publicDir, cleanUrl(url));
-  if (!publicFile.startsWith(publicDir)) {
-    return;
-  }
-  if (fs.existsSync(publicFile)) {
-    return publicFile;
-  } else {
-    return;
-  }
-}
+// export function checkPublicFile(
+//   url: string,
+//   { publicDir }: ResolvedConfig
+// ): string | undefined {
+//   // if (!publicDir || url[0] !== "/") {
+//   //   return;
+//   // }
+//   // const publicFile = path.join(publicDir, cleanUrl(url));
+//   // if (!publicFile.startsWith(publicDir)) {
+//   //   return;
+//   // }
+//   // if (fs.existsSync(publicFile)) {
+//   //   return publicFile;
+//   // } else {
+//     return;
+//   // }
+// }
 
-const rawRE = /(?:\?|&)raw(?:&|$)/;
+// const rawRE = /(?:\?|&)raw(?:&|$)/;
 const urlRE = /(\?|&)url(?:&|$)/;
-const jsSourceMapRE = /\.[cm]?js\.map$/;
+// const jsSourceMapRE = /\.[cm]?js\.map$/;
 const unnededFinalQueryCharRE = /[?&]$/;
 
 // DELETE
-export function publicFileToBuiltUrl(
-  url: string,
-  config: ResolvedConfig
-): string {
-  // if (config.command !== "build") {
-  return joinUrlSegments(config.base, url);
-  // }
-  // const hash = getHash(url);
-  // let cache = publicAssetUrlCache.get(config);
-  // if (!cache) {
-  //   cache = new Map<string, string>();
-  //   publicAssetUrlCache.set(config, cache);
-  // }
-  // if (!cache.get(hash)) {
-  //   cache.set(hash, url);
-  // }
-  // return `__VITE_PUBLIC_ASSET__${hash}__`;
-}
+// export function publicFileToBuiltUrl(
+//   url: string,
+//   config: ResolvedConfig
+// ): string {
+//   // if (config.command !== "build") {
+//   return joinUrlSegments(config.base, url);
+//   // }
+//   // const hash = getHash(url);
+//   // let cache = publicAssetUrlCache.get(config);
+//   // if (!cache) {
+//   //   cache = new Map<string, string>();
+//   //   publicAssetUrlCache.set(config, cache);
+//   // }
+//   // if (!cache.get(hash)) {
+//   //   cache.set(hash, url);
+//   // }
+//   // return `__VITE_PUBLIC_ASSET__${hash}__`;
+// }
 
-// DELETE
 export async function fileToUrl(
   id: string,
   config: ResolvedConfig,
@@ -101,13 +100,13 @@ export async function fileToUrl(
 
 function fileToDevUrl(id: string, config: ResolvedConfig) {
   let rtn: string;
-  if (checkPublicFile(id, config)) {
-    rtn = id;
-  } else if (id.startsWith(config.root)) {
+  // if (checkPublicFile(id, config)) {
+  //   rtn = id;
+  // } else if (id.startsWith(config.root)) {
     rtn = "/" + path.posix.relative(config.root, id);
-  } else {
-    rtn = path.posix.join(FS_PREFIX, id);
-  }
+  // } else {
+  //   rtn = path.posix.join(FS_PREFIX, id);
+  // }
   const base = joinUrlSegments(config.server?.origin ?? "", config.base);
   return joinUrlSegments(base, removeLeadingSlash(rtn));
 }
@@ -188,10 +187,10 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
       if (!config.assetsInclude(cleanUrl(id))) {
         return;
       }
-      const publicFile = checkPublicFile(id, config);
-      if (publicFile) {
-        return id;
-      }
+      // const publicFile = checkPublicFile(id, config);
+      // if (publicFile) {
+      //   return id;
+      // }
     },
 
     async load(id) {
@@ -199,12 +198,12 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
         return;
       }
 
-      if (rawRE.test(id)) {
-        const file = checkPublicFile(id, config) || cleanUrl(id);
-        return `export default ${JSON.stringify(
-          await fsp.readFile(file, "utf-8")
-        )}`;
-      }
+      // if (rawRE.test(id)) {
+      //   const file = checkPublicFile(id, config) || cleanUrl(id);
+      //   return `export default ${JSON.stringify(
+      //     await fsp.readFile(file, "utf-8")
+      //   )}`;
+      // }
 
       if (!config.assetsInclude(cleanUrl(id)) && !urlRE.test(id)) {
         return;
@@ -215,37 +214,37 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
       return `export default ${JSON.stringify(url)}`;
     },
 
-    renderChunk(code, chunk, opts) {
-      const s = renderAssetUrlInJS(this, config, chunk, opts, code);
+    // renderChunk(code, chunk, opts) {
+    //   const s = renderAssetUrlInJS(this, config, chunk, opts, code);
 
-      if (s) {
-        return {
-          code: s.toString(),
-          // map: config.build.sourcemap ? s.generateMap({ hires: true }) : null,
-          map: null,
-        };
-      } else {
-        return null;
-      }
-    },
+    //   if (s) {
+    //     return {
+    //       code: s.toString(),
+    //       // map: config.build.sourcemap ? s.generateMap({ hires: true }) : null,
+    //       map: null,
+    //     };
+    //   } else {
+    //     return null;
+    //   }
+    // },
 
-    generateBundle(_, bundle) {
-      if (
-        config.command === "build" &&
-        config.build.ssr &&
-        !config.build.ssrEmitAssets
-      ) {
-        for (const file in bundle) {
-          if (
-            bundle[file].type === "asset" &&
-            !file.endsWith("ssr-manifest.json") &&
-            !jsSourceMapRE.test(file)
-          ) {
-            delete bundle[file];
-          }
-        }
-      }
-    },
+    // generateBundle(_, bundle) {
+    //   if (
+    //     config.command === "build" &&
+    //     config.build.ssr &&
+    //     !config.build.ssrEmitAssets
+    //   ) {
+    //     for (const file in bundle) {
+    //       if (
+    //         bundle[file].type === "asset" &&
+    //         !file.endsWith("ssr-manifest.json") &&
+    //         !jsSourceMapRE.test(file)
+    //       ) {
+    //         delete bundle[file];
+    //       }
+    //     }
+    //   }
+    // },
   };
 }
 

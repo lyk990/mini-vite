@@ -19,7 +19,7 @@ import { isFileServingAllowed } from "./middlewares/static";
 import { ModuleNode } from "./moduleGraph";
 import colors from "picocolors";
 import path from "node:path";
-import { checkPublicFile } from "../plugins/asset";
+// import { checkPublicFile } from "../plugins/asset";
 // import { applySourcemapIgnoreList, injectSourcesContent } from "./sourcemap";
 
 const debugLoad = createDebugger("vite:load");
@@ -172,12 +172,14 @@ async function loadAndTransform(
     }
   }
   if (code == null) {
-    const isPublicFile = checkPublicFile(url, config);
-    const msg = isPublicFile
-      ? `This file is in /public and will be copied as-is during build without ` +
-        `going through the plugin transforms, and therefore should not be ` +
-        `imported from source code. It can only be referenced via HTML tags.`
-      : `Does the file exist?`;
+    // const isPublicFile = checkPublicFile(url, config);
+    const msg =
+      // isPublicFile
+      //   ? `This file is in /public and will be copied as-is during build without ` +
+      //     `going through the plugin transforms, and therefore should not be ` +
+      //     `imported from source code. It can only be referenced via HTML tags.`
+      // :
+      `Does the file exist?`;
     const importerMod: ModuleNode | undefined = server.moduleGraph.idToModuleMap
       .get(id)
       ?.importers.values()
@@ -188,7 +190,9 @@ async function loadAndTransform(
         importer ? ` in ${importer}` : ""
       }. ${msg}`
     );
-    err.code = isPublicFile ? ERR_LOAD_PUBLIC_URL : ERR_LOAD_URL;
+    err.code =
+      // isPublicFile ? ERR_LOAD_PUBLIC_URL :
+      ERR_LOAD_URL;
     throw err;
   }
   const mod = await moduleGraph.ensureEntryFromUrl(url, ssr);
@@ -252,7 +256,7 @@ async function loadAndTransform(
 
   if (timestamp > mod.lastInvalidationTimestamp) {
     // if (ssr) mod.ssrTransformResult = result;
-    // else 
+    // else
     mod.transformResult = result;
   }
 

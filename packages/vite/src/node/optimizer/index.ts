@@ -22,6 +22,7 @@ import type {
   BuildContext,
   BuildOptions as EsbuildBuildOptions,
 } from "esbuild";
+import colors from 'picocolors'
 
 const debug = createDebugger("vite:deps");
 
@@ -209,7 +210,16 @@ export function discoverProjectDependencies(config: ResolvedConfig): {
     result: result.then(({ deps, missing }) => {
       const missingIds = Object.keys(missing);
       if (missingIds.length) {
-        console.log("引入依赖但是无法解析，是否重新下载");
+        throw new Error(
+          `The following dependencies are imported but could not be resolved:\n\n  ${missingIds
+            .map(
+              (id) =>
+                `${colors.cyan(id)} ${colors.white(
+                  colors.dim(`(imported by ${missing[id]})`)
+                )}`
+            )
+            .join(`\n  `)}\n\nAre they installed?`
+        );
       }
       return deps;
     }),
@@ -807,28 +817,28 @@ export function getDepHash(config: ResolvedConfig): string {
   return getHash(content);
 }
 
-export function optimizedDepInfoFromId(
-  metadata: DepOptimizationMetadata,
-  id: string
-): OptimizedDepInfo | undefined {
-  return (
-    metadata.optimized[id] || metadata.discovered[id] || metadata.chunks[id]
-  );
-}
+// export function optimizedDepInfoFromId(
+//   metadata: DepOptimizationMetadata,
+//   id: string
+// ): OptimizedDepInfo | undefined {
+//   return (
+//     metadata.optimized[id] || metadata.discovered[id] || metadata.chunks[id]
+//   );
+// }
 
-export async function optimizedDepNeedsInterop(
-  metadata: DepOptimizationMetadata,
-  file: string,
-  config: ResolvedConfig
-): Promise<boolean | undefined> {
-  const depInfo = optimizedDepInfoFromFile(metadata, file);
-  if (depInfo?.src && depInfo.needsInterop === undefined) {
-    depInfo.exportsData ??= extractExportsData(depInfo.src, config);
-    depInfo.needsInterop = needsInterop(
-      config,
-      depInfo.id,
-      await depInfo.exportsData
-    );
-  }
-  return depInfo?.needsInterop;
-}
+// export async function optimizedDepNeedsInterop(
+//   metadata: DepOptimizationMetadata,
+//   file: string,
+//   config: ResolvedConfig
+// ): Promise<boolean | undefined> {
+//   const depInfo = optimizedDepInfoFromFile(metadata, file);
+//   if (depInfo?.src && depInfo.needsInterop === undefined) {
+//     depInfo.exportsData ??= extractExportsData(depInfo.src, config);
+//     depInfo.needsInterop = needsInterop(
+//       config,
+//       depInfo.id,
+//       await depInfo.exportsData
+//     );
+//   }
+//   return depInfo?.needsInterop;
+// }

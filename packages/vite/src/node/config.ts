@@ -59,7 +59,7 @@ import {
   resolvePlugins,
 } from "./plugins";
 import type { ServerOptions as HttpsServerOptions } from "node:https";
-import type { ProxyOptions } from "./server/middlewares/proxy";
+// import type { ProxyOptions } from "./server/middlewares/proxy";
 import type { OutgoingHttpHeaders as HttpServerHeaders } from "node:http";
 // import { loadEnv, resolveEnvPrefix } from "./env";
 // import { resolveSSROptions } from "./ssr";
@@ -94,7 +94,7 @@ export interface CommonServerOptions {
   host?: string | boolean;
   https?: boolean | HttpsServerOptions;
   open?: boolean | string;
-  proxy?: Record<string, string | ProxyOptions>;
+  // proxy?: Record<string, string | ProxyOptions>;
   cors?: CorsOptions | boolean;
   headers?: HttpServerHeaders;
 }

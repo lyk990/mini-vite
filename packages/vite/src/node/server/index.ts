@@ -1,7 +1,7 @@
 import connect from "connect";
 import type { Connect } from "dep-types/connect";
 import { createPluginContainer, PluginContainer } from "../pluginContainer";
-import { CLIENT_DIR, DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
+import { DEFAULT_DEV_PORT, DEFAULT_HOST_NAME } from "../constants";
 import {
   InlineConfig,
   ServerOptions,
@@ -18,7 +18,7 @@ import { ResolvedConfig } from "../config";
 import {
   diffDnsOrderChange,
   // isInNodeModules,
-  isParentDirectory,
+  // isParentDirectory,
   normalizePath,
   resolveServerUrls,
 } from "../utils";
@@ -44,11 +44,11 @@ import {
 } from "./middlewares/static";
 // import picomatch from "picomatch";
 // import type { Matcher } from "picomatch";
-import { proxyMiddleware } from "./middlewares/proxy";
+// import { proxyMiddleware } from "./middlewares/proxy";
 import path from "node:path";
 import { resolveChokidarOptions } from "../watch";
 import { htmlFallbackMiddleware } from "./middlewares/htmlFallback";
-import { errorMiddleware } from "./middlewares/error";
+// import { errorMiddleware } from "./middlewares/error";
 // import colors from "picocolors"; DELETE
 import { searchForWorkspaceRoot } from "./searchRoot";
 
@@ -314,10 +314,10 @@ export async function _createServer(
     postHooks.push(await hook(server));
   }
 
-  const { proxy } = serverConfig;
-  if (proxy) {
-    middlewares.use(proxyMiddleware(httpServer, proxy, config));
-  }
+  // const { proxy } = serverConfig;
+  // if (proxy) {
+  //   middlewares.use(proxyMiddleware(httpServer, proxy, config));
+  // }
 
   if (config.publicDir) {
     middlewares.use(
@@ -334,12 +334,12 @@ export async function _createServer(
 
   middlewares.use(indexHtmlMiddleware(server));
 
-  middlewares.use(function vite404Middleware(_, res) {
-    res.statusCode = 404;
-    res.end();
-  });
+  // middlewares.use(function vite404Middleware(_, res) {
+  //   res.statusCode = 404;
+  //   res.end();
+  // });
 
-  middlewares.use(errorMiddleware(server, middlewareMode));
+  // middlewares.use(errorMiddleware(server, middlewareMode));
   // 初始化服务器
   let initingServer: Promise<void> | undefined;
   let serverInited = false;
@@ -356,24 +356,24 @@ export async function _createServer(
     return initingServer;
   };
 
-  if (!middlewareMode && httpServer) {
-    const listen = httpServer.listen.bind(httpServer);
-    httpServer.listen = (async (port: number, ...args: any[]) => {
-      try {
-        ws.listen();
-        await initServer();
-      } catch (e) {
-        httpServer.emit("error", e);
-        return;
-      }
-      return listen(port, ...args);
-    }) as any;
-  } else {
-    if (options.ws) {
+  // if (!middlewareMode && httpServer) {
+  const listen = httpServer.listen.bind(httpServer);
+  httpServer.listen = (async (port: number, ...args: any[]) => {
+    try {
       ws.listen();
+      await initServer();
+    } catch (e) {
+      httpServer.emit("error", e);
+      return;
     }
-    await initServer();
-  }
+    return listen(port, ...args);
+  }) as any;
+  // } else {
+  //   if (options.ws) {
+  //     ws.listen();
+  //   }
+  //   await initServer();
+  // }
 
   return server;
 }
@@ -461,10 +461,10 @@ export function resolveServerOptions(
 
   allowDirs = allowDirs.map((i) => resolvedAllowDir(root, i));
 
-  const resolvedClientDir = resolvedAllowDir(root, CLIENT_DIR);
-  if (!allowDirs.some((dir) => isParentDirectory(dir, resolvedClientDir))) {
-    allowDirs.push(resolvedClientDir);
-  }
+  // const resolvedClientDir = resolvedAllowDir(root, CLIENT_DIR);
+  // if (!allowDirs.some((dir) => isParentDirectory(dir, resolvedClientDir))) {
+  //   allowDirs.push(resolvedClientDir);
+  // }
 
   server.fs = {
     strict: server.fs?.strict ?? true,
