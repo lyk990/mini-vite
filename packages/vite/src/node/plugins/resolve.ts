@@ -13,15 +13,15 @@ import {
   // deepImportRE,
   fsPathFromId,
   injectQuery,
-  isBuiltin,
-  isDataUrl,
-  isExternalUrl,
+  // isBuiltin,
+  // isDataUrl,
+  // isExternalUrl,
   isInNodeModules,
   isNonDriveRelativeAbsolutePath,
   // isObject,
   isOptimizable,
   isTsRequest,
-  isWindows,
+  // isWindows,
   normalizePath,
   safeRealpathSync,
   // slash,
@@ -40,7 +40,7 @@ import {
   // SPECIAL_QUERY_RE,
 } from "../constants";
 import colors from "picocolors";
-import { optimizedDepInfoFromFile, optimizedDepInfoFromId } from "../optimizer";
+// import { optimizedDepInfoFromId } from "../optimizer";
 import fs from "node:fs";
 import { resolvePackageData } from "../packages";
 import { exports, imports } from "resolve.exports";
@@ -93,18 +93,19 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
     root,
     // isProduction,
     asSrc,
-    // ssrConfig, // DELETE
+    // ssrConfig,
     preferRelative = false,
   } = resolveOptions;
 
   // const { target: ssrTarget, noExternal: ssrNoExternal } = ssrConfig ?? {};
 
-  const rootInRoot = tryStatSync(path.join(root, root))?.isDirectory() ?? false;
-
+  // const rootInRoot = tryStatSync(path.join(root, root))?.isDirectory() ?? false;
+  const rootInRoot = false;
   return {
     name: "vite:resolve",
 
     async resolveId(id, importer, resolveOpts) {
+      // FEATURE virtual
       if (
         id[0] === "\0" ||
         id.startsWith("virtual:") ||
@@ -158,13 +159,12 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
 
       let res: string | PartialResolvedId | undefined;
 
-      if (asSrc && depsOptimizer?.isOptimizedDepUrl(id)) {
-        const optimizedPath = id.startsWith(FS_PREFIX)
-          ? fsPathFromId(id)
-          : normalizePath(path.resolve(root, id.slice(1)));
-        return optimizedPath;
-      }
-
+      // if (asSrc && depsOptimizer?.isOptimizedDepUrl(id)) {
+      //   const optimizedPath = id.startsWith(FS_PREFIX)
+      //     ? fsPathFromId(id)
+      //     : normalizePath(path.resolve(root, id.slice(1)));
+      //   return optimizedPath;
+      // }
       if (asSrc && id.startsWith(FS_PREFIX)) {
         res = fsPathFromId(id);
         debug?.(`[@fs] ${colors.cyan(id)} -> ${colors.dim(res)}`);
@@ -187,20 +187,20 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         const basedir = importer ? path.dirname(importer) : process.cwd();
         const fsPath = path.resolve(basedir, id);
 
-        const normalizedFsPath = normalizePath(fsPath);
+        // const normalizedFsPath = normalizePath(fsPath);
 
-        if (depsOptimizer?.isOptimizedDepFile(normalizedFsPath)) {
-          if (!normalizedFsPath.match(DEP_VERSION_RE)) {
-            const browserHash = optimizedDepInfoFromFile(
-              depsOptimizer.metadata,
-              normalizedFsPath
-            )?.browserHash;
-            if (browserHash) {
-              return injectQuery(normalizedFsPath, `v=${browserHash}`);
-            }
-          }
-          return normalizedFsPath;
-        }
+        // if (depsOptimizer?.isOptimizedDepFile(normalizedFsPath)) {
+        //   if (!normalizedFsPath.match(DEP_VERSION_RE)) {
+        //     const browserHash = optimizedDepInfoFromFile(
+        //       depsOptimizer.metadata,
+        //       normalizedFsPath
+        //     )?.browserHash;
+        //     if (browserHash) {
+        //       return injectQuery(normalizedFsPath, `v=${browserHash}`);
+        //     }
+        //   }
+        //   return normalizedFsPath;
+        // }
 
         // if (
         //   targetWeb &&
@@ -235,14 +235,14 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         }
       }
 
-      if (isWindows && id[0] === "/") {
-        const basedir = importer ? path.dirname(importer) : process.cwd();
-        const fsPath = path.resolve(basedir, id);
-        if ((res = tryFsResolve(fsPath, options))) {
-          debug?.(`[drive-relative] ${colors.cyan(id)} -> ${colors.dim(res)}`);
-          return ensureVersionQuery(res, id, options, depsOptimizer);
-        }
-      }
+      // if (isWindows && id[0] === "/") {
+      //   const basedir = importer ? path.dirname(importer) : process.cwd();
+      //   const fsPath = path.resolve(basedir, id);
+      // if ((res = tryFsResolve(fsPath, options))) {
+      //   debug?.(`[drive-relative] ${colors.cyan(id)} -> ${colors.dim(res)}`);
+      //   return ensureVersionQuery(res, id, options, depsOptimizer);
+      // }
+      // }
 
       if (
         isNonDriveRelativeAbsolutePath(id) &&
@@ -252,31 +252,31 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         return ensureVersionQuery(res, id, options, depsOptimizer);
       }
 
-      if (isExternalUrl(id)) {
-        return options.idOnly ? id : { id, external: true };
-      }
+      // if (isExternalUrl(id)) {
+      //   return options.idOnly ? id : { id, external: true };
+      // }
 
-      if (isDataUrl(id)) {
-        return null;
-      }
+      // if (isDataUrl(id)) {
+      //   return null;
+      // }
 
       if (bareImportRE.test(id)) {
-        const external = options.shouldExternalize?.(id);
-        if (
-          !external &&
-          asSrc &&
-          depsOptimizer &&
-          !options.scan &&
-          (res = await tryOptimizedResolve(
-            depsOptimizer,
-            id,
-            importer,
-            options.preserveSymlinks,
-            options.packageCache
-          ))
-        ) {
-          return res;
-        }
+        // const external = options.shouldExternalize?.(id);
+        // if (
+        //   !external &&
+        //   asSrc &&
+        //   depsOptimizer &&
+        //   !options.scan &&
+        //   (res = await tryOptimizedResolve(
+        //     depsOptimizer,
+        //     id,
+        //     importer,
+        //     options.preserveSymlinks,
+        //     options.packageCache
+        //   ))
+        // ) {
+        //   return res;
+        // }
 
         // if (
         //   targetWeb &&
@@ -306,67 +306,67 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
           return res;
         }
 
-        if (isBuiltin(id)) {
-          // if (ssr) {
-          //   if (ssrNoExternal === true) {
-          //     let message = `Cannot bundle Node.js built-in "${id}"`;
-          //     if (importer) {
-          //       message += ` imported from "${path.relative(
-          //         process.cwd(),
-          //         importer
-          //       )}"`;
-          //     }
-          //     message += `. Consider disabling ssr.noExternal or remove the built-in dependency.`;
-          //     this.error(message);
-          //   }
+        // if (isBuiltin(id)) {
+        //   // if (ssr) {
+        //   //   if (ssrNoExternal === true) {
+        //   //     let message = `Cannot bundle Node.js built-in "${id}"`;
+        //   //     if (importer) {
+        //   //       message += ` imported from "${path.relative(
+        //   //         process.cwd(),
+        //   //         importer
+        //   //       )}"`;
+        //   //     }
+        //   //     message += `. Consider disabling ssr.noExternal or remove the built-in dependency.`;
+        //   //     this.error(message);
+        //   //   }
 
-          //   return options.idOnly ? id : { id, external: true };
-          // } else {
-          // if (!asSrc) {
-          //   debug?.(
-          //     `externalized node built-in "${id}" to empty module. ` +
-          //       `(imported by: ${colors.white(colors.dim(importer))})`
-          //   );
-          // } else if (isProduction) {
-          //   this.warn(
-          //     `Module "${id}" has been externalized for browser compatibility, imported by "${importer}". ` +
-          //       `See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`
-          //   );
-          // }
-          return `${browserExternalId}:${id}`;
-          // isProduction
-          // ? browserExternalId
-          // :
-        }
+        //   //   return options.idOnly ? id : { id, external: true };
+        //   // } else {
+        //   // if (!asSrc) {
+        //   //   debug?.(
+        //   //     `externalized node built-in "${id}" to empty module. ` +
+        //   //       `(imported by: ${colors.white(colors.dim(importer))})`
+        //   //   );
+        //   // } else if (isProduction) {
+        //   //   this.warn(
+        //   //     `Module "${id}" has been externalized for browser compatibility, imported by "${importer}". ` +
+        //   //       `See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.`
+        //   //   );
+        //   // }
+        //   return `${browserExternalId}:${id}`;
+        //   // isProduction
+        //   // ? browserExternalId
+        //   // :
+        // }
         // }
       }
 
       debug?.(`[fallthrough] ${colors.dim(id)}`);
     },
 
-    load(id) {
-      if (id.startsWith(browserExternalId)) {
-        // if (isProduction) {
-        //   return `export default {}`;
-        // } else {
-        id = id.slice(browserExternalId.length + 1);
-        return `\
-  export default new Proxy({}, {
-    get(_, key) {
-      throw new Error(\`Module "${id}" has been externalized for browser compatibility. Cannot access "${id}.\${key}" in client code.  See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\`)
-    }
-  })`;
-        // }
-      }
-      if (id.startsWith(optionalPeerDepId)) {
-        // if (isProduction) {
-        //   return `export default {}`;
-        // } else {
-        const [, peerDep, parentDep] = id.split(":");
-        return `throw new Error(\`Could not resolve "${peerDep}" imported by "${parentDep}". Is it installed?\`)`;
-        // }
-      }
-    },
+    //   load(id) {
+    //     if (id.startsWith(browserExternalId)) {
+    //       // if (isProduction) {
+    //       //   return `export default {}`;
+    //       // } else {
+    //       id = id.slice(browserExternalId.length + 1);
+    //       return `\
+    // export default new Proxy({}, {
+    //   get(_, key) {
+    //     throw new Error(\`Module "${id}" has been externalized for browser compatibility. Cannot access "${id}.\${key}" in client code.  See http://vitejs.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.\`)
+    //   }
+    // })`;
+    //       // }
+    //     }
+    //     if (id.startsWith(optionalPeerDepId)) {
+    //       // if (isProduction) {
+    //       //   return `export default {}`;
+    //       // } else {
+    //       const [, peerDep, parentDep] = id.split(":");
+    //       return `throw new Error(\`Could not resolve "${peerDep}" imported by "${parentDep}". Is it installed?\`)`;
+    //       // }
+    //     }
+    //   },
   };
 }
 
@@ -763,48 +763,48 @@ function tryFsResolve(
 //   }
 // }
 
-export async function tryOptimizedResolve(
-  depsOptimizer: DepsOptimizer,
-  id: string,
-  importer?: string,
-  preserveSymlinks?: boolean,
-  packageCache?: PackageCache
-): Promise<string | undefined> {
-  await depsOptimizer.scanProcessing;
+// export async function tryOptimizedResolve(
+//   depsOptimizer: DepsOptimizer,
+//   id: string,
+//   importer?: string,
+//   preserveSymlinks?: boolean,
+//   packageCache?: PackageCache
+// ): Promise<string | undefined> {
+//   await depsOptimizer.scanProcessing;
 
-  const metadata = depsOptimizer.metadata;
+//   const metadata = depsOptimizer.metadata;
 
-  const depInfo = optimizedDepInfoFromId(metadata, id);
-  if (depInfo) {
-    return depsOptimizer.getOptimizedDepId(depInfo);
-  }
+//   const depInfo = optimizedDepInfoFromId(metadata, id);
+//   if (depInfo) {
+//     return depsOptimizer.getOptimizedDepId(depInfo);
+//   }
 
-  if (!importer) return;
+//   if (!importer) return;
 
-  let idPkgDir: string | undefined;
-  const nestedIdMatch = `> ${id}`;
+//   let idPkgDir: string | undefined;
+//   const nestedIdMatch = `> ${id}`;
 
-  for (const optimizedData of metadata.depInfoList) {
-    if (!optimizedData.src) continue;
+//   for (const optimizedData of metadata.depInfoList) {
+//     if (!optimizedData.src) continue;
 
-    if (!optimizedData.id.endsWith(nestedIdMatch)) continue;
+//     if (!optimizedData.id.endsWith(nestedIdMatch)) continue;
 
-    if (idPkgDir == null) {
-      idPkgDir = resolvePackageData(
-        id,
-        importer,
-        preserveSymlinks,
-        packageCache
-      )?.dir;
-      if (idPkgDir == null) break;
-      idPkgDir = normalizePath(idPkgDir);
-    }
+//     if (idPkgDir == null) {
+//       idPkgDir = resolvePackageData(
+//         id,
+//         importer,
+//         preserveSymlinks,
+//         packageCache
+//       )?.dir;
+//       if (idPkgDir == null) break;
+//       idPkgDir = normalizePath(idPkgDir);
+//     }
 
-    if (optimizedData.src.startsWith(idPkgDir)) {
-      return depsOptimizer.getOptimizedDepId(optimizedData);
-    }
-  }
-}
+//     if (optimizedData.src.startsWith(idPkgDir)) {
+//       return depsOptimizer.getOptimizedDepId(optimizedData);
+//     }
+//   }
+// }
 
 // function resolveDeepImport(
 //   id: string,

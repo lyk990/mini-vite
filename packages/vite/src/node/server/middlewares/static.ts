@@ -194,7 +194,7 @@ Refer to docs https://vitejs.dev/config/server-options.html#server-fs-allow for 
 export function isFileServingAllowed(
   url: string,
   server: ViteDevServer
-): boolean {
+): boolean { 
   if (!server.config.server.fs.strict) return true;
 
   const file = fsPathFromUrl(url);

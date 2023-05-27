@@ -23,8 +23,10 @@ export function getDepsOptimizer(
   config: ResolvedConfig,
   ssr?: boolean
 ): DepsOptimizer | undefined {
-  const isDevSsr = false;
-  return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(config);
+  const isDevSsr = ssr && config.command !== "build";
+  return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(
+    config.mainConfig || config
+  );
 }
 
 /**初始化预构建依赖 */

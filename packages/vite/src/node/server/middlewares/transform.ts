@@ -7,9 +7,9 @@ import {
   isDirectRequest,
 } from "../../plugins/css";
 import {
-  cleanUrl,
+  // cleanUrl,
   createDebugger,
-  fsPathFromId,
+  // fsPathFromId,
   injectQuery,
   isImportRequest,
   isJSRequest,
@@ -21,12 +21,12 @@ import {
 } from "../../utils";
 import {
   DEP_VERSION_RE,
-  FS_PREFIX,
+  // FS_PREFIX,
   NULL_BYTE_PLACEHOLDER,
 } from "../../constants";
-import path from "node:path";
-import fsp from "node:fs/promises";
-import type { ExistingRawSourceMap } from "rollup";
+// import path from "node:path";
+// import fsp from "node:fs/promises";
+// import type { ExistingRawSourceMap } from "rollup";
 import colors from "picocolors";
 import {
   ERR_OPTIMIZE_DEPS_PROCESSING_ERROR,
@@ -63,58 +63,58 @@ export function transformMiddleware(
       return next(e);
     }
 
-    const withoutQuery = cleanUrl(url);
+    // const withoutQuery = cleanUrl(url);
 
     try {
-      const isSourceMap = withoutQuery.endsWith(".map");
-      if (isSourceMap) {
-        const depsOptimizer = getDepsOptimizer(server.config, false); // non-ssr
-        if (depsOptimizer?.isOptimizedDepUrl(url)) {
-          const sourcemapPath = url.startsWith(FS_PREFIX)
-            ? fsPathFromId(url)
-            : normalizePath(path.resolve(root, url.slice(1)));
-          try {
-            const map = JSON.parse(
-              await fsp.readFile(sourcemapPath, "utf-8")
-            ) as ExistingRawSourceMap;
+      // const isSourceMap = withoutQuery.endsWith(".map");
+      // if (isSourceMap) {
+      //   const depsOptimizer = getDepsOptimizer(server.config, false); // non-ssr
+      //   if (depsOptimizer?.isOptimizedDepUrl(url)) {
+      //     const sourcemapPath = url.startsWith(FS_PREFIX)
+      //       ? fsPathFromId(url)
+      //       : normalizePath(path.resolve(root, url.slice(1)));
+      //     try {
+      //       const map = JSON.parse(
+      //         await fsp.readFile(sourcemapPath, "utf-8")
+      //       ) as ExistingRawSourceMap;
 
-            // applySourcemapIgnoreList(
-            //   map,
-            //   sourcemapPath,
-            //   server.config.server.sourcemapIgnoreList,
-            //   logger
-            // );
+      //       // applySourcemapIgnoreList(
+      //       //   map,
+      //       //   sourcemapPath,
+      //       //   server.config.server.sourcemapIgnoreList,
+      //       //   logger
+      //       // );
 
-            return send(req, res, JSON.stringify(map), "json", {
-              headers: server.config.server.headers,
-            });
-          } catch (e) {
-            const dummySourceMap = {
-              version: 3,
-              file: sourcemapPath.replace(/\.map$/, ""),
-              sources: [],
-              sourcesContent: [],
-              names: [],
-              mappings: ";;;;;;;;;",
-            };
-            return send(req, res, JSON.stringify(dummySourceMap), "json", {
-              cacheControl: "no-cache",
-              headers: server.config.server.headers,
-            });
-          }
-        } else {
-          const originalUrl = url.replace(/\.map($|\?)/, "$1");
-          const map = (await moduleGraph.getModuleByUrl(originalUrl, false))
-            ?.transformResult?.map;
-          if (map) {
-            return send(req, res, JSON.stringify(map), "json", {
-              headers: server.config.server.headers,
-            });
-          } else {
-            return next();
-          }
-        }
-      }
+      //       return send(req, res, JSON.stringify(map), "json", {
+      //         headers: server.config.server.headers,
+      //       });
+      //     } catch (e) {
+      //       const dummySourceMap = {
+      //         version: 3,
+      //         file: sourcemapPath.replace(/\.map$/, ""),
+      //         sources: [],
+      //         sourcesContent: [],
+      //         names: [],
+      //         mappings: ";;;;;;;;;",
+      //       };
+      //       return send(req, res, JSON.stringify(dummySourceMap), "json", {
+      //         cacheControl: "no-cache",
+      //         headers: server.config.server.headers,
+      //       });
+      //     }
+      //   } else {
+      //     const originalUrl = url.replace(/\.map($|\?)/, "$1");
+      //     const map = (await moduleGraph.getModuleByUrl(originalUrl, false))
+      //       ?.transformResult?.map;
+      //     if (map) {
+      //       return send(req, res, JSON.stringify(map), "json", {
+      //         headers: server.config.server.headers,
+      //       });
+      //     } else {
+      //       return next();
+      //     }
+      //   }
+      // }
 
       const publicDir = normalizePath(server.config.publicDir);
       const rootDir = normalizePath(server.config.root);

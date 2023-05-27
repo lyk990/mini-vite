@@ -393,7 +393,6 @@ export function lexAcceptedHmrDeps(
         if (char === `'`) {
           addDep(i);
           if (prevState === LexerState.inCall) {
-            // accept('foo', ...)
             return false;
           } else {
             state = prevState;
@@ -406,7 +405,6 @@ export function lexAcceptedHmrDeps(
         if (char === `"`) {
           addDep(i);
           if (prevState === LexerState.inCall) {
-            // accept('foo', ...)
             return false;
           } else {
             state = prevState;
@@ -419,7 +417,6 @@ export function lexAcceptedHmrDeps(
         if (char === "`") {
           addDep(i);
           if (prevState === LexerState.inCall) {
-            // accept('foo', ...)
             return false;
           } else {
             state = prevState;
