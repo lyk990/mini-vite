@@ -17,7 +17,7 @@ export { getDepsOptimizer } from "./optimizer";
 import { promisify } from "node:util";
 import esbuild, { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
-import { esbuildDepPlugin } from "./esbuildDepPlugin ";
+// import { esbuildDepPlugin } from "./esbuildDepPlugin ";
 import type {
   BuildContext,
   BuildOptions as EsbuildBuildOptions,
@@ -118,7 +118,7 @@ export interface OptimizedDepInfo {
 /**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig,
-  ssr: boolean = false
+  // ssr: boolean = false
 ): Promise<DepOptimizationMetadata | undefined> {
   const depsCacheDir = getDepsCacheDir(config);
   let cachedMetadata: DepOptimizationMetadata | undefined;
@@ -236,7 +236,7 @@ export function optimizedDepInfoFromFile(
 export function runOptimizeDeps(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
-  ssr: boolean = false
+  // ssr: boolean = false
 ): {
   cancel: () => Promise<void>;
   result: Promise<DepOptimizationResult>;
@@ -537,7 +537,7 @@ async function prepareEsbuildOptimizerRun(
 
   const external = [...(optimizeDeps?.exclude ?? [])];
   const plugins = [...pluginsFromConfig];
-  plugins.push(esbuildDepPlugin(flatIdDeps, external, config));
+  // plugins.push(esbuildDepPlugin(flatIdDeps, external, config));
   // 扫描依赖
   const context = await esbuild.context({
     absWorkingDir: process.cwd(),

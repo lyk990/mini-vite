@@ -24,7 +24,7 @@ export function resolveBuildOptions(
     copyPublicDir: true,
     manifest: false,
     lib: false,
-    ssr: false,
+    // ssr: false,
     ssrManifest: false,
     ssrEmitAssets: false,
     reportCompressedSize: true,

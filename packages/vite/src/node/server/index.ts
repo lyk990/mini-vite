@@ -184,8 +184,8 @@ export async function _createServer(
   // const httpsOptions = undefined; // DELETE
   const ws = createWebSocketServer(httpServer, config);
 
-  const moduleGraph: ModuleGraph = new ModuleGraph((url, ssr) =>
-    container.resolveId(url, undefined, { ssr })
+  const moduleGraph: ModuleGraph = new ModuleGraph((url) =>
+    container.resolveId(url, undefined)
   );
   const container = await createPluginContainer(config);
   const closeHttpServer = createServerCloseFn(httpServer);
@@ -284,7 +284,7 @@ export async function _createServer(
         ws.close(),
         container.close(),
         getDepsOptimizer(server.config)?.close(),
-        getDepsOptimizer(server.config, true)?.close(),
+        getDepsOptimizer(server.config)?.close(),
         closeHttpServer(),
       ]);
       server.resolvedUrls = null;

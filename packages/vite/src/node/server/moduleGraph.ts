@@ -58,14 +58,14 @@ export class ModuleGraph {
 
   constructor(
     private resolveId: (
-      url: string,
-      ssr: boolean
+      url: string
+      // ssr: boolean
     ) => Promise<PartialResolvedId | null>
   ) {}
 
   async getModuleByUrl(
-    rawUrl: string,
-    ssr?: boolean
+    rawUrl: string
+    // ssr?: boolean
   ): Promise<ModuleNode | undefined> {
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl));
     const mod = this._getUnresolvedUrlToModule(rawUrl);
@@ -73,7 +73,7 @@ export class ModuleGraph {
       return mod;
     }
 
-    const [url] = await this._resolveUrl(rawUrl, ssr);
+    const [url] = await this._resolveUrl(rawUrl);
     return this.urlToModuleMap.get(url);
   }
 
@@ -136,8 +136,8 @@ export class ModuleGraph {
     importedBindings: Map<string, Set<string>> | null,
     acceptedModules: Set<string | ModuleNode>,
     acceptedExports: Set<string> | null,
-    isSelfAccepting: boolean,
-    ssr?: boolean
+    isSelfAccepting: boolean
+    // ssr?: boolean
   ): Promise<Set<ModuleNode> | undefined> {
     mod.isSelfAccepting = isSelfAccepting;
     const prevImports = mod.importedModules;
@@ -150,7 +150,7 @@ export class ModuleGraph {
       const nextIndex = index++;
       if (typeof imported === "string") {
         resolvePromises.push(
-          this.ensureEntryFromUrl(imported, ssr).then((dep) => {
+          this.ensureEntryFromUrl(imported).then((dep) => {
             dep.importers.add(mod);
             resolveResults[nextIndex] = dep;
           })
@@ -183,7 +183,7 @@ export class ModuleGraph {
       const nextIndex = index++;
       if (typeof accepted === "string") {
         resolvePromises.push(
-          this.ensureEntryFromUrl(accepted, ssr).then((dep) => {
+          this.ensureEntryFromUrl(accepted).then((dep) => {
             resolveResults[nextIndex] = dep;
           })
         );
@@ -205,15 +205,15 @@ export class ModuleGraph {
 
   async ensureEntryFromUrl(
     rawUrl: string,
-    ssr?: boolean,
+    // ssr?: boolean,
     setIsSelfAccepting = true
   ): Promise<ModuleNode> {
-    return this._ensureEntryFromUrl(rawUrl, ssr, setIsSelfAccepting);
+    return this._ensureEntryFromUrl(rawUrl, setIsSelfAccepting);
   }
 
   async _ensureEntryFromUrl(
     rawUrl: string,
-    ssr?: boolean,
+    // ssr?: boolean,
     setIsSelfAccepting = true,
     resolved?: PartialResolvedId
   ): Promise<ModuleNode> {
@@ -225,7 +225,7 @@ export class ModuleGraph {
     const modPromise = (async () => {
       const [url, resolvedId, meta] = await this._resolveUrl(
         rawUrl,
-        ssr,
+        // ssr,
         resolved
       );
       mod = this.idToModuleMap.get(resolvedId);
@@ -274,13 +274,13 @@ export class ModuleGraph {
     return mod;
   }
 
-  async resolveUrl(url: string, ssr?: boolean): Promise<ResolvedUrl> {
+  async resolveUrl(url: string): Promise<ResolvedUrl> {
     url = removeImportQuery(removeTimestampQuery(url));
     const mod = await this._getUnresolvedUrlToModule(url);
     if (mod?.id) {
       return [mod.url, mod.id, mod.meta];
     }
-    return this._resolveUrl(url, ssr);
+    return this._resolveUrl(url);
   }
 
   _getUnresolvedUrlToModule(
@@ -298,10 +298,10 @@ export class ModuleGraph {
 
   async _resolveUrl(
     url: string,
-    ssr?: boolean,
+    // ssr?: boolean,
     alreadyResolved?: PartialResolvedId
   ): Promise<ResolvedUrl> {
-    const resolved = alreadyResolved ?? (await this.resolveId(url, !!ssr));
+    const resolved = alreadyResolved ?? (await this.resolveId(url));
     const resolvedId = resolved?.id || url;
     if (
       url !== resolvedId &&

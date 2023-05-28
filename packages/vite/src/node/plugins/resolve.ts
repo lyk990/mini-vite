@@ -71,7 +71,7 @@ export interface InternalResolveOptions extends Required<ResolveOptions> {
   tryEsmOnly?: boolean;
   scan?: boolean;
   ssrOptimizeCheck?: boolean;
-  getDepsOptimizer?: (ssr: boolean) => DepsOptimizer | undefined;
+  getDepsOptimizer?: () => DepsOptimizer | undefined;
   shouldExternalize?: (id: string) => boolean | undefined;
   idOnly?: boolean;
 }
@@ -81,7 +81,7 @@ const debug = createDebugger("vite:resolve-details", {
   onlyWhenFocused: true,
 });
 export const browserExternalId = "__vite-browser-external";
-export const optionalPeerDepId = "__vite-optional-peer-dep";
+// export const optionalPeerDepId = "__vite-optional-peer-dep";
 
 export type InternalResolveOptionsWithOverrideConditions =
   InternalResolveOptions & {
@@ -118,9 +118,9 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
 
       // const depsOptimizer = resolveOptions.getDepsOptimizer?.(ssr);
 
-      if (id.startsWith(browserExternalId)) {
-        return id;
-      }
+      // if (id.startsWith(browserExternalId)) {
+      //   return id;
+      // }
 
       // const targetWeb = !ssr || ssrTarget === "webworker"; // DELETE
       const targetWeb = true;
@@ -252,7 +252,7 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
       ) {
         debug?.(`[fs] ${colors.cyan(id)} -> ${colors.dim(res)}`);
         // return ensureVersionQuery(res, id, options, depsOptimizer);
-        return res
+        return res;
       }
 
       // if (isExternalUrl(id)) {
@@ -666,7 +666,7 @@ function splitFileAndPostfix(path: string) {
 
 function tryFsResolve(
   fsPath: string,
-  options: InternalResolveOptions,
+  options: InternalResolveOptions
   // tryIndex = true,
   // targetWeb = true,
   // skipPackageJson = false
@@ -679,7 +679,7 @@ function tryFsResolve(
         queryIndex > hashIndex ? fsPath.slice(0, queryIndex) : fsPath;
       const res = tryCleanFsResolve(
         file,
-        options,
+        options
         // tryIndex,
         // targetWeb,
         // skipPackageJson
@@ -691,7 +691,7 @@ function tryFsResolve(
   const { file, postfix } = splitFileAndPostfix(fsPath);
   const res = tryCleanFsResolve(
     file,
-    options,
+    options
     // tryIndex,
     // targetWeb,
     // skipPackageJson
@@ -974,7 +974,7 @@ export function resolvePackageEntry(
       const entryPointPath = path.join(dir, entry);
       const resolvedEntryPoint = tryFsResolve(
         entryPointPath,
-        options,
+        options
         // true,
         // true,
         // skipPackageJson
@@ -1025,7 +1025,7 @@ function getRealPath(resolved: string, preserveSymlinks?: boolean): string {
 // const isPossibleTsOutput = (url: string): boolean => knownTsOutputRE.test(url);
 function tryCleanFsResolve(
   file: string,
-  options: InternalResolveOptions,
+  options: InternalResolveOptions
   // tryIndex = true,
   // targetWeb = true,
   // skipPackageJson = false

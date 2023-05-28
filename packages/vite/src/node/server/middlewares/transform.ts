@@ -164,8 +164,8 @@ export function transformMiddleware(
         const ifNoneMatch = req.headers["if-none-match"];
         if (
           ifNoneMatch &&
-          (await moduleGraph.getModuleByUrl(url, false))?.transformResult
-            ?.etag === ifNoneMatch
+          (await moduleGraph.getModuleByUrl(url))?.transformResult?.etag ===
+            ifNoneMatch
         ) {
           debugCache?.(`[304] ${prettifyUrl(url, root)}`);
           res.statusCode = 304;
@@ -176,7 +176,7 @@ export function transformMiddleware(
           html: req.headers.accept?.includes("text/html"),
         });
         if (result) {
-          const depsOptimizer = getDepsOptimizer(server.config, false);
+          const depsOptimizer = getDepsOptimizer(server.config);
           const type = isDirectCSSRequest(url) ? "css" : "js";
           const isDep =
             DEP_VERSION_RE.test(url) || depsOptimizer?.isOptimizedDepUrl(url);

@@ -102,8 +102,8 @@ export interface CommonServerOptions {
 export type ResolveFn = (
   id: string,
   importer?: string,
-  aliasOnly?: boolean,
-  ssr?: boolean
+  aliasOnly?: boolean
+  // ssr?: boolean
 ) => Promise<string | undefined>;
 
 // interface NodeModuleWithCompile extends NodeModule {
@@ -299,7 +299,8 @@ export async function resolveConfig(
   const relativeBaseShortcut = config.base === "" || config.base === "./";
 
   const resolvedBase = relativeBaseShortcut
-    ? !isBuild || config.build?.ssr
+    ? // ? !isBuild || config.build?.ssr
+      !isBuild
       ? "/"
       : "./"
     : resolveBaseUrl(config.base, isBuild, logger) ?? "/";
@@ -328,7 +329,7 @@ export async function resolveConfig(
   const createResolver: ResolvedConfig["createResolver"] = (options) => {
     let aliasContainer: PluginContainer | undefined;
     let resolverContainer: PluginContainer | undefined;
-    return async (id, importer, aliasOnly, ssr) => {
+    return async (id, importer, aliasOnly) => {
       let container: PluginContainer;
       if (aliasOnly) {
         container =
@@ -349,7 +350,7 @@ export async function resolveConfig(
                 root: resolvedRoot,
                 isProduction,
                 isBuild: command === "build",
-                ssrConfig: resolved.ssr,
+                // ssrConfig: resolved.ssr,
                 asSrc: true,
                 preferRelative: false,
                 tryIndex: true,
@@ -361,7 +362,7 @@ export async function resolveConfig(
       }
       return (
         await container.resolveId(id, importer, {
-          ssr,
+          // ssr,
           scan: options?.scan,
         })
       )?.id;

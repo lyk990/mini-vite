@@ -109,7 +109,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         return null;
       }
 
-      const ssr = options?.ssr === true;
+      // const ssr = options?.ssr === true;
       const prettyImporter = prettifyUrl(importer, root);
 
       // if (canSkipImportAnalysis(importer)) {
@@ -149,7 +149,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         );
       }
 
-      const depsOptimizer = getDepsOptimizer(config, ssr);
+      const depsOptimizer = getDepsOptimizer(config);
 
       const { moduleGraph } = server;
       const importerModule = moduleGraph.getModuleById(importer)!;
@@ -242,37 +242,37 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
           url = wrapId(resolved.id);
         }
 
-        if (!ssr) {
-          url = markExplicitImport(url);
+        // if (!ssr) {
+        url = markExplicitImport(url);
 
-          // if (
-          //   (isRelative || isSelfImport) &&
-          //   !hasImportInQueryParamsRE.test(url) &&
-          //   !url.match(DEP_VERSION_RE)
-          // ) {
-          //   const versionMatch = importer.match(DEP_VERSION_RE);
-          //   // if (versionMatch) {
-          //   //   url = injectQuery(url, versionMatch[1]);
-          //   // }
-          // }
+        // if (
+        //   (isRelative || isSelfImport) &&
+        //   !hasImportInQueryParamsRE.test(url) &&
+        //   !url.match(DEP_VERSION_RE)
+        // ) {
+        //   const versionMatch = importer.match(DEP_VERSION_RE);
+        //   // if (versionMatch) {
+        //   //   url = injectQuery(url, versionMatch[1]);
+        //   // }
+        // }
 
-          try {
-            const depModule = await moduleGraph._ensureEntryFromUrl(
-              unwrapId(url),
-              ssr,
-              canSkipImportAnalysis(url) || forceSkipImportAnalysis,
-              resolved
-            );
-            if (depModule.lastHMRTimestamp > 0) {
-              url = injectQuery(url, `t=${depModule.lastHMRTimestamp}`);
-            }
-          } catch (e: any) {
-            e.pos = pos;
-            throw e;
+        try {
+          const depModule = await moduleGraph._ensureEntryFromUrl(
+            unwrapId(url),
+            // ssr,
+            canSkipImportAnalysis(url) || forceSkipImportAnalysis,
+            resolved
+          );
+          if (depModule.lastHMRTimestamp > 0) {
+            url = injectQuery(url, `t=${depModule.lastHMRTimestamp}`);
           }
-
-          url = joinUrlSegments(base, url);
+        } catch (e: any) {
+          e.pos = pos;
+          throw e;
         }
+
+        url = joinUrlSegments(base, url);
+        // }
 
         return [url, resolved.id];
       };
@@ -495,7 +495,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               config.server.preTransformRequests
             ) {
               const url = removeImportQuery(hmrUrl);
-              server.transformRequest(url, { ssr }).catch((e) => {
+              server.transformRequest(url).catch((e) => {
                 // if (e?.code === ERR_OUTDATED_OPTIMIZED_DEP) {
                 //   return;
                 // }
@@ -551,7 +551,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       //   str().prepend(getEnv(ssr));
       // }
 
-      if (hasHMR && !ssr) {
+      if (hasHMR) {
         debugHmr?.(
           `${
             isSelfAccepting
@@ -580,8 +580,8 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       const normalizedAcceptedUrls = new Set<string>();
       for (const { url, start, end } of acceptedUrls) {
         const [normalized] = await moduleGraph.resolveUrl(
-          toAbsoluteUrl(url),
-          ssr
+          toAbsoluteUrl(url)
+          // ssr
         );
         normalizedAcceptedUrls.add(normalized);
         str().overwrite(start, end, JSON.stringify(normalized), {
@@ -620,8 +620,8 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
           importedBindings,
           normalizedAcceptedUrls,
           isPartiallySelfAccepting ? acceptedExports : null,
-          isSelfAccepting,
-          ssr
+          isSelfAccepting
+          // ssr
         );
         // if (hasHMR && prunedImports) {
         //   handlePrunedModules(prunedImports, server);

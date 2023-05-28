@@ -20,10 +20,10 @@ const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
 const devSsrDepsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
 
 export function getDepsOptimizer(
-  config: ResolvedConfig,
-  ssr?: boolean
+  config: ResolvedConfig
+  // ssr?: boolean
 ): DepsOptimizer | undefined {
-  const isDevSsr = ssr && config.command !== "build";
+  const isDevSsr = config.command !== "build";
   return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(
     config.mainConfig || config
   );
@@ -43,7 +43,7 @@ async function createDepsOptimizer(
 ): Promise<void> {
   const sessionTimestamp = Date.now().toString();
   // let ssr = false;
-  const cachedMetadata = await loadCachedDepOptimizationMetadata(config, false);
+  const cachedMetadata = await loadCachedDepOptimizationMetadata(config);
   let metadata =
     cachedMetadata || initDepsOptimizerMetadata(config, sessionTimestamp);
   let depOptimizationProcessing = newDepOptimizationProcessing();

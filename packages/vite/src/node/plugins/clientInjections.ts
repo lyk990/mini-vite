@@ -74,10 +74,10 @@ export function clientInjectionsPlugin(config: ResolvedConfig): Plugin {
           .replace(`__HMR_ENABLE_OVERLAY__`, hmrEnableOverlayReplacement);
       };
     },
-    transform(code, id, options) {
+    transform(code, id) {
       if (id === normalizedClientEntry || id === normalizedEnvEntry) {
         return injectConfigValues(code);
-      } else if (!options?.ssr && code.includes("process.env.NODE_ENV")) {
+      } else if (code.includes("process.env.NODE_ENV")) {
         return code.replace(
           process_env_NODE_ENV_RE,
           config.define?.["process.env.NODE_ENV"] ||

@@ -56,7 +56,7 @@ export interface Plugin extends RollupPlugin {
       options: {
         assertions: Record<string, string>;
         custom?: CustomPluginOptions;
-        ssr?: boolean;
+        // ssr?: boolean;
         scan?: boolean;
         isEntry: boolean;
       }
@@ -66,7 +66,7 @@ export interface Plugin extends RollupPlugin {
     (
       this: PluginContext,
       id: string,
-      options?: { ssr?: boolean }
+      options?: {}
     ) => Promise<LoadResult> | LoadResult
   >;
   transform?: ObjectHook<
@@ -74,7 +74,7 @@ export interface Plugin extends RollupPlugin {
       this: TransformPluginContext,
       code: string,
       id: string,
-      options?: { ssr?: boolean }
+      options?: {}
     ) => Promise<TransformResult> | TransformResult
   >;
 }

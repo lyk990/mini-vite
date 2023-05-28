@@ -42,13 +42,13 @@ export function transformRequest(
   server: ViteDevServer,
   options: TransformOptions = {}
 ): Promise<TransformResult | null> {
-  const cacheKey = (options.ssr ? "ssr:" : options.html ? "html:" : "") + url;
+  const cacheKey = (options.html ? "html:" : "") + url;
   const timestamp = Date.now();
 
   const pending = server._pendingRequests.get(cacheKey);
   if (pending) {
     return server.moduleGraph
-      .getModuleByUrl(removeTimestampQuery(url), options.ssr)
+      .getModuleByUrl(removeTimestampQuery(url))
       .then((module) => {
         if (!module || pending.timestamp > module.lastInvalidationTimestamp) {
           return pending.request;
@@ -89,22 +89,19 @@ async function doTransform(
 
   const { config, pluginContainer } = server;
   const prettyUrl = debugCache ? prettifyUrl(url, config.root) : "";
-  const ssr = !!options.ssr;
+  // const ssr = !!options.ssr;
 
-  const module = await server.moduleGraph.getModuleByUrl(url, ssr);
+  const module = await server.moduleGraph.getModuleByUrl(url);
 
-  const cached =
-    module && (ssr ? module.ssrTransformResult : module.transformResult);
+  const cached = module && module.transformResult;
   if (cached) {
     debugCache?.(`[memory] ${prettyUrl}`);
     return cached;
   }
   const id =
-    module?.id ??
-    (await pluginContainer.resolveId(url, undefined, { ssr }))?.id ??
-    url;
+    module?.id ?? (await pluginContainer.resolveId(url, undefined))?.id ?? url;
   const result = loadAndTransform(id, url, server, options, timestamp);
-  getDepsOptimizer(config, ssr)?.delayDepsOptimizerUntil(id, () => result);
+  getDepsOptimizer(config)?.delayDepsOptimizerUntil(id, () => result);
   return result;
 }
 
@@ -119,7 +116,7 @@ async function loadAndTransform(
   const { root, logger } = config;
   const prettyUrl =
     debugLoad || debugTransform ? prettifyUrl(url, config.root) : "";
-  const ssr = !!options.ssr;
+  // const ssr = !!options.ssr;
 
   const file = cleanUrl(id);
 
@@ -127,12 +124,12 @@ async function loadAndTransform(
   let map: SourceDescription["map"] = null;
 
   const loadStart = debugLoad ? performance.now() : 0;
-  const loadResult = await pluginContainer.load(id, { ssr });
+  const loadResult = await pluginContainer.load(id);
   if (loadResult == null) {
     // if (options.html && !id.endsWith(".html")) {
     //   return null;
     // }
-    if (options.ssr || isFileServingAllowed(file, server)) {
+    if (isFileServingAllowed(file, server)) {
       try {
         code = await fs.readFile(file, "utf-8");
         debugLoad?.(`${timeFrom(loadStart)} [fs] ${prettyUrl}`);
@@ -195,12 +192,12 @@ async function loadAndTransform(
     //   ERR_LOAD_URL;
     throw new Error(`Failed to load url`);
   }
-  const mod = await moduleGraph.ensureEntryFromUrl(url, ssr);
+  const mod = await moduleGraph.ensureEntryFromUrl(url);
   ensureWatchedFile(watcher, mod.file, root);
   const transformStart = debugTransform ? performance.now() : 0;
   const transformResult = await pluginContainer.transform(code, id, {
     inMap: map,
-    ssr,
+    // ssr,
   });
   if (
     transformResult == null ||

@@ -35,7 +35,7 @@ export async function resolvePlugins(
       packageCache: config.packageCache,
       // ssrConfig: config.ssr, // DELETE
       asSrc: true,
-      getDepsOptimizer: (ssr: boolean) => getDepsOptimizer(config, ssr),
+      getDepsOptimizer: () => getDepsOptimizer(config),
       shouldExternalize: undefined,
     }),
     htmlInlineProxyPlugin(config),
@@ -55,7 +55,6 @@ export async function resolvePlugins(
 export function createPluginHookUtils(
   plugins: readonly Plugin[]
 ): PluginHookUtils {
-  
   const sortedPluginsCache = new Map<keyof Plugin, Plugin[]>();
   function getSortedPlugins(hookName: keyof Plugin): Plugin[] {
     if (sortedPluginsCache.has(hookName))

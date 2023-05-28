@@ -66,7 +66,7 @@ export interface PluginContainer {
       assertions?: Record<string, string>;
       custom?: CustomPluginOptions;
       skip?: Set<Plugin>;
-      ssr?: boolean;
+      // ssr?: boolean;
       scan?: boolean;
       isEntry?: boolean;
     }
@@ -76,13 +76,13 @@ export interface PluginContainer {
     id: string,
     options?: {
       inMap?: SourceDescription["map"];
-      ssr?: boolean;
+      // ssr?: boolean;
     }
   ): Promise<SourceDescription | null>;
   load(
     id: string,
     options?: {
-      ssr?: boolean;
+      // ssr?: boolean;
     }
   ): Promise<LoadResult | null>;
   close(): Promise<void>;
@@ -151,7 +151,7 @@ export async function createPluginContainer(
 
   class Context implements PluginContext {
     meta = minimalContext.meta;
-    ssr = false;
+    // ssr = false;
     _scan = false;
     _activePlugin: Plugin | null;
     _activeId: string | null = null;
@@ -187,7 +187,7 @@ export async function createPluginContainer(
         custom: options?.custom,
         isEntry: !!options?.isEntry,
         skip,
-        ssr: this.ssr,
+        // ssr: this.ssr,
         scan: this._scan,
       });
       if (typeof out === "string") out = { id: out };
@@ -203,7 +203,7 @@ export async function createPluginContainer(
       await moduleGraph?.ensureEntryFromUrl(options.id);
       updateModuleInfo(options.id, options);
 
-      await container.load(options.id, { ssr: this.ssr });
+      await container.load(options.id);
       const moduleInfo = this.getModuleInfo(options.id);
       if (!moduleInfo)
         throw Error(`Failed to load module with id ${options.id}`);
@@ -346,10 +346,10 @@ export async function createPluginContainer(
 
     async resolveId(rawId, importer = join(root, "index.html"), options) {
       const skip = options?.skip;
-      const ssr = options?.ssr;
+      // const ssr = options?.ssr;
       const scan = !!options?.scan;
       const ctx = new Context();
-      ctx.ssr = !!ssr;
+      // ctx.ssr = !!ssr;
       ctx._scan = scan;
       ctx._resolveSkips = skip;
       // const resolveStart = debugResolve ? performance.now() : 0;
@@ -371,7 +371,7 @@ export async function createPluginContainer(
           assertions: options?.assertions ?? {},
           custom: options?.custom,
           isEntry: !!options?.isEntry,
-          ssr,
+          // ssr,
           scan,
         });
         if (!result) continue;
@@ -412,16 +412,16 @@ export async function createPluginContainer(
       }
     },
 
-    async load(id, options) {
-      const ssr = options?.ssr;
+    async load(id) {
+      // const ssr = options?.ssr;
       const ctx = new Context();
-      ctx.ssr = !!ssr;
+      // ctx.ssr = !!ssr;
       for (const plugin of getSortedPlugins("load")) {
         if (!plugin.load) continue;
         ctx._activePlugin = plugin;
         const handler =
           "handler" in plugin.load ? plugin.load.handler : plugin.load;
-        const result = await handler.call(ctx as any, id, { ssr });
+        const result = await handler.call(ctx as any, id);
         if (result != null) {
           if (isObject(result)) {
             updateModuleInfo(id, result);
@@ -434,9 +434,9 @@ export async function createPluginContainer(
 
     async transform(code, id, options) {
       const inMap = options?.inMap;
-      const ssr = options?.ssr;
+      // const ssr = options?.ssr;
       const ctx = new TransformContext(id, code, inMap as SourceMap);
-      ctx.ssr = !!ssr;
+      // ctx.ssr = !!ssr;
       for (const plugin of getSortedPlugins("transform")) {
         if (!plugin.transform) continue;
         ctx._activePlugin = plugin;
@@ -448,7 +448,7 @@ export async function createPluginContainer(
             ? plugin.transform.handler
             : plugin.transform;
         try {
-          result = await handler.call(ctx as any, code, id, { ssr });
+          result = await handler.call(ctx as any, code, id);
         } catch (e) {}
 
         if (!result) continue;
