@@ -17,7 +17,6 @@ export { getDepsOptimizer } from "./optimizer";
 import { promisify } from "node:util";
 import esbuild, { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
-// import { esbuildDepPlugin } from "./esbuildDepPlugin ";
 import type {
   BuildContext,
   BuildOptions as EsbuildBuildOptions,
@@ -158,12 +157,6 @@ function parseDepsOptimizerMetadata(
       return value;
     }
   );
-  // if (
-  //   !chunks ||
-  //   Object.values(optimized).some((depInfo: any) => !depInfo.fileHash)
-  // ) {
-  //   return;
-  // }
   const metadata = {
     hash,
     browserHash,
@@ -236,7 +229,6 @@ export function optimizedDepInfoFromFile(
 export function runOptimizeDeps(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
-  // ssr: boolean = false
 ): {
   cancel: () => Promise<void>;
   result: Promise<DepOptimizationResult>;
@@ -265,7 +257,6 @@ export function runOptimizeDeps(
     depsFromOptimizedDepInfo(depsInfo)
   );
 
-  // const qualifiedIds = Object.keys(depsInfo); DELETE
   const cleanUp = () => {
     fsp
       .rm(processingCacheDir, { recursive: true, force: true })
@@ -292,13 +283,6 @@ export function runOptimizeDeps(
         fsp.rm(temporalPath, { recursive: true, force: true });
     },
   };
-  //  DELETE 没有依赖
-  // if (!qualifiedIds.length) {
-  //   return {
-  //     cancel: async () => cleanUp(),
-  //     result: Promise.resolve(succesfulResult),
-  //   };
-  // }
 
   const cancelledResult: DepOptimizationResult = {
     metadata,
@@ -306,12 +290,9 @@ export function runOptimizeDeps(
     cancel: cleanUp,
   };
 
-  // const start = performance.now();
-
   const preparedRun = prepareEsbuildOptimizerRun(
     resolvedConfig,
     depsInfo,
-    // ssr,
     processingCacheDir,
     optimizerContext
   );
@@ -377,10 +358,6 @@ export function runOptimizeDeps(
           }
         }
 
-        // debug?.(
-        //   `Dependencies bundled in ${(performance.now() - start).toFixed(2)}ms`
-        // );
-
         return succesfulResult;
       })
 
@@ -417,18 +394,8 @@ function getDepsCacheDirPrefix(config: ResolvedConfig): string {
   return normalizePath(path.resolve(config.cacheDir, "deps"));
 }
 
-// TODO  getDepsCacheSuffix 是否直接返回""
 function getDepsCacheSuffix(): string {
   let suffix = "";
-  // if (config.command === "build") {
-  //   const { outDir } = config.build;
-  //   const buildId =
-  //     outDir.length > 8 || outDir.includes("/") ? getHash(outDir) : outDir;
-  //   suffix += `_build-${buildId}`;
-  // }
-  // if (ssr) {
-  //   suffix += "_ssr";
-  // }
   return suffix;
 }
 
@@ -483,14 +450,12 @@ function stringifyDepsOptimizerMetadata(
 async function prepareEsbuildOptimizerRun(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
-  // ssr: boolean,
   processingCacheDir: string,
   optimizerContext: { cancelled: boolean }
 ): Promise<{
   context?: BuildContext;
   idToExports: Record<string, ExportsData>;
 }> {
-  // const isBuild = resolvedConfig.command === "build";
   const config: ResolvedConfig = {
     ...resolvedConfig,
     command: "build",
@@ -526,18 +491,12 @@ async function prepareEsbuildOptimizerRun(
   if (optimizerContext.cancelled) return { context: undefined, idToExports };
   const define = {
     "process.env.NODE_ENV":
-      // isBuild
-      //   ? "__vite_process_env_NODE_ENV"
-      //   :
       JSON.stringify(process.env.NODE_ENV || config.mode),
   };
 
-  // const platform =
-  //   ssr && config.ssr?.target !== "webworker" ? "node" : "browser";
 
   const external = [...(optimizeDeps?.exclude ?? [])];
   const plugins = [...pluginsFromConfig];
-  // plugins.push(esbuildDepPlugin(flatIdDeps, external, config));
   // 扫描依赖
   const context = await esbuild.context({
     absWorkingDir: process.cwd(),
@@ -547,12 +506,6 @@ async function prepareEsbuildOptimizerRun(
     define,
     format: "esm",
     banner: undefined,
-    // platform === "node"
-    //   ? {
-    //       js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
-    //     }
-    //   : undefined,
-    // isBuild ? config.build.target || undefined :
     target: ESBUILD_MODULES_TARGET,
     external,
     logLevel: "error",
@@ -816,29 +769,3 @@ export function getDepHash(config: ResolvedConfig): string {
   );
   return getHash(content);
 }
-
-// export function optimizedDepInfoFromId(
-//   metadata: DepOptimizationMetadata,
-//   id: string
-// ): OptimizedDepInfo | undefined {
-//   return (
-//     metadata.optimized[id] || metadata.discovered[id] || metadata.chunks[id]
-//   );
-// }
-
-// export async function optimizedDepNeedsInterop(
-//   metadata: DepOptimizationMetadata,
-//   file: string,
-//   config: ResolvedConfig
-// ): Promise<boolean | undefined> {
-//   const depInfo = optimizedDepInfoFromFile(metadata, file);
-//   if (depInfo?.src && depInfo.needsInterop === undefined) {
-//     depInfo.exportsData ??= extractExportsData(depInfo.src, config);
-//     depInfo.needsInterop = needsInterop(
-//       config,
-//       depInfo.id,
-//       await depInfo.exportsData
-//     );
-//   }
-//   return depInfo?.needsInterop;
-// }

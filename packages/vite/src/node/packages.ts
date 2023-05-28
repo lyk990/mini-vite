@@ -1,16 +1,6 @@
-// import { Plugin } from "vite";
 import { safeRealpathSync } from "./utils";
 import path from "node:path";
-// import { createRequire } from "node:module";
 import fs from "node:fs";
-// FEATURE
-// @ts-ignore eslint-disable-next-line @typescript-eslint/consistent-type-imports
-// let pnp: typeof import("pnpapi") | undefined;
-// if (process.versions.pnp) {
-//   try {
-//     pnp = createRequire(import.meta.url)("pnpapi");
-//   } catch (e) {}
-// }
 export type PackageCache = Map<string, PackageData>;
 export interface PackageData {
   dir: string;
@@ -33,59 +23,6 @@ export interface PackageData {
   };
 }
 
-/**监听package.json文件得改变 */
-// export function watchPackageDataPlugin(packageCache: PackageCache): Plugin {
-//   const watchQueue = new Set<string>();
-//   const watchedDirs = new Set<string>();
-
-//   const watchFileStub = (id: string) => {
-//     watchQueue.add(id);
-//   };
-//   let watchFile = watchFileStub;
-
-//   const setPackageData = packageCache.set.bind(packageCache);
-//   packageCache.set = (id, pkg) => {
-//     if (!isInNodeModules(pkg.dir) && !watchedDirs.has(pkg.dir)) {
-//       watchedDirs.add(pkg.dir);
-//       watchFile(path.join(pkg.dir, "package.json"));
-//     }
-//     return setPackageData(id, pkg);
-//   };
-
-//   return {
-//     name: "vite:watch-package-data",
-//     buildStart() {
-//       watchFile = this.addWatchFile.bind(this);
-//       watchQueue.forEach(watchFile);
-//       watchQueue.clear();
-//     },
-//     buildEnd() {
-//       watchFile = watchFileStub;
-//     },
-//     watchChange(id) {
-//       if (id.endsWith("/package.json")) {
-//         invalidatePackageData(packageCache, path.normalize(id));
-//       }
-//     },
-//     handleHotUpdate({ file }) {
-//       if (file.endsWith("/package.json")) {
-//         invalidatePackageData(packageCache, path.normalize(file));
-//       }
-//     },
-//   };
-// }
-
-// function invalidatePackageData(
-//   packageCache: PackageCache,
-//   pkgPath: string
-// ): void {
-//   const pkgDir = path.dirname(pkgPath);
-//   packageCache.forEach((pkg, cacheKey) => {
-//     if (pkg.dir === pkgDir) {
-//       packageCache.delete(cacheKey);
-//     }
-//   });
-// }
 /**生成预加载缓存的键值。 */
 function getRpdCacheKey(
   pkgName: string,
@@ -101,39 +38,8 @@ export function resolvePackageData(
   preserveSymlinks = false,
   packageCache?: PackageCache
 ): PackageData | null {
-  // if (pnp) {
-  //   const cacheKey = getRpdCacheKey(pkgName, basedir, preserveSymlinks);
-  //   if (packageCache?.has(cacheKey)) return packageCache.get(cacheKey)!;
-
-  //   let pkg: string | null;
-  //   try {
-  //     pkg = pnp.resolveToUnqualified(pkgName, basedir, {
-  //       considerBuiltins: false,
-  //     });
-  //   } catch (e) {
-  //     return null;
-  //   }
-  //   if (!pkg) return null;
-
-  //   const pkgData = loadPackageData(path.join(pkg, "package.json"));
-  //   packageCache?.set(cacheKey, pkgData);
-
-  //   return pkgData;
-  // }
-
   const originalBasedir = basedir;
   while (basedir) {
-    // if (packageCache) {
-    //   const cached = getRpdCache(
-    //     packageCache,
-    //     pkgName,
-    //     basedir,
-    //     originalBasedir,
-    //     preserveSymlinks
-    //   );
-    //   if (cached) return cached;
-    // }
-
     const pkg = path.join(basedir, "node_modules", pkgName, "package.json");
     try {
       if (fs.existsSync(pkg)) {
@@ -182,24 +88,9 @@ export function findNearestMainPackageData(
 export function loadPackageData(pkgPath: string): PackageData {
   const data = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
   const pkgDir = path.dirname(pkgPath);
-  // const { sideEffects } = data;
   let hasSideEffects: (id: string) => boolean;
-  // if (typeof sideEffects === "boolean") {
-  //   hasSideEffects = () => sideEffects;
-  // } else if (Array.isArray(sideEffects)) {
-  //   const finalPackageSideEffects = sideEffects.map((sideEffect) => {
-  //     if (sideEffect.includes("/")) {
-  //       return sideEffect;
-  //     }
-  //     return `**/${sideEffect}`;
-  //   });
 
-  //   hasSideEffects = createFilter(finalPackageSideEffects, null, {
-  //     resolve: pkgDir,
-  //   });
-  // } else {
   hasSideEffects = () => true;
-  // }
 
   const pkg: PackageData = {
     dir: pkgDir,
@@ -225,23 +116,6 @@ export function loadPackageData(pkgPath: string): PackageData {
 
   return pkg;
 }
-
-// function getRpdCache(
-//   packageCache: PackageCache,
-//   pkgName: string,
-//   basedir: string,
-//   originalBasedir: string,
-//   preserveSymlinks: boolean
-// ) {
-//   const cacheKey = getRpdCacheKey(pkgName, basedir, preserveSymlinks);
-//   const pkgData = packageCache.get(cacheKey);
-//   if (pkgData) {
-//     traverseBetweenDirs(originalBasedir, basedir, (dir) => {
-//       packageCache.set(getRpdCacheKey(pkgName, dir, preserveSymlinks), pkgData);
-//     });
-//     return pkgData;
-//   }
-// }
 
 function traverseBetweenDirs(
   longerDir: string,

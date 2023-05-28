@@ -16,7 +16,6 @@ cli
         mode: options.mode,
         configFile: options.config,
         logLevel: options.logLevel,
-        // clearScreen: options.clearScreen,
         optimizeDeps: { force: options.force },
         server: {},
       });

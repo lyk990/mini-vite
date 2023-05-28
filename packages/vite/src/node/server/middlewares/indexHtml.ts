@@ -3,11 +3,8 @@ import type { Connect } from "dep-types/connect";
 import {
   cleanUrl,
   ensureWatchedFile,
-  // fsPathFromId,
-  // injectQuery,
   joinUrlSegments,
   normalizePath,
-  // processSrcSetSync,
   stripBase,
   unwrapId,
   wrapId,
@@ -19,11 +16,7 @@ import fsp from "node:fs/promises";
 import { send } from "../send";
 import {
   applyHtmlTransforms,
-  // htmlEnvHook,
-  // postImportMapHook,
-  // preImportMapHook,
   resolveHtmlTransforms,
-  // addToHTMLProxyCache,
   traverseHtml,
   nodeIsElement,
   getScriptInfo,
@@ -34,9 +27,7 @@ import {
 import { IndexHtmlTransformHook } from "vite";
 import MagicString from "magic-string";
 import type { DefaultTreeAdapterMap, Token } from "parse5";
-// import type { SourceMapInput } from "rollup";
 import { ResolvedConfig } from "../../config";
-// import { checkPublicFile } from "../../plugins/asset";
 
 interface AssetNode {
   start: number;
@@ -73,13 +64,9 @@ export function indexHtmlMiddleware(
 }
 
 function getHtmlFilename(url: string, server: ViteDevServer) {
-  // if (url.startsWith(FS_PREFIX)) {
-  //   return decodeURIComponent(fsPathFromId(url));
-  // } else {
   return decodeURIComponent(
     normalizePath(path.join(server.config.root, url.slice(1)))
   );
-  // }
 }
 /**改造index.html */
 export function createDevHtmlTransformFn(
@@ -92,13 +79,10 @@ export function createDevHtmlTransformFn(
     return applyHtmlTransforms(
       html,
       [
-        // preImportMapHook(server.config),
         ...preHooks,
-        // htmlEnvHook(server.config),
         devHtmlHook, // 主要调用这个钩子
         ...normalHooks,
         ...postHooks,
-        // postImportMapHook(),
       ],
       {
         path: url,
@@ -132,53 +116,7 @@ const devHtmlHook: IndexHtmlTransformHook = async (
   }
 
   const s = new MagicString(html);
-  // let inlineModuleIndex = -1;
-  // const proxyCacheUrl = cleanUrl(proxyModulePath).replace(
-  //   normalizePath(config.root),
-  //   ""
-  // );
   const styleUrl: AssetNode[] = [];
-
-  // const addInlineModule = (
-  //   node: DefaultTreeAdapterMap["element"],
-  //   ext: "js"
-  // ) => {
-  //   inlineModuleIndex++;
-
-  //   const contentNode = node.childNodes[0] as DefaultTreeAdapterMap["textNode"];
-
-  //   const code = contentNode.value;
-
-  //   let map: SourceMapInput | undefined;
-  //   // if (proxyModulePath[0] !== "\0") {
-  //   //   map = new MagicString(html)
-  //   //     .snip(
-  //   //       contentNode.sourceCodeLocation!.startOffset,
-  //   //       contentNode.sourceCodeLocation!.endOffset
-  //   //     )
-  //   //     .generateMap({ hires: true });
-  //   //   map.sources = [filename];
-  //   //   map.file = filename;
-  //   // }
-
-  //   addToHTMLProxyCache(config as any, proxyCacheUrl, inlineModuleIndex, {
-  //     code,
-  //     map,
-  //   });
-
-  //   const modulePath = `${proxyModuleUrl}?html-proxy&index=${inlineModuleIndex}.${ext}`;
-
-  //   // const module = server?.moduleGraph.getModuleById(modulePath);
-  //   // if (module) {
-  //   //   server?.moduleGraph.invalidateModule(module);
-  //   // }
-  //   s.update(
-  //     node.sourceCodeLocation!.startOffset,
-  //     node.sourceCodeLocation!.endOffset,
-  //     `<script type="module" src="${modulePath}"></script>`
-  //   );
-  //   preTransformRequest(server! as any, modulePath, base);
-  // };
 
   await traverseHtml(html, filename, (node) => {
     if (!nodeIsElement(node)) {
@@ -194,14 +132,9 @@ const devHtmlHook: IndexHtmlTransformHook = async (
           sourceCodeLocation!,
           s,
           config as any,
-          // htmlPath,
-          // originalUrl,
           server as any
         );
       }
-      // else if (isModule && node.childNodes.length) {
-      //   addInlineModule(node, "js");
-      // }
     }
 
     if (node.nodeName === "style" && node.childNodes.length) {
@@ -223,8 +156,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
             node.sourceCodeLocation!.attrs![attrKey],
             s,
             config as any
-            // htmlPath,
-            // originalUrl
           );
         }
       }
@@ -277,18 +208,10 @@ const processNodeUrl = (
   sourceCodeLocation: Token.Location,
   s: MagicString,
   config: ResolvedConfig,
-  // htmlPath: string,
-  // originalUrl?: string,
   server?: ViteDevServer
 ) => {
   let url = attr.value || "";
 
-  // if (server?.moduleGraph) {
-  //   // const mod = server.moduleGraph.urlToModuleMap.get(url);
-  //   // if (mod && mod.lastHMRTimestamp > 0) {
-  //   //   url = injectQuery(url, `t=${mod.lastHMRTimestamp}`);
-  //   // }
-  // }
   const devBase = config.base;
   if (url[0] === "/" && url[1] !== "/") {
     const fullUrl = path.posix.join(devBase, url);
@@ -297,23 +220,4 @@ const processNodeUrl = (
       preTransformRequest(server, fullUrl, devBase);
     }
   }
-  // else if (
-  //   url[0] === "." &&
-  //   originalUrl &&
-  //   originalUrl !== "/" &&
-  //   htmlPath === "/index.html"
-  // ) {
-  //   const replacer = (url: string) => {
-  //     const fullUrl = path.posix.join(devBase, url);
-  //     if (server) {
-  //       preTransformRequest(server, fullUrl, devBase);
-  //     }
-  //     return fullUrl;
-  //   };
-  //   const processedUrl =
-  //     attr.name === "srcset" && attr.prefix === undefined
-  //       ? processSrcSetSync(url, ({ url }) => replacer(url))
-  //       : replacer(url);
-  //   overwriteAttrValue(s, sourceCodeLocation, processedUrl);
-  // }
 };

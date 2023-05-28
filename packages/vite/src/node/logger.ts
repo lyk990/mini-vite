@@ -8,7 +8,6 @@ export interface Logger {
   warn(msg: string, options?: LogOptions): void;
   warnOnce(msg: string, options?: LogOptions): void;
   error(msg: string, options?: LogErrorOptions): void;
-  // clearScreen(type: LogType): void;
   hasErrorLogged(error: Error | RollupError): boolean;
   hasWarned: boolean;
 }

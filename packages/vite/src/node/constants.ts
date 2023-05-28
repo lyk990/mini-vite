@@ -3,7 +3,6 @@ import path, { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const VITE_PACKAGE_DIR = resolve(
-  // import.meta.url is `dist/node/constants.js` after bundle
   fileURLToPath(import.meta.url),
   "../../.."
 );
@@ -21,7 +20,7 @@ export const DEFAULT_DEV_PORT = 5173;
 export const DEFAULT_HOST_NAME = "localhost";
 export const VERSION = version as string;
 export const ESBUILD_MODULES_TARGET = [
-  "es2020", // support import.meta.url
+  "es2020",
   "edge88",
   "firefox78",
   "chrome87",
@@ -31,11 +30,7 @@ export const ESBUILD_MODULES_TARGET = [
 export const CLIENT_ENTRY = resolve(VITE_PACKAGE_DIR, "dist/client/client.mjs");
 export const CLIENT_DIR = path.dirname(CLIENT_ENTRY);
 
-export const DEFAULT_MAIN_FIELDS = [
-  "module",
-  "jsnext:main", // moment still uses this...
-  "jsnext",
-];
+export const DEFAULT_MAIN_FIELDS = ["module", "jsnext:main", "jsnext"];
 export const DEFAULT_EXTENSIONS = [
   ".mjs",
   ".js",
@@ -45,34 +40,6 @@ export const DEFAULT_EXTENSIONS = [
   ".tsx",
   ".json",
 ];
-// export const EXTERNAL_TYPES = [
-//   "css",
-//   "less",
-//   "sass",
-//   "scss",
-//   "styl",
-//   "stylus",
-//   "pcss",
-//   "postcss",
-//   "vue",
-//   "svelte",
-//   "marko",
-//   "astro",
-//   "png",
-//   "jpe?g",
-//   "gif",
-//   "svg",
-//   "ico",
-//   "webp",
-//   "avif",
-//   // EXTERNAL_TYPES
-//   "html",
-//   "vue",
-//   "svelte",
-//   "astro",
-//   "imba",
-//   "ts",
-// ];
 export const SPECIAL_QUERY_RE = /[?&](?:worker|sharedworker|raw|url)\b/;
 
 export const FS_PREFIX = `/@fs/`;
@@ -92,7 +59,6 @@ export const DEFAULT_CONFIG_FILES = [
 ];
 
 export const KNOWN_ASSET_TYPES = [
-  // images
   "png",
   "jpe?g",
   "jfif",
@@ -104,7 +70,6 @@ export const KNOWN_ASSET_TYPES = [
   "webp",
   "avif",
 
-  // media
   "mp4",
   "webm",
   "ogg",
@@ -114,13 +79,11 @@ export const KNOWN_ASSET_TYPES = [
   "aac",
   "opus",
 
-  // fonts
   "woff2?",
   "eot",
   "ttf",
   "otf",
 
-  // other
   "webmanifest",
   "pdf",
   "txt",

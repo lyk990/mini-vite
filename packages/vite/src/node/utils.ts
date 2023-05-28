@@ -23,8 +23,6 @@ import { builtinModules, createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { createFilter as _createFilter } from "@rollup/pluginutils";
 import { exec } from "node:child_process";
-// import type { DecodedSourceMap, RawSourceMap } from "@ampproject/remapping";
-// import remapping from "@ampproject/remapping";
 import { TransformResult } from "rollup";
 import type MagicString from "magic-string";
 import { resolvePackageData } from "./packages";
@@ -91,7 +89,6 @@ export async function resolveServerUrls(
       )
       .forEach((detail) => {
         let host = detail.address.replace("127.0.0.1", hostname.name);
-        // ipv6 host
         if (host.includes(":")) {
           host = `[${host}]`;
         }
@@ -194,10 +191,6 @@ export async function asyncFlatten<T>(arr: T[]): Promise<T[]> {
   } while (arr.some((v: any) => v?.then));
   return arr;
 }
-
-// export function arraify<T>(target: T | T[]): T[] {
-//   return Array.isArray(target) ? target : [target];
-// }
 
 export function joinUrlSegments(a: string, b: string): string {
   if (!a || !b) {
@@ -394,7 +387,6 @@ export function lookupFile(
   fileNames: string[]
 ): string | undefined {
   while (dir) {
-    // fileNames=['package.json']
     for (const fileName of fileNames) {
       const fullPath = path.join(dir, fileName);
       if (tryStatSync(fullPath)?.isFile()) return fullPath;
@@ -553,90 +545,6 @@ export function isOptimizable(
   );
 }
 
-// const revertWindowsDriveRE = /^\/windows\/([A-Z])\//;
-// function unescapeToLinuxLikePath(path: string) {
-//   if (path.startsWith("/linux/")) {
-//     return path.slice("/linux".length);
-//   }
-//   if (path.startsWith("/windows/")) {
-//     return path.replace(revertWindowsDriveRE, "$1:/");
-//   }
-//   return path;
-// }
-// const windowsDriveRE = /^[A-Z]:/;
-// const replaceWindowsDriveRE = /^([A-Z]):\//;
-// const linuxAbsolutePathRE = /^\/[^/]/;
-// function escapeToLinuxLikePath(path: string) {
-//   if (windowsDriveRE.test(path)) {
-//     return path.replace(replaceWindowsDriveRE, "/windows/$1/");
-//   }
-//   if (linuxAbsolutePathRE.test(path)) {
-//     return `/linux${path}`;
-//   }
-//   return path;
-// }
-// const nullSourceMap: RawSourceMap = {
-//   names: [],
-//   sources: [],
-//   mappings: "",
-//   version: 3,
-// };
-// export function combineSourcemaps(
-//   filename: string,
-//   sourcemapList: Array<DecodedSourceMap | RawSourceMap>,
-//   excludeContent = true
-// ): RawSourceMap {
-//   if (
-//     sourcemapList.length === 0 ||
-//     sourcemapList.every((m) => m.sources.length === 0)
-//   ) {
-//     return { ...nullSourceMap };
-//   }
-
-//   sourcemapList = sourcemapList.map((sourcemap) => {
-//     const newSourcemaps = { ...sourcemap };
-//     newSourcemaps.sources = sourcemap.sources.map((source) =>
-//       source ? escapeToLinuxLikePath(source) : null
-//     );
-//     if (sourcemap.sourceRoot) {
-//       newSourcemaps.sourceRoot = escapeToLinuxLikePath(sourcemap.sourceRoot);
-//     }
-//     return newSourcemaps;
-//   });
-//   const escapedFilename = escapeToLinuxLikePath(filename);
-
-//   let map;
-//   let mapIndex = 1;
-//   const useArrayInterface =
-//     sourcemapList.slice(0, -1).find((m) => m.sources.length !== 1) ===
-//     undefined;
-//   if (useArrayInterface) {
-//     map = remapping(sourcemapList, () => null, excludeContent);
-//   } else {
-//     map = remapping(
-//       sourcemapList[0],
-//       function loader(sourcefile) {
-//         if (sourcefile === escapedFilename && sourcemapList[mapIndex]) {
-//           return sourcemapList[mapIndex++];
-//         } else {
-//           return null;
-//         }
-//       },
-//       excludeContent
-//     );
-//   }
-//   if (!map.file) {
-//     delete map.file;
-//   }
-
-//   map.sources = map.sources.map((source) =>
-//     source ? unescapeToLinuxLikePath(source) : source
-//   );
-//   map.file = filename;
-
-//   return map as RawSourceMap;
-// }
-
 export const multilineCommentsRE = /\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g;
 export const singlelineCommentsRE = /\/\/.*/g;
 
@@ -662,18 +570,10 @@ export function fsPathFromUrl(url: string): string {
   return fsPathFromId(cleanUrl(url));
 }
 
-export function transformStableResult(
-  s: MagicString
-  // id: string,
-  // config: ResolvedConfig
-): TransformResult {
+export function transformStableResult(s: MagicString): TransformResult {
   return {
     code: s.toString(),
-    map:
-      // config.command === "build" && config.build.sourcemap
-      //   ? s.generateMap({ hires: true, source: id })
-      //   :
-      null,
+    map: null,
   };
 }
 

@@ -15,13 +15,7 @@ import type * as http from "node:http";
 import { httpServerStart, resolveHttpServer } from "../http";
 import { resolveConfig } from "../config";
 import { ResolvedConfig } from "../config";
-import {
-  diffDnsOrderChange,
-  // isInNodeModules,
-  // isParentDirectory,
-  normalizePath,
-  resolveServerUrls,
-} from "../utils";
+import { diffDnsOrderChange, normalizePath, resolveServerUrls } from "../utils";
 import { printServerUrls } from "../logger";
 import { transformMiddleware } from "./middlewares/transform";
 import { FSWatcher } from "chokidar";
@@ -31,7 +25,6 @@ import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
 import { bindShortcuts, BindShortcutsOptions } from "../shortcuts";
 import { getDepsOptimizer, initDepsOptimizer } from "../optimizer/optimizer";
 import type * as net from "node:net";
-// import { openBrowser as _openBrowser } from "./openBrowser";
 import { transformRequest } from "./transformRequest";
 import {
   createDevHtmlTransformFn,
@@ -42,14 +35,9 @@ import {
   serveRawFsMiddleware,
   serveStaticMiddleware,
 } from "./middlewares/static";
-// import picomatch from "picomatch";
-// import type { Matcher } from "picomatch";
-// import { proxyMiddleware } from "./middlewares/proxy";
 import path from "node:path";
 import { resolveChokidarOptions } from "../watch";
 import { htmlFallbackMiddleware } from "./middlewares/htmlFallback";
-// import { errorMiddleware } from "./middlewares/error";
-// import colors from "picocolors"; DELETE
 import { searchForWorkspaceRoot } from "./searchRoot";
 
 export interface ResolvedServerUrls {
@@ -60,10 +48,6 @@ export interface ResolvedServerUrls {
 export interface ResolvedServerOptions extends ServerOptions {
   fs: Required<FileSystemServeOptions>;
   middlewareMode: boolean;
-  // sourcemapIgnoreList: Exclude<
-  //   ServerOptions["sourcemapIgnoreList"],
-  //   false | undefined
-  // >;
 }
 
 export interface ViteDevServer {
@@ -79,7 +63,6 @@ export interface ViteDevServer {
   watcher: FSWatcher;
   ws: WebSocketServer;
   restart(forceOptimize?: boolean): Promise<void>;
-  // _ssrExternals: string[] | null; // DELETE
   _restartPromise: Promise<void> | null;
   _forceOptimizeOnRestart: boolean;
   _pendingRequests: Map<
@@ -93,7 +76,6 @@ export interface ViteDevServer {
   _importGlobMap: Map<string, string[][]>;
   _shortcutsOptions: any | undefined;
   close(): Promise<void>;
-  // openBrowser(): void;
   transformIndexHtml(
     url: string,
     html: string,
@@ -103,7 +85,6 @@ export interface ViteDevServer {
     url: string,
     options?: TransformOptions
   ): Promise<TransformResult | null>;
-  // _fsDenyGlob: Matcher;
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
@@ -181,7 +162,6 @@ export async function _createServer(
   });
 
   const httpServer = await resolveHttpServer(middlewares);
-  // const httpsOptions = undefined; // DELETE
   const ws = createWebSocketServer(httpServer, config);
 
   const moduleGraph: ModuleGraph = new ModuleGraph((url) =>
@@ -258,20 +238,6 @@ export async function _createServer(
         );
       }
     },
-    // openBrowser() {
-    //   const options = server.config.server;
-    //   const url = server.resolvedUrls?.local[0];
-    //   if (url) {
-    //     const path =
-    //       typeof options.open === "string"
-    //         ? new URL(options.open, url).href
-    //         : url;
-
-    //     _openBrowser(path, true, server.config.logger);
-    //   } else {
-    //     server.config.logger.warn("No URL available to open in browser");
-    //   }
-    // },
     async close() {
       if (!middlewareMode) {
         process.off("SIGTERM", exitProcess);
@@ -299,12 +265,10 @@ export async function _createServer(
       }
       return server._restartPromise;
     },
-    // _ssrExternals: null, // DELETE
     _restartPromise: null,
     _importGlobMap: new Map(),
     _forceOptimizeOnRestart: false,
     _pendingRequests: new Map(),
-    // _fsDenyGlob: picomatch(config.server.fs.deny, { matchBase: true }),
     _shortcutsOptions: undefined,
   };
   server.transformIndexHtml = createDevHtmlTransformFn(server);
@@ -313,11 +277,6 @@ export async function _createServer(
   for (const hook of config.getSortedPluginHooks("configureServer")) {
     postHooks.push(await hook(server));
   }
-
-  // const { proxy } = serverConfig;
-  // if (proxy) {
-  //   middlewares.use(proxyMiddleware(httpServer, proxy, config));
-  // }
 
   if (config.publicDir) {
     middlewares.use(
@@ -333,13 +292,6 @@ export async function _createServer(
   postHooks.forEach((fn) => fn && fn());
 
   middlewares.use(indexHtmlMiddleware(server));
-
-  // middlewares.use(function vite404Middleware(_, res) {
-  //   res.statusCode = 404;
-  //   res.end();
-  // });
-
-  // middlewares.use(errorMiddleware(server, middlewareMode));
   // 初始化服务器
   let initingServer: Promise<void> | undefined;
   let serverInited = false;
@@ -356,7 +308,6 @@ export async function _createServer(
     return initingServer;
   };
 
-  // if (!middlewareMode && httpServer) {
   const listen = httpServer.listen.bind(httpServer);
   httpServer.listen = (async (port: number, ...args: any[]) => {
     try {
@@ -368,13 +319,6 @@ export async function _createServer(
     }
     return listen(port, ...args);
   }) as any;
-  // } else {
-  //   if (options.ws) {
-  //     ws.listen();
-  //   }
-  //   await initServer();
-  // }
-
   return server;
 }
 
@@ -441,15 +385,10 @@ async function restartServer(server: ViteDevServer) {
 export function resolveServerOptions(
   root: string,
   raw: ServerOptions | undefined
-  // logger: Logger
 ): ResolvedServerOptions {
   const server: ResolvedServerOptions = {
     preTransformRequests: true,
     ...(raw as Omit<ResolvedServerOptions, "sourcemapIgnoreList">),
-    // sourcemapIgnoreList:
-    //   raw?.sourcemapIgnoreList === false
-    //     ? () => false
-    //     : raw?.sourcemapIgnoreList || isInNodeModules,
     middlewareMode: !!raw?.middlewareMode,
   };
   let allowDirs = server.fs?.allow;
@@ -461,28 +400,11 @@ export function resolveServerOptions(
 
   allowDirs = allowDirs.map((i) => resolvedAllowDir(root, i));
 
-  // const resolvedClientDir = resolvedAllowDir(root, CLIENT_DIR);
-  // if (!allowDirs.some((dir) => isParentDirectory(dir, resolvedClientDir))) {
-  //   allowDirs.push(resolvedClientDir);
-  // }
-
   server.fs = {
     strict: server.fs?.strict ?? true,
     allow: allowDirs,
     deny,
   };
-  // DELETE
-  // if (server.origin?.endsWith("/")) {
-  //   server.origin = server.origin.slice(0, -1);
-  //   logger.warn(
-  //     colors.yellow(
-  //       `${colors.bold("(!)")} server.origin should not end with "/". Using "${
-  //         server.origin
-  //       }" instead.`
-  //     )
-  //   );
-  // }
-
   return server;
 }
 

@@ -1,5 +1,4 @@
 import { ResolvedConfig } from "../config";
-// import { ViteDevServer } from "../server";
 import { getHash } from "../utils";
 import {
   loadCachedDepOptimizationMetadata,
@@ -13,7 +12,6 @@ import {
   addOptimizedDepInfo,
   OptimizedDepInfo,
   DepsOptimizer,
-  // DepOptimizationResult,
 } from "./index";
 
 const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
@@ -21,7 +19,6 @@ const devSsrDepsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
 
 export function getDepsOptimizer(
   config: ResolvedConfig
-  // ssr?: boolean
 ): DepsOptimizer | undefined {
   const isDevSsr = config.command !== "build";
   return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(
@@ -32,17 +29,14 @@ export function getDepsOptimizer(
 /**初始化预构建依赖 */
 export async function initDepsOptimizer(
   config: ResolvedConfig
-  // server?: ViteDevServer
 ): Promise<void> {
   await createDepsOptimizer(config);
 }
 
 async function createDepsOptimizer(
   config: ResolvedConfig
-  // server?: ViteDevServer
 ): Promise<void> {
   const sessionTimestamp = Date.now().toString();
-  // let ssr = false;
   const cachedMetadata = await loadCachedDepOptimizationMetadata(config);
   let metadata =
     cachedMetadata || initDepsOptimizerMetadata(config, sessionTimestamp);

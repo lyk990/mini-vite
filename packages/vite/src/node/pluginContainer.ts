@@ -19,15 +19,11 @@ import type {
 } from "rollup";
 import { ModuleGraph } from "vite";
 import { ResolvedConfig } from "./config";
-// import type { FSWatcher } from "chokidar";
 import { createPluginHookUtils } from "./plugins";
 import { join } from "path";
 import { VERSION as rollupVersion } from "rollup";
 import { Plugin } from "./plugin";
 import {
-  // arraify,
-  // cleanUrl,
-  // combineSourcemaps,
   createDebugger,
   isExternalUrl,
   isObject,
@@ -35,17 +31,9 @@ import {
   prettifyUrl,
   timeFrom,
 } from "./utils";
-// import { FS_PREFIX } from "./constants";
-// import MagicString from "magic-string";
 import * as acorn from "acorn";
-// import colors from "picocolors";
-// import type { RawSourceMap } from "@ampproject/remapping";
 
 type PluginContext = Omit<RollupPluginContext, "cache" | "moduleIds">;
-// const debugResolve = createDebugger("vite:resolve");
-// const debugSourcemapCombine = createDebugger("vite:sourcemap-combine", {
-//   onlyWhenFocused: true,
-// });
 
 const debugPluginResolve = createDebugger("vite:plugin-resolve", {
   onlyWhenFocused: "vite:plugin",
@@ -53,8 +41,6 @@ const debugPluginResolve = createDebugger("vite:plugin-resolve", {
 
 export let parser = acorn.Parser;
 
-// const debugSourcemapCombineFilter =
-//   process.env.DEBUG_VITE_SOURCEMAP_COMBINE_FILTER;
 export interface PluginContainer {
   options: InputOptions;
   getModuleInfo(id: string): ModuleInfo | null;
@@ -79,19 +65,13 @@ export interface PluginContainer {
       // ssr?: boolean;
     }
   ): Promise<SourceDescription | null>;
-  load(
-    id: string,
-    options?: {
-      // ssr?: boolean;
-    }
-  ): Promise<LoadResult | null>;
+  load(id: string, options?: {}): Promise<LoadResult | null>;
   close(): Promise<void>;
 }
 // 创建插件容器
 export async function createPluginContainer(
   config: ResolvedConfig,
   moduleGraph?: ModuleGraph
-  // watcher?: FSWatcher
 ): Promise<PluginContainer> {
   const {
     plugins,
@@ -100,8 +80,6 @@ export async function createPluginContainer(
   } = config;
   const { getSortedPlugins, getSortedPluginHooks } =
     createPluginHookUtils(plugins);
-
-  // const seenResolves: Record<string, true | undefined> = {};
 
   const minimalContext: MinimalPluginContext = {
     meta: {
@@ -151,7 +129,6 @@ export async function createPluginContainer(
 
   class Context implements PluginContext {
     meta = minimalContext.meta;
-    // ssr = false;
     _scan = false;
     _activePlugin: Plugin | null;
     _activeId: string | null = null;
@@ -187,7 +164,6 @@ export async function createPluginContainer(
         custom: options?.custom,
         isEntry: !!options?.isEntry,
         skip,
-        // ssr: this.ssr,
         scan: this._scan,
       });
       if (typeof out === "string") out = { id: out };
@@ -254,25 +230,11 @@ export async function createPluginContainer(
       this.filename = filename;
       this.originalCode = code;
       if (inMap) {
-        // if (debugSourcemapCombine) {
-        //   // @ts-expect-error inject name for debug purpose
-        //   inMap.name = "$inMap";
-        // }
         this.sourcemapChain.push(inMap);
       }
     }
 
     _getCombinedSourcemap(createIfNull = false) {
-      // if (
-      //   debugSourcemapCombine &&
-      //   debugSourcemapCombineFilter &&
-      //   this.filename.includes(debugSourcemapCombineFilter)
-      // ) {
-      //   debugSourcemapCombine("----------", this.filename);
-      //   debugSourcemapCombine(this.combinedMap);
-      //   debugSourcemapCombine(this.sourcemapChain);
-      // }
-
       let combinedMap = this.combinedMap;
       for (let m of this.sourcemapChain) {
         if (typeof m === "string") m = JSON.parse(m);
@@ -284,25 +246,9 @@ export async function createPluginContainer(
         if (!combinedMap) {
           combinedMap = m as SourceMap;
         }
-        //  else {
-        //   combinedMap = combineSourcemaps(cleanUrl(this.filename), [
-        //     {
-        //       ...(m as RawSourceMap),
-        //       sourcesContent: combinedMap.sourcesContent,
-        //     },
-        //     combinedMap as RawSourceMap,
-        //   ]) as SourceMap;
-        // }
       }
       if (!combinedMap) {
         return null;
-        // createIfNull
-        //   ? new MagicString(this.originalCode).generateMap({
-        //       includeContent: true,
-        //       hires: true,
-        //       source: cleanUrl(this.filename),
-        //     })
-        //   :
       }
       if (combinedMap !== this.combinedMap) {
         this.combinedMap = combinedMap;
@@ -310,10 +256,6 @@ export async function createPluginContainer(
       }
       return this.combinedMap;
     }
-
-    // getCombinedSourcemap() {
-    //   return this._getCombinedSourcemap(true) as SourceMap;
-    // }
   }
 
   const container: PluginContainer = {
@@ -322,14 +264,8 @@ export async function createPluginContainer(
       for (const optionsHook of getSortedPluginHooks("options")) {
         options = (await optionsHook.call(minimalContext, options)) || options;
       }
-      // if (options.acornInjectPlugins) {
-      //   parser = acorn.Parser.extend(
-      //     ...(arraify(options.acornInjectPlugins) as any)
-      //   );
-      // }
       return {
         acorn,
-        // acornInjectPlugins: [],
         ...options,
       };
     })(),
@@ -346,13 +282,10 @@ export async function createPluginContainer(
 
     async resolveId(rawId, importer = join(root, "index.html"), options) {
       const skip = options?.skip;
-      // const ssr = options?.ssr;
       const scan = !!options?.scan;
       const ctx = new Context();
-      // ctx.ssr = !!ssr;
       ctx._scan = scan;
       ctx._resolveSkips = skip;
-      // const resolveStart = debugResolve ? performance.now() : 0;
 
       let id: string | null = null;
       const partial: Partial<PartialResolvedId> = {};
@@ -371,7 +304,6 @@ export async function createPluginContainer(
           assertions: options?.assertions ?? {},
           custom: options?.custom,
           isEntry: !!options?.isEntry,
-          // ssr,
           scan,
         });
         if (!result) continue;
@@ -392,18 +324,6 @@ export async function createPluginContainer(
         break;
       }
 
-      // if (debugResolve && rawId !== id && !rawId.startsWith(FS_PREFIX)) {
-      //   const key = rawId + id;
-      //   if (!seenResolves[key]) {
-      //     seenResolves[key] = true;
-      //     debugResolve(
-      //       `${timeFrom(resolveStart)} ${colors.cyan(rawId)} -> ${colors.dim(
-      //         id
-      //       )}`
-      //     );
-      //   }
-      // }
-
       if (id) {
         partial.id = isExternalUrl(id) ? id : normalizePath(id);
         return partial as PartialResolvedId;
@@ -413,9 +333,7 @@ export async function createPluginContainer(
     },
 
     async load(id) {
-      // const ssr = options?.ssr;
       const ctx = new Context();
-      // ctx.ssr = !!ssr;
       for (const plugin of getSortedPlugins("load")) {
         if (!plugin.load) continue;
         ctx._activePlugin = plugin;
@@ -434,9 +352,7 @@ export async function createPluginContainer(
 
     async transform(code, id, options) {
       const inMap = options?.inMap;
-      // const ssr = options?.ssr;
       const ctx = new TransformContext(id, code, inMap as SourceMap);
-      // ctx.ssr = !!ssr;
       for (const plugin of getSortedPlugins("transform")) {
         if (!plugin.transform) continue;
         ctx._activePlugin = plugin;
@@ -456,10 +372,6 @@ export async function createPluginContainer(
           if (result.code !== undefined) {
             code = result.code;
             if (result.map) {
-              // if (debugSourcemapCombine) {
-              //   // @ts-expect-error inject plugin name for debug purpose
-              //   result.map.name = plugin.name;
-              // }
               ctx.sourcemapChain.push(result.map);
             }
           }

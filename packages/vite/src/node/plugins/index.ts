@@ -1,6 +1,5 @@
 import { HookHandler } from "vite";
 import { ResolvedConfig, PluginHookUtils } from "../config";
-// import { watchPackageDataPlugin } from "../packages";
 import { Plugin } from "../plugin";
 import { clientInjectionsPlugin } from "./clientInjections";
 import { cssPlugin, cssPostPlugin } from "./css";
@@ -10,7 +9,6 @@ import { getDepsOptimizer } from "../optimizer/optimizer";
 import { esbuildPlugin } from "./esbuild";
 import { assetPlugin } from "./asset";
 import { htmlInlineProxyPlugin } from "./html";
-// import { preAliasPlugin } from "./preAlias"; // DELETE
 import aliasPlugin from "@rollup/plugin-alias";
 
 export async function resolvePlugins(
@@ -20,20 +18,15 @@ export async function resolvePlugins(
   postPlugins: Plugin[]
 ): Promise<Plugin[]> {
   const isBuild = config.command === "build";
-  // const buildPlugins = { pre: [], post: [] }; // DELETE
 
   return [
-    // watchPackageDataPlugin(config.packageCache),
-    // preAliasPlugin(config), // DELETE
     aliasPlugin({ entries: config.resolve.alias }),
     ...prePlugins,
     resolvePlugin({
       ...config.resolve,
       root: config.root,
-      // isProduction: false,
       isBuild,
       packageCache: config.packageCache,
-      // ssrConfig: config.ssr, // DELETE
       asSrc: true,
       getDepsOptimizer: () => getDepsOptimizer(config),
       shouldExternalize: undefined,
@@ -44,9 +37,7 @@ export async function resolvePlugins(
     assetPlugin(config),
     ...normalPlugins,
     cssPostPlugin(config),
-    // ...buildPlugins.pre, DELETE
     ...postPlugins,
-    // ...buildPlugins.post,DELETE
     clientInjectionsPlugin(config),
     importAnalysisPlugin(config),
   ].filter(Boolean) as Plugin[]; // NOTE Bolean 写法

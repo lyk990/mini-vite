@@ -59,13 +59,11 @@ export class ModuleGraph {
   constructor(
     private resolveId: (
       url: string
-      // ssr: boolean
     ) => Promise<PartialResolvedId | null>
   ) {}
 
   async getModuleByUrl(
     rawUrl: string
-    // ssr?: boolean
   ): Promise<ModuleNode | undefined> {
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl));
     const mod = this._getUnresolvedUrlToModule(rawUrl);
@@ -137,7 +135,6 @@ export class ModuleGraph {
     acceptedModules: Set<string | ModuleNode>,
     acceptedExports: Set<string> | null,
     isSelfAccepting: boolean
-    // ssr?: boolean
   ): Promise<Set<ModuleNode> | undefined> {
     mod.isSelfAccepting = isSelfAccepting;
     const prevImports = mod.importedModules;
@@ -205,7 +202,6 @@ export class ModuleGraph {
 
   async ensureEntryFromUrl(
     rawUrl: string,
-    // ssr?: boolean,
     setIsSelfAccepting = true
   ): Promise<ModuleNode> {
     return this._ensureEntryFromUrl(rawUrl, setIsSelfAccepting);
@@ -213,7 +209,6 @@ export class ModuleGraph {
 
   async _ensureEntryFromUrl(
     rawUrl: string,
-    // ssr?: boolean,
     setIsSelfAccepting = true,
     resolved?: PartialResolvedId
   ): Promise<ModuleNode> {
@@ -225,7 +220,6 @@ export class ModuleGraph {
     const modPromise = (async () => {
       const [url, resolvedId, meta] = await this._resolveUrl(
         rawUrl,
-        // ssr,
         resolved
       );
       mod = this.idToModuleMap.get(resolvedId);
@@ -298,7 +292,6 @@ export class ModuleGraph {
 
   async _resolveUrl(
     url: string,
-    // ssr?: boolean,
     alreadyResolved?: PartialResolvedId
   ): Promise<ResolvedUrl> {
     const resolved = alreadyResolved ?? (await this.resolveId(url));

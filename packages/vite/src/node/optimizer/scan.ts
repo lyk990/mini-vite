@@ -50,7 +50,6 @@ export function scanImports(config: ResolvedConfig): {
   const deps: Record<string, string> = {};
   const missing: Record<string, string> = {};
   let entries: string[];
-  // const scanContext = { cancelled: false }; // REMOVE 移除scanContext
 
   const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
     config
@@ -70,7 +69,6 @@ export function scanImports(config: ResolvedConfig): {
   });
   return {
     cancel: async () => {
-      // scanContext.cancelled = true;
       return esbuildContext.then((context) => context?.cancel());
     },
     result,
@@ -137,7 +135,6 @@ function esbuildScanPlugin(
       id,
       config.root,
       resolve,
-      // config.isProduction
     );
 
     return result?.s.toString() || transpiledContents;
@@ -417,7 +414,6 @@ async function prepareEsbuildScanner(
   entries: string[],
   deps: Record<string, string>,
   missing: Record<string, string>
-  // scanContext?: { cancelled: boolean } // REMOVE
 ): Promise<BuildContext | undefined> {
   const container = await createPluginContainer(config);
   const plugin = esbuildScanPlugin(config, container, deps, missing, entries);

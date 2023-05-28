@@ -6,9 +6,6 @@ import {
 import { ResolvedConfig } from "../config";
 import { Plugin } from "../plugin";
 import { cleanUrl, generateCodeFrame, normalizePath } from "../utils";
-// import path from "node:path";
-// import colors from "picocolors";
-// import { resolveEnvPrefix } from "../env";
 import { RollupError, SourceMapInput } from "rollup";
 import { DefaultTreeAdapterMap, ParserError, Token } from "parse5";
 import MagicString from "magic-string";
@@ -27,17 +24,6 @@ const doctypePrependInjectRE = /<!doctype html>/i;
 const unaryTags = new Set(["link", "meta", "base"]);
 
 const htmlProxyRE = /\?html-proxy=?(?:&inline-css)?&index=(\d+)\.(js|css)$/;
-
-// const importMapRE =
-//   /[ \t]*<script[^>]*type\s*=\s*(?:"importmap"|'importmap'|importmap)[^>]*>.*?<\/script>/is;
-// const moduleScriptRE =
-//   /[ \t]*<script[^>]*type\s*=\s*(?:"module"|'module'|module)[^>]*>/i;
-// const modulePreloadLinkRE =
-  // /[ \t]*<link[^>]*rel\s*=\s*(?:"modulepreload"|'modulepreload'|modulepreload)[\s\S]*?\/>/i;
-// const importMapAppendRE = new RegExp(
-//   [moduleScriptRE, modulePreloadLinkRE].map((r) => r.source).join("|"),
-//   "i"
-// );
 
 export const htmlProxyMap = new WeakMap<
   ResolvedConfig,
@@ -246,103 +232,6 @@ function prependInjectFallback(html: string, tags: HtmlTagDescriptor[]) {
   return serializeTags(tags) + html;
 }
 
-// export function preImportMapHook(
-//   config: ResolvedConfig
-// ): IndexHtmlTransformHook {
-//   return (html, ctx) => {
-//     const importMapIndex = html.match(importMapRE)?.index;
-//     if (importMapIndex === undefined) return;
-
-//     const importMapAppendIndex = html.match(importMapAppendRE)?.index;
-//     if (importMapAppendIndex === undefined) return;
-
-//     if (importMapAppendIndex < importMapIndex) {
-//       const relativeHtml = normalizePath(
-//         path.relative(config.root, ctx.filename)
-//       );
-//       config.logger.warnOnce(
-//         colors.yellow(
-//           colors.bold(
-//             `(!) <script type="importmap"> should come before <script type="module"> and <link rel="modulepreload"> in /${relativeHtml}`
-//           )
-//         )
-//       );
-//     }
-//   };
-// }
-
-// export function htmlEnvHook(config: ResolvedConfig): IndexHtmlTransformHook {
-//   const pattern = /%(\S+?)%/g;
-//   // const envPrefix = resolveEnvPrefix({ envPrefix: config.envPrefix });
-//   const env: Record<string, any> = { ...config.env };
-
-//   for (const key in config.define) {
-//     if (key.startsWith(`import.meta.env.`)) {
-//       const val = config.define[key];
-//       env[key.slice(16)] = typeof val === "string" ? val : JSON.stringify(val);
-//     }
-//   }
-//   return (html, ctx) => {
-//     return html.replace(pattern, (text, key) => {
-//       if (key in env) {
-//         return env[key];
-//       } else {
-//         // if (envPrefix.some((prefix) => key.startsWith(prefix))) {
-//         //   const relativeHtml = normalizePath(
-//         //     path.relative(config.root, ctx.filename)
-//         //   );
-//         //   config.logger.warn(
-//         //     colors.yellow(
-//         //       colors.bold(
-//         //         `(!) ${text} is not defined in env variables found in /${relativeHtml}. ` +
-//         //           `Is the variable mistyped?`
-//         //       )
-//         //     )
-//         //   );
-//         // }
-
-//         return text;
-//       }
-//     });
-//   };
-// }
-
-// export function postImportMapHook(): IndexHtmlTransformHook {
-//   return (html) => {
-//     if (!importMapAppendRE.test(html)) return;
-
-//     let importMap: string | undefined;
-//     html = html.replace(importMapRE, (match) => {
-//       importMap = match;
-//       return "";
-//     });
-
-//     if (importMap) {
-//       html = html.replace(
-//         importMapAppendRE,
-//         (match) => `${importMap}\n${match}`
-//       );
-//     }
-
-//     return html;
-//   };
-// }
-
-// export function addToHTMLProxyCache(
-//   config: ResolvedConfig,
-//   filePath: string,
-//   index: number,
-//   result: { code: string; map?: SourceMapInput }
-// ): void {
-//   if (!htmlProxyMap.get(config)) {
-//     htmlProxyMap.set(config, new Map());
-//   }
-//   if (!htmlProxyMap.get(config)!.get(filePath)) {
-//     htmlProxyMap.get(config)!.set(filePath, []);
-//   }
-//   htmlProxyMap.get(config)!.get(filePath)![index] = result;
-// }
-
 export async function traverseHtml(
   html: string,
   filePath: string,
@@ -350,7 +239,7 @@ export async function traverseHtml(
 ): Promise<void> {
   const { parse } = await import("parse5");
   const ast = parse(html, {
-    scriptingEnabled: false, // parse inside <noscript>
+    scriptingEnabled: false,
     sourceCodeLocationInfo: true,
     onParseError: (e: ParserError) => {
       handleParseError(e, html, filePath);

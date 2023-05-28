@@ -56,7 +56,6 @@ export interface Plugin extends RollupPlugin {
       options: {
         assertions: Record<string, string>;
         custom?: CustomPluginOptions;
-        // ssr?: boolean;
         scan?: boolean;
         isEntry: boolean;
       }

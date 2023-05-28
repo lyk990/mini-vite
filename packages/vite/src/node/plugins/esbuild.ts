@@ -1,4 +1,3 @@
-// import fs from "node:fs";
 import path from "node:path";
 import colors from "picocolors";
 import { ResolvedConfig } from "../config";
@@ -11,20 +10,15 @@ import type {
 } from "esbuild";
 import {
   cleanUrl,
-  // combineSourcemaps,
   createDebugger,
   createFilter,
   generateCodeFrame,
-  // timeFrom,
 } from "../utils";
 import { ViteDevServer } from "../server";
-// import { searchForWorkspaceRoot } from "../server/searchRoot";
 import type { TSConfckParseOptions } from "tsconfck";
 import type { SourceMap } from "rollup";
 import { parse } from "tsconfck";
 import { transform } from "esbuild";
-// import type { RawSourceMap } from "@ampproject/remapping";
-// import type { FSWatcher } from "chokidar";
 
 const debug = createDebugger("vite:esbuild");
 
@@ -60,7 +54,6 @@ type TSConfigJSON = {
 
 type TSCompilerOptions = NonNullable<TSConfigJSON["compilerOptions"]>;
 
-// let tsconfckRoot: string | undefined;
 let tsconfckParseOptions: TSConfckParseOptions | Promise<TSConfckParseOptions> =
   { resolveWithEmptyIfConfigNotFound: true };
 // @ts-ignore
@@ -86,17 +79,9 @@ export function esbuildPlugin(config: ResolvedConfig): Plugin {
     keepNames: false,
   };
 
-  // initTSConfck(config.root);
-
   return {
     name: "vite:esbuild",
-    configureServer(_server) {
-      // server = _server;
-      // server.watcher
-      //   .on("add", reloadOnTsconfigChange)
-      //   .on("change", reloadOnTsconfigChange)
-      //   .on("unlink", reloadOnTsconfigChange);
-    },
+    configureServer(_server) {},
     buildEnd() {
       server = null as any;
     },
@@ -120,51 +105,10 @@ export function esbuildPlugin(config: ResolvedConfig): Plugin {
   };
 }
 
-// function initTSConfck(root: string, force = false) {
-//   if (!force && root === tsconfckRoot) return;
-
-//   const workspaceRoot = searchForWorkspaceRoot(root);
-
-//   tsconfckRoot = root;
-//   tsconfckParseOptions = initTSConfckParseOptions(workspaceRoot);
-
-//   tsconfckParseOptions.then((options) => {
-//     if (root === tsconfckRoot) {
-//       tsconfckParseOptions = options;
-//     }
-//   });
-// }
-
-// async function reloadOnTsconfigChange(changedFile: string) {
-//   if (!server) return;
-//   // if (
-//   //   path.basename(changedFile) === "tsconfig.json" ||
-//   //   (changedFile.endsWith(".json") &&
-//   //     (await tsconfckParseOptions)?.cache?.has(changedFile))
-//   // ) {
-//   //   server.config.logger.info(
-//   //     `changed tsconfig file detected: ${changedFile} - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.`,
-//   //     { timestamp: true }
-//   //   );
-
-//   //   server.moduleGraph.invalidateAll();
-
-//   //   initTSConfck(server.config.root, true);
-
-//   //   if (server) {
-//   //     server.ws.send({
-//   //       type: "full-reload",
-//   //       path: "*",
-//   //     });
-//   //   }
-//   // }
-// }
-
 export async function transformWithEsbuild(
   code: string,
   filename: string,
   options?: TransformOptions
-  // inMap?: object
 ): Promise<ESBuildTransformResult> {
   let loader = options?.loader;
 
@@ -172,14 +116,7 @@ export async function transformWithEsbuild(
     const ext = path
       .extname(validExtensionRE.test(filename) ? filename : cleanUrl(filename))
       .slice(1);
-
-    // if (ext === "cjs" || ext === "mjs") {
-    //   loader = "js";
-    // } else if (ext === "cts" || ext === "mts") {
-    //   loader = "ts";
-    // } else {
     loader = ext as Loader;
-    // }
   }
 
   let tsconfigRaw = options?.tsconfigRaw;
@@ -214,17 +151,6 @@ export async function transformWithEsbuild(
       ...tsconfigRaw?.compilerOptions,
     };
 
-    // if (compilerOptions.useDefineForClassFields === undefined) {
-    //   const lowercaseTarget = compilerOptions.target?.toLowerCase() ?? "es3";
-    //   if (lowercaseTarget.startsWith("es")) {
-    //     const esVersion = lowercaseTarget.slice(2);
-    //     compilerOptions.useDefineForClassFields =
-    //       esVersion === "next" || +esVersion >= 2022;
-    //   } else {
-    //     compilerOptions.useDefineForClassFields = false;
-    //   }
-    // }
-
     if (options) {
       options.jsx && (compilerOptions.jsx = undefined);
       options.jsxFactory && (compilerOptions.jsxFactory = undefined);
@@ -254,20 +180,10 @@ export async function transformWithEsbuild(
   try {
     const result = await transform(code, resolvedOptions);
     let map: SourceMap;
-    // if (inMap && resolvedOptions.sourcemap) {
-    //   const nextMap = JSON.parse(result.map);
-    //   nextMap.sourcesContent = [];
-    //   map = combineSourcemaps(filename, [
-    //     nextMap as RawSourceMap,
-    //     inMap as RawSourceMap,
-    //   ]) as SourceMap;
-    // } else
-    // {
     map =
       resolvedOptions.sourcemap && resolvedOptions.sourcemap !== "inline"
         ? JSON.parse(result.map)
         : { mappings: "" };
-    // }
     return {
       ...result,
       map,
@@ -301,57 +217,13 @@ function prettifyMessage(m: Message, code: string): string {
   return res + `\n`;
 }
 
-// async function initTSConfckParseOptions(workspaceRoot: string) {
-//   // const start = debug ? performance.now() : 0;
-
-//   const options: TSConfckParseOptions = {
-//     cache: new Map(),
-//     root: workspaceRoot,
-//     tsConfigPaths: new Set(
-//       await findAll(workspaceRoot, {
-//         skip: (dir) => dir === "node_modules" || dir === ".git",
-//       })
-//     ),
-//     resolveWithEmptyIfConfigNotFound: true,
-//   };
-//   // debug?.(timeFrom(start), "tsconfck init", colors.dim(workspaceRoot));
-//   return options;
-// }
-
 async function loadTsconfigJsonForFile(
   filename: string
 ): Promise<TSConfigJSON> {
   try {
     const result = await parse(filename, await tsconfckParseOptions);
-    // if (server && result.tsconfigFile !== "no_tsconfig_file_found") {
-    //   ensureWatchedFile(
-    //     server.watcher,
-    //     result.tsconfigFile,
-    //     server.config.root
-    //   );
-    // }
     return result.tsconfig;
   } catch (e) {
-    // if (e instanceof TSConfckParseError) {
-    //   if (server && e.tsconfigFile) {
-    //     ensureWatchedFile(server.watcher, e.tsconfigFile, server.config.root);
-    //   }
-    // }
     throw e;
   }
 }
-
-// export function ensureWatchedFile(
-//   watcher: FSWatcher,
-//   file: string | null,
-//   root: string
-// ): void {
-//   if (
-//     file &&
-//     !file.startsWith(root + "/") &&
-//     !file.includes("\0") &&
-//     fs.existsSync(file)
-//   ) {
-//     watcher.add(path.resolve(file));
-//   }
-// }

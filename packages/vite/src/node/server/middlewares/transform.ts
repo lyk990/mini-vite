@@ -7,34 +7,22 @@ import {
   isDirectRequest,
 } from "../../plugins/css";
 import {
-  // cleanUrl,
   createDebugger,
-  // fsPathFromId,
   injectQuery,
   isImportRequest,
   isJSRequest,
-  // normalizePath,
   prettifyUrl,
   removeImportQuery,
   removeTimestampQuery,
   unwrapId,
 } from "../../utils";
-import {
-  DEP_VERSION_RE,
-  // FS_PREFIX,
-  NULL_BYTE_PLACEHOLDER,
-} from "../../constants";
-// import path from "node:path";
-// import fsp from "node:fs/promises";
-// import type { ExistingRawSourceMap } from "rollup";
-// import colors from "picocolors";
+import { DEP_VERSION_RE, NULL_BYTE_PLACEHOLDER } from "../../constants";
 import {
   ERR_OPTIMIZE_DEPS_PROCESSING_ERROR,
   ERR_OUTDATED_OPTIMIZED_DEP,
 } from "../../plugins/optimizedDeps";
 import { getDepsOptimizer } from "../../optimizer/optimizer";
 import { ViteDevServer } from "../..";
-// import { applySourcemapIgnoreList } from "../sourcemap";
 import { isHTMLProxy } from "../../plugins/html";
 
 const knownIgnoreList = new Set(["/", "/favicon.ico"]);
@@ -63,88 +51,7 @@ export function transformMiddleware(
       return next(e);
     }
 
-    // const withoutQuery = cleanUrl(url);
-
     try {
-      // const isSourceMap = withoutQuery.endsWith(".map");
-      // if (isSourceMap) {
-      //   const depsOptimizer = getDepsOptimizer(server.config, false); // non-ssr
-      //   if (depsOptimizer?.isOptimizedDepUrl(url)) {
-      //     const sourcemapPath = url.startsWith(FS_PREFIX)
-      //       ? fsPathFromId(url)
-      //       : normalizePath(path.resolve(root, url.slice(1)));
-      //     try {
-      //       const map = JSON.parse(
-      //         await fsp.readFile(sourcemapPath, "utf-8")
-      //       ) as ExistingRawSourceMap;
-
-      //       // applySourcemapIgnoreList(
-      //       //   map,
-      //       //   sourcemapPath,
-      //       //   server.config.server.sourcemapIgnoreList,
-      //       //   logger
-      //       // );
-
-      //       return send(req, res, JSON.stringify(map), "json", {
-      //         headers: server.config.server.headers,
-      //       });
-      //     } catch (e) {
-      //       const dummySourceMap = {
-      //         version: 3,
-      //         file: sourcemapPath.replace(/\.map$/, ""),
-      //         sources: [],
-      //         sourcesContent: [],
-      //         names: [],
-      //         mappings: ";;;;;;;;;",
-      //       };
-      //       return send(req, res, JSON.stringify(dummySourceMap), "json", {
-      //         cacheControl: "no-cache",
-      //         headers: server.config.server.headers,
-      //       });
-      //     }
-      //   } else {
-      //     const originalUrl = url.replace(/\.map($|\?)/, "$1");
-      //     const map = (await moduleGraph.getModuleByUrl(originalUrl, false))
-      //       ?.transformResult?.map;
-      //     if (map) {
-      //       return send(req, res, JSON.stringify(map), "json", {
-      //         headers: server.config.server.headers,
-      //       });
-      //     } else {
-      //       return next();
-      //     }
-      //   }
-      // }
-
-      // const publicDir = normalizePath(server.config.publicDir);
-      // const rootDir = normalizePath(server.config.root);
-      // if (publicDir.startsWith(rootDir)) {
-      //   // const publicPath = `${publicDir.slice(rootDir.length)}/`;
-      //   // if (url.startsWith(publicPath)) {
-      //   //   // let warning: string;
-
-      //   //   // if (isImportRequest(url)) {
-      //   //   //   const rawUrl = removeImportQuery(url);
-
-      //   //   //   warning =
-      //   //   //     "Assets in public cannot be imported from JavaScript.\n" +
-      //   //   //     `Instead of ${colors.cyan(
-      //   //   //       rawUrl
-      //   //   //     )}, put the file in the src directory, and use ${colors.cyan(
-      //   //   //       rawUrl.replace(publicPath, "/src/")
-      //   //   //     )} instead.`;
-      //   //   // } else {
-      //   //   //   warning =
-      //   //   //     `files in the public directory are served at the root path.\n` +
-      //   //   //     `Instead of ${colors.cyan(url)}, use ${colors.cyan(
-      //   //   //       url.replace(publicPath, "/")
-      //   //   //     )}.`;
-      //   //   // }
-
-      //   //   logger.warn(colors.yellow(warning));
-      //   // }
-      // }
-
       if (
         isJSRequest(url) ||
         isImportRequest(url) ||
