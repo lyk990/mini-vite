@@ -585,9 +585,9 @@ export async function resolveConfig(
   return resolved;
 }
 
-export function defineConfig(config: UserConfigExport): UserConfigExport {
-  return config;
-}
+// export function defineConfig(config: UserConfigExport): UserConfigExport {
+//   return config;
+// }
 /**通过enforce对plugin进行分类，并按顺序进行排列。
  * Alias -> 带有 enforce: 'pre' 的用户插件
  * ->Vite 核心插件-> 没有 enforce 值的用户插件 ->

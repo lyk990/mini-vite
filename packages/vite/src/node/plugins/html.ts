@@ -328,20 +328,20 @@ function prependInjectFallback(html: string, tags: HtmlTagDescriptor[]) {
 //   };
 // }
 
-export function addToHTMLProxyCache(
-  config: ResolvedConfig,
-  filePath: string,
-  index: number,
-  result: { code: string; map?: SourceMapInput }
-): void {
-  if (!htmlProxyMap.get(config)) {
-    htmlProxyMap.set(config, new Map());
-  }
-  if (!htmlProxyMap.get(config)!.get(filePath)) {
-    htmlProxyMap.get(config)!.set(filePath, []);
-  }
-  htmlProxyMap.get(config)!.get(filePath)![index] = result;
-}
+// export function addToHTMLProxyCache(
+//   config: ResolvedConfig,
+//   filePath: string,
+//   index: number,
+//   result: { code: string; map?: SourceMapInput }
+// ): void {
+//   if (!htmlProxyMap.get(config)) {
+//     htmlProxyMap.set(config, new Map());
+//   }
+//   if (!htmlProxyMap.get(config)!.get(filePath)) {
+//     htmlProxyMap.get(config)!.set(filePath, []);
+//   }
+//   htmlProxyMap.get(config)!.get(filePath)![index] = result;
+// }
 
 export async function traverseHtml(
   html: string,

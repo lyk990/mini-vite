@@ -1,7 +1,7 @@
 // import { SSROptions } from "vite";
 import {
-  findNearestPackageData,
-  loadPackageData,
+  // findNearestPackageData,
+  // loadPackageData,
   PackageCache,
   PackageData,
 } from "../packages";
@@ -12,14 +12,14 @@ import {
   createDebugger,
   // deepImportRE,
   fsPathFromId,
-  injectQuery,
+  // injectQuery,
   // isBuiltin,
   // isDataUrl,
   // isExternalUrl,
   isInNodeModules,
   isNonDriveRelativeAbsolutePath,
   // isObject,
-  isOptimizable,
+  // isOptimizable,
   isTsRequest,
   // isWindows,
   normalizePath,
@@ -30,11 +30,11 @@ import {
 import path from "path";
 import { PartialResolvedId } from "rollup";
 import {
-  CLIENT_ENTRY,
+  // CLIENT_ENTRY,
   // DEFAULT_EXTENSIONS,
   // DEFAULT_MAIN_FIELDS,
-  DEP_VERSION_RE,
-  ENV_ENTRY,
+  // DEP_VERSION_RE,
+  // ENV_ENTRY,
   FS_PREFIX,
   // OPTIMIZABLE_ENTRY_RE,
   // SPECIAL_QUERY_RE,
@@ -114,9 +114,9 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         return;
       }
 
-      const ssr = resolveOpts?.ssr === true;
+      // const ssr = resolveOpts?.ssr === true;
 
-      const depsOptimizer = resolveOptions.getDepsOptimizer?.(ssr);
+      // const depsOptimizer = resolveOptions.getDepsOptimizer?.(ssr);
 
       if (id.startsWith(browserExternalId)) {
         return id;
@@ -134,15 +134,15 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         scan: resolveOpts?.scan ?? resolveOptions.scan,
       };
 
-      const resolvedImports = resolveSubpathImports(
-        id,
-        importer,
-        options,
-        targetWeb
-      );
-      if (resolvedImports) {
-        id = resolvedImports;
-      }
+      // const resolvedImports = resolveSubpathImports(
+      //   id,
+      //   importer,
+      //   options,
+      //   targetWeb
+      // );
+      // if (resolvedImports) {
+      //   id = resolvedImports;
+      // }
 
       if (importer) {
         if (
@@ -168,14 +168,16 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
       if (asSrc && id.startsWith(FS_PREFIX)) {
         res = fsPathFromId(id);
         debug?.(`[@fs] ${colors.cyan(id)} -> ${colors.dim(res)}`);
-        return ensureVersionQuery(res, id, options, depsOptimizer);
+        // return ensureVersionQuery(res, id, options, depsOptimizer);
+        return res;
       }
 
       if (asSrc && id[0] === "/" && (rootInRoot || !id.startsWith(root))) {
         const fsPath = path.resolve(root, id.slice(1));
         if ((res = tryFsResolve(fsPath, options))) {
           debug?.(`[url] ${colors.cyan(id)} -> ${colors.dim(res)}`);
-          return ensureVersionQuery(res, id, options, depsOptimizer);
+          // return ensureVersionQuery(res, id, options, depsOptimizer);
+          return res;
         }
       }
 
@@ -211,7 +213,7 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         // }
 
         if ((res = tryFsResolve(fsPath, options))) {
-          res = ensureVersionQuery(res, id, options, depsOptimizer);
+          // res = ensureVersionQuery(res, id, options, depsOptimizer);
           debug?.(`[relative] ${colors.cyan(id)} -> ${colors.dim(res)}`);
 
           // if (
@@ -249,7 +251,8 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
         (res = tryFsResolve(id, options))
       ) {
         debug?.(`[fs] ${colors.cyan(id)} -> ${colors.dim(res)}`);
-        return ensureVersionQuery(res, id, options, depsOptimizer);
+        // return ensureVersionQuery(res, id, options, depsOptimizer);
+        return res
       }
 
       // if (isExternalUrl(id)) {
@@ -563,7 +566,7 @@ export function tryNodeResolve(
   // return { id: resolved! };
   // }
 }
-const subpathImportsPrefix = "#";
+// const subpathImportsPrefix = "#";
 function resolveExportsOrImports(
   pkg: PackageData["data"],
   key: string,
@@ -601,60 +604,60 @@ function resolveExportsOrImports(
 
   return result ? result[0] : undefined;
 }
-function resolveSubpathImports(
-  id: string,
-  importer: string | undefined,
-  options: InternalResolveOptions,
-  targetWeb: boolean
-) {
-  if (!importer || !id.startsWith(subpathImportsPrefix)) return;
-  const basedir = path.dirname(importer);
-  const pkgData = findNearestPackageData(basedir, options.packageCache);
-  if (!pkgData) return;
+// function resolveSubpathImports(
+//   id: string,
+//   importer: string | undefined,
+//   options: InternalResolveOptions,
+//   targetWeb: boolean
+// ) {
+//   if (!importer || !id.startsWith(subpathImportsPrefix)) return;
+//   const basedir = path.dirname(importer);
+//   const pkgData = findNearestPackageData(basedir, options.packageCache);
+//   if (!pkgData) return;
 
-  let importsPath = resolveExportsOrImports(
-    pkgData.data,
-    id,
-    options,
-    targetWeb,
-    "imports"
-  );
+//   let importsPath = resolveExportsOrImports(
+//     pkgData.data,
+//     id,
+//     options,
+//     targetWeb,
+//     "imports"
+//   );
 
-  if (importsPath?.[0] === ".") {
-    importsPath = path.relative(basedir, path.join(pkgData.dir, importsPath));
+//   if (importsPath?.[0] === ".") {
+//     importsPath = path.relative(basedir, path.join(pkgData.dir, importsPath));
 
-    if (importsPath[0] !== ".") {
-      importsPath = `./${importsPath}`;
-    }
-  }
+//     if (importsPath[0] !== ".") {
+//       importsPath = `./${importsPath}`;
+//     }
+//   }
 
-  return importsPath;
-}
-const normalizedClientEntry = normalizePath(CLIENT_ENTRY);
-const normalizedEnvEntry = normalizePath(ENV_ENTRY);
-function ensureVersionQuery(
-  resolved: string,
-  id: string,
-  options: InternalResolveOptions,
-  depsOptimizer?: DepsOptimizer
-): string {
-  if (
-    !options.isBuild &&
-    !options.scan &&
-    depsOptimizer &&
-    !(resolved === normalizedClientEntry || resolved === normalizedEnvEntry)
-  ) {
-    const isNodeModule = isInNodeModules(id) || isInNodeModules(resolved);
+//   return importsPath;
+// }
+// const normalizedClientEntry = normalizePath(CLIENT_ENTRY);
+// const normalizedEnvEntry = normalizePath(ENV_ENTRY);
+// function ensureVersionQuery(
+//   resolved: string,
+//   id: string,
+//   options: InternalResolveOptions,
+//   depsOptimizer?: DepsOptimizer
+// ): string {
+// if (
+//   !options.isBuild &&
+//   !options.scan &&
+//   depsOptimizer &&
+//   !(resolved === normalizedClientEntry || resolved === normalizedEnvEntry)
+// ) {
+//   const isNodeModule = isInNodeModules(id) || isInNodeModules(resolved);
 
-    if (isNodeModule && !resolved.match(DEP_VERSION_RE)) {
-      const versionHash = depsOptimizer.metadata.browserHash;
-      if (versionHash && isOptimizable(resolved, depsOptimizer.options)) {
-        resolved = injectQuery(resolved, `v=${versionHash}`);
-      }
-    }
-  }
-  return resolved;
-}
+//   if (isNodeModule && !resolved.match(DEP_VERSION_RE)) {
+//     const versionHash = depsOptimizer.metadata.browserHash;
+//     if (versionHash && isOptimizable(resolved, depsOptimizer.options)) {
+//       resolved = injectQuery(resolved, `v=${versionHash}`);
+//     }
+//   }
+// }
+//   return resolved;
+// }
 
 function splitFileAndPostfix(path: string) {
   const file = cleanUrl(path);
@@ -664,9 +667,9 @@ function splitFileAndPostfix(path: string) {
 function tryFsResolve(
   fsPath: string,
   options: InternalResolveOptions,
-  tryIndex = true,
-  targetWeb = true,
-  skipPackageJson = false
+  // tryIndex = true,
+  // targetWeb = true,
+  // skipPackageJson = false
 ): string | undefined {
   const hashIndex = fsPath.indexOf("#");
   if (hashIndex >= 0 && isInNodeModules(fsPath)) {
@@ -677,9 +680,9 @@ function tryFsResolve(
       const res = tryCleanFsResolve(
         file,
         options,
-        tryIndex,
-        targetWeb,
-        skipPackageJson
+        // tryIndex,
+        // targetWeb,
+        // skipPackageJson
       );
       if (res) return res + fsPath.slice(file.length);
     }
@@ -689,9 +692,9 @@ function tryFsResolve(
   const res = tryCleanFsResolve(
     file,
     options,
-    tryIndex,
-    targetWeb,
-    skipPackageJson
+    // tryIndex,
+    // targetWeb,
+    // skipPackageJson
   );
   if (res) return res + postfix;
 }
@@ -953,7 +956,7 @@ export function resolvePackageEntry(
       : ["index.js", "index.json", "index.node"];
 
     for (let entry of entryPoints) {
-      let skipPackageJson = false;
+      // let skipPackageJson = false;
       // if (
       //   options.mainFields[0] === "sass" &&
       //   !options.extensions.includes(path.extname(entry))
@@ -972,9 +975,9 @@ export function resolvePackageEntry(
       const resolvedEntryPoint = tryFsResolve(
         entryPointPath,
         options,
-        true,
-        true,
-        skipPackageJson
+        // true,
+        // true,
+        // skipPackageJson
       );
       if (resolvedEntryPoint) {
         debug?.(
@@ -1007,128 +1010,128 @@ function getRealPath(resolved: string, preserveSymlinks?: boolean): string {
   return normalizePath(resolved);
 }
 
-function tryResolveRealFileWithExtensions(
-  filePath: string,
-  extensions: string[],
-  preserveSymlinks: boolean
-): string | undefined {
-  for (const ext of extensions) {
-    const res = tryResolveRealFile(filePath + ext, preserveSymlinks);
-    if (res) return res;
-  }
-}
+// function tryResolveRealFileWithExtensions(
+//   filePath: string,
+//   extensions: string[],
+//   preserveSymlinks: boolean
+// ): string | undefined {
+//   for (const ext of extensions) {
+//     const res = tryResolveRealFile(filePath + ext, preserveSymlinks);
+//     if (res) return res;
+//   }
+// }
 
-const knownTsOutputRE = /\.(?:js|mjs|cjs|jsx)$/;
-const isPossibleTsOutput = (url: string): boolean => knownTsOutputRE.test(url);
+// const knownTsOutputRE = /\.(?:js|mjs|cjs|jsx)$/;
+// const isPossibleTsOutput = (url: string): boolean => knownTsOutputRE.test(url);
 function tryCleanFsResolve(
   file: string,
   options: InternalResolveOptions,
-  tryIndex = true,
-  targetWeb = true,
-  skipPackageJson = false
+  // tryIndex = true,
+  // targetWeb = true,
+  // skipPackageJson = false
 ): string | undefined {
-  const { tryPrefix, extensions, preserveSymlinks } = options;
+  // const { tryPrefix, extensions, preserveSymlinks } = options;
 
   const fileStat = tryStatSync(file);
 
   if (fileStat?.isFile()) return getRealPath(file, options.preserveSymlinks);
 
-  let res: string | undefined;
+  // let res: string | undefined;
 
-  const possibleJsToTs = options.isFromTsImporter && isPossibleTsOutput(file);
-  if (possibleJsToTs || extensions.length || tryPrefix) {
-    const dirPath = path.dirname(file);
-    const dirStat = tryStatSync(dirPath);
-    if (dirStat?.isDirectory()) {
-      if (possibleJsToTs) {
-        const fileExt = path.extname(file);
-        const fileName = file.slice(0, -fileExt.length);
-        if (
-          (res = tryResolveRealFile(
-            fileName + fileExt.replace("js", "ts"),
-            preserveSymlinks
-          ))
-        )
-          return res;
-        if (
-          fileExt === ".js" &&
-          (res = tryResolveRealFile(fileName + ".tsx", preserveSymlinks))
-        )
-          return res;
-      }
+  // const possibleJsToTs = options.isFromTsImporter && isPossibleTsOutput(file);
+  // if (possibleJsToTs || extensions.length || tryPrefix) {
+  //   const dirPath = path.dirname(file);
+  //   const dirStat = tryStatSync(dirPath);
+  //   if (dirStat?.isDirectory()) {
+  //     if (possibleJsToTs) {
+  //       const fileExt = path.extname(file);
+  //       const fileName = file.slice(0, -fileExt.length);
+  //       if (
+  //         (res = tryResolveRealFile(
+  //           fileName + fileExt.replace("js", "ts"),
+  //           preserveSymlinks
+  //         ))
+  //       )
+  //         return res;
+  //       if (
+  //         fileExt === ".js" &&
+  //         (res = tryResolveRealFile(fileName + ".tsx", preserveSymlinks))
+  //       )
+  //         return res;
+  //     }
 
-      if (
-        (res = tryResolveRealFileWithExtensions(
-          file,
-          extensions,
-          preserveSymlinks
-        ))
-      )
-        return res;
+  //     if (
+  //       (res = tryResolveRealFileWithExtensions(
+  //         file,
+  //         extensions,
+  //         preserveSymlinks
+  //       ))
+  //     )
+  //       return res;
 
-      if (tryPrefix) {
-        const prefixed = `${dirPath}/${options.tryPrefix}${path.basename(
-          file
-        )}`;
+  //     if (tryPrefix) {
+  //       const prefixed = `${dirPath}/${options.tryPrefix}${path.basename(
+  //         file
+  //       )}`;
 
-        if ((res = tryResolveRealFile(prefixed, preserveSymlinks))) return res;
+  //       if ((res = tryResolveRealFile(prefixed, preserveSymlinks))) return res;
 
-        if (
-          (res = tryResolveRealFileWithExtensions(
-            prefixed,
-            extensions,
-            preserveSymlinks
-          ))
-        )
-          return res;
-      }
-    }
-  }
+  //       if (
+  //         (res = tryResolveRealFileWithExtensions(
+  //           prefixed,
+  //           extensions,
+  //           preserveSymlinks
+  //         ))
+  //       )
+  //         return res;
+  //     }
+  //   }
+  // }
 
-  if (tryIndex && fileStat) {
-    const dirPath = file;
+  // if (tryIndex && fileStat) {
+  //   const dirPath = file;
 
-    if (!skipPackageJson) {
-      let pkgPath = `${dirPath}/package.json`;
-      try {
-        if (fs.existsSync(pkgPath)) {
-          if (!options.preserveSymlinks) {
-            pkgPath = safeRealpathSync(pkgPath);
-          }
-          const pkg = loadPackageData(pkgPath);
-          return resolvePackageEntry(dirPath, pkg, targetWeb, options);
-        }
-      } catch (e) {
-        if (e.code !== "ENOENT") throw e;
-      }
-    }
+  //   if (!skipPackageJson) {
+  //     let pkgPath = `${dirPath}/package.json`;
+  //     try {
+  //       if (fs.existsSync(pkgPath)) {
+  //         if (!options.preserveSymlinks) {
+  //           pkgPath = safeRealpathSync(pkgPath);
+  //         }
+  //         const pkg = loadPackageData(pkgPath);
+  //         return resolvePackageEntry(dirPath, pkg, targetWeb, options);
+  //       }
+  //     } catch (e) {
+  //       if (e.code !== "ENOENT") throw e;
+  //     }
+  //   }
 
-    if (
-      (res = tryResolveRealFileWithExtensions(
-        `${dirPath}/index`,
-        extensions,
-        preserveSymlinks
-      ))
-    )
-      return res;
+  //   if (
+  //     (res = tryResolveRealFileWithExtensions(
+  //       `${dirPath}/index`,
+  //       extensions,
+  //       preserveSymlinks
+  //     ))
+  //   )
+  //     return res;
 
-    if (tryPrefix) {
-      if (
-        (res = tryResolveRealFileWithExtensions(
-          `${dirPath}/${options.tryPrefix}index`,
-          extensions,
-          preserveSymlinks
-        ))
-      )
-        return res;
-    }
-  }
+  //   if (tryPrefix) {
+  //     if (
+  //       (res = tryResolveRealFileWithExtensions(
+  //         `${dirPath}/${options.tryPrefix}index`,
+  //         extensions,
+  //         preserveSymlinks
+  //       ))
+  //     )
+  //       return res;
+  //   }
+  // }
 }
 
-function tryResolveRealFile(
-  file: string,
-  preserveSymlinks: boolean
-): string | undefined {
-  const stat = tryStatSync(file);
-  if (stat?.isFile()) return getRealPath(file, preserveSymlinks);
-}
+// function tryResolveRealFile(
+//   file: string,
+//   preserveSymlinks: boolean
+// ): string | undefined {
+//   const stat = tryStatSync(file);
+//   if (stat?.isFile()) return getRealPath(file, preserveSymlinks);
+// }

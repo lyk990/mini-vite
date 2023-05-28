@@ -8,21 +8,21 @@ import {
   removeLeadingSlash,
 } from "../utils";
 import type {
-  NormalizedOutputOptions,
+  // NormalizedOutputOptions,
   PluginContext,
-  RenderedChunk,
+  // RenderedChunk,
 } from "rollup";
 // import { FS_PREFIX } from "../constants";
 // import fs, { promises as fsp } from "node:fs";
 // import colors from "picocolors";
 import * as mrmime from "mrmime";
 // import { parse as parseUrl } from "node:url";
-import MagicString from "magic-string";
+// import MagicString from "magic-string";
 import type { Plugin } from "rollup";
-import {
-  createToImportMetaURLBasedRelativeRuntime,
-  toOutputFilePathInJS,
-} from "../build";
+// import {
+//   createToImportMetaURLBasedRelativeRuntime,
+//   toOutputFilePathInJS,
+// } from "../build";
 
 export const assetUrlRE = /__VITE_ASSET__([a-z\d]+)__(?:\$_(.*?)__)?/g;
 export const publicAssetUrlRE = /__VITE_PUBLIC_ASSET__([a-z\d]{8})__/g;
@@ -256,62 +256,62 @@ export function registerCustomMime(): void {
   mrmime.mimes["eot"] = "application/vnd.ms-fontobject";
 }
 
-export function renderAssetUrlInJS(
-  ctx: PluginContext,
-  config: ResolvedConfig,
-  chunk: RenderedChunk,
-  opts: NormalizedOutputOptions,
-  code: string
-): MagicString | undefined {
-  const toRelativeRuntime = createToImportMetaURLBasedRelativeRuntime(
-    opts.format
-  );
+// export function renderAssetUrlInJS(
+//   ctx: PluginContext,
+//   config: ResolvedConfig,
+//   chunk: RenderedChunk,
+//   opts: NormalizedOutputOptions,
+//   code: string
+// ): MagicString | undefined {
+//   const toRelativeRuntime = createToImportMetaURLBasedRelativeRuntime(
+//     opts.format
+//   );
 
-  let match: RegExpExecArray | null;
-  let s: MagicString | undefined;
+//   let match: RegExpExecArray | null;
+//   let s: MagicString | undefined;
 
-  assetUrlRE.lastIndex = 0;
-  while ((match = assetUrlRE.exec(code))) {
-    s ||= new MagicString(code);
-    const [full, referenceId, postfix = ""] = match;
-    const file = ctx.getFileName(referenceId);
-    chunk.viteMetadata!.importedAssets.add(cleanUrl(file));
-    const filename = file + postfix;
-    const replacement = toOutputFilePathInJS(
-      filename,
-      "asset",
-      chunk.fileName,
-      "js",
-      config,
-      toRelativeRuntime
-    );
-    const replacementString =
-      typeof replacement === "string"
-        ? JSON.stringify(replacement).slice(1, -1)
-        : `"+${replacement.runtime}+"`;
-    s.update(match.index, match.index + full.length, replacementString);
-  }
+//   assetUrlRE.lastIndex = 0;
+//   while ((match = assetUrlRE.exec(code))) {
+//     s ||= new MagicString(code);
+//     const [full, referenceId, postfix = ""] = match;
+//     const file = ctx.getFileName(referenceId);
+//     chunk.viteMetadata!.importedAssets.add(cleanUrl(file));
+//     const filename = file + postfix;
+//     const replacement = toOutputFilePathInJS(
+//       filename,
+//       "asset",
+//       chunk.fileName,
+//       "js",
+//       config,
+//       toRelativeRuntime
+//     );
+//     const replacementString =
+//       typeof replacement === "string"
+//         ? JSON.stringify(replacement).slice(1, -1)
+//         : `"+${replacement.runtime}+"`;
+//     s.update(match.index, match.index + full.length, replacementString);
+//   }
 
-  const publicAssetUrlMap = publicAssetUrlCache.get(config)!;
-  publicAssetUrlRE.lastIndex = 0;
-  while ((match = publicAssetUrlRE.exec(code))) {
-    s ||= new MagicString(code);
-    const [full, hash] = match;
-    const publicUrl = publicAssetUrlMap.get(hash)!.slice(1);
-    const replacement = toOutputFilePathInJS(
-      publicUrl,
-      "public",
-      chunk.fileName,
-      "js",
-      config,
-      toRelativeRuntime
-    );
-    const replacementString =
-      typeof replacement === "string"
-        ? JSON.stringify(replacement).slice(1, -1)
-        : `"+${replacement.runtime}+"`;
-    s.update(match.index, match.index + full.length, replacementString);
-  }
+//   const publicAssetUrlMap = publicAssetUrlCache.get(config)!;
+//   publicAssetUrlRE.lastIndex = 0;
+//   while ((match = publicAssetUrlRE.exec(code))) {
+//     s ||= new MagicString(code);
+//     const [full, hash] = match;
+//     const publicUrl = publicAssetUrlMap.get(hash)!.slice(1);
+//     const replacement = toOutputFilePathInJS(
+//       publicUrl,
+//       "public",
+//       chunk.fileName,
+//       "js",
+//       config,
+//       toRelativeRuntime
+//     );
+//     const replacementString =
+//       typeof replacement === "string"
+//         ? JSON.stringify(replacement).slice(1, -1)
+//         : `"+${replacement.runtime}+"`;
+//     s.update(match.index, match.index + full.length, replacementString);
+//   }
 
-  return s;
-}
+//   return s;
+// }

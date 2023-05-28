@@ -1,4 +1,4 @@
-import fs from "node:fs";
+// import fs from "node:fs";
 import path from "node:path";
 import colors from "picocolors";
 import { ResolvedConfig } from "../config";
@@ -21,10 +21,10 @@ import { ViteDevServer } from "../server";
 // import { searchForWorkspaceRoot } from "../server/searchRoot";
 import type { TSConfckParseOptions } from "tsconfck";
 import type { SourceMap } from "rollup";
-import { TSConfckParseError, parse } from "tsconfck";
+import { parse } from "tsconfck";
 import { transform } from "esbuild";
 // import type { RawSourceMap } from "@ampproject/remapping";
-import type { FSWatcher } from "chokidar";
+// import type { FSWatcher } from "chokidar";
 
 const debug = createDebugger("vite:esbuild");
 
@@ -63,7 +63,7 @@ type TSCompilerOptions = NonNullable<TSConfigJSON["compilerOptions"]>;
 // let tsconfckRoot: string | undefined;
 let tsconfckParseOptions: TSConfckParseOptions | Promise<TSConfckParseOptions> =
   { resolveWithEmptyIfConfigNotFound: true };
-
+// @ts-ignore
 let server: ViteDevServer;
 export function esbuildPlugin(config: ResolvedConfig): Plugin {
   const options = config.esbuild as ESBuildOptions;
@@ -163,8 +163,8 @@ export function esbuildPlugin(config: ResolvedConfig): Plugin {
 export async function transformWithEsbuild(
   code: string,
   filename: string,
-  options?: TransformOptions,
-  inMap?: object
+  options?: TransformOptions
+  // inMap?: object
 ): Promise<ESBuildTransformResult> {
   let loader = options?.loader;
 
@@ -173,13 +173,13 @@ export async function transformWithEsbuild(
       .extname(validExtensionRE.test(filename) ? filename : cleanUrl(filename))
       .slice(1);
 
-    if (ext === "cjs" || ext === "mjs") {
-      loader = "js";
-    } else if (ext === "cts" || ext === "mts") {
-      loader = "ts";
-    } else {
-      loader = ext as Loader;
-    }
+    // if (ext === "cjs" || ext === "mjs") {
+    //   loader = "js";
+    // } else if (ext === "cts" || ext === "mts") {
+    //   loader = "ts";
+    // } else {
+    loader = ext as Loader;
+    // }
   }
 
   let tsconfigRaw = options?.tsconfigRaw;
@@ -323,35 +323,35 @@ async function loadTsconfigJsonForFile(
 ): Promise<TSConfigJSON> {
   try {
     const result = await parse(filename, await tsconfckParseOptions);
-    if (server && result.tsconfigFile !== "no_tsconfig_file_found") {
-      ensureWatchedFile(
-        server.watcher,
-        result.tsconfigFile,
-        server.config.root
-      );
-    }
+    // if (server && result.tsconfigFile !== "no_tsconfig_file_found") {
+    //   ensureWatchedFile(
+    //     server.watcher,
+    //     result.tsconfigFile,
+    //     server.config.root
+    //   );
+    // }
     return result.tsconfig;
   } catch (e) {
-    if (e instanceof TSConfckParseError) {
-      if (server && e.tsconfigFile) {
-        ensureWatchedFile(server.watcher, e.tsconfigFile, server.config.root);
-      }
-    }
+    // if (e instanceof TSConfckParseError) {
+    //   if (server && e.tsconfigFile) {
+    //     ensureWatchedFile(server.watcher, e.tsconfigFile, server.config.root);
+    //   }
+    // }
     throw e;
   }
 }
 
-export function ensureWatchedFile(
-  watcher: FSWatcher,
-  file: string | null,
-  root: string
-): void {
-  if (
-    file &&
-    !file.startsWith(root + "/") &&
-    !file.includes("\0") &&
-    fs.existsSync(file)
-  ) {
-    watcher.add(path.resolve(file));
-  }
-}
+// export function ensureWatchedFile(
+//   watcher: FSWatcher,
+//   file: string | null,
+//   root: string
+// ): void {
+//   if (
+//     file &&
+//     !file.startsWith(root + "/") &&
+//     !file.includes("\0") &&
+//     fs.existsSync(file)
+//   ) {
+//     watcher.add(path.resolve(file));
+//   }
+// }

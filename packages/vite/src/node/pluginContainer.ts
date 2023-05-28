@@ -26,8 +26,8 @@ import { VERSION as rollupVersion } from "rollup";
 import { Plugin } from "./plugin";
 import {
   // arraify,
-  cleanUrl,
-  combineSourcemaps,
+  // cleanUrl,
+  // combineSourcemaps,
   createDebugger,
   isExternalUrl,
   isObject,
@@ -39,7 +39,7 @@ import {
 // import MagicString from "magic-string";
 import * as acorn from "acorn";
 // import colors from "picocolors";
-import type { RawSourceMap } from "@ampproject/remapping";
+// import type { RawSourceMap } from "@ampproject/remapping";
 
 type PluginContext = Omit<RollupPluginContext, "cache" | "moduleIds">;
 // const debugResolve = createDebugger("vite:resolve");
@@ -283,15 +283,16 @@ export async function createPluginContainer(
         }
         if (!combinedMap) {
           combinedMap = m as SourceMap;
-        } else {
-          combinedMap = combineSourcemaps(cleanUrl(this.filename), [
-            {
-              ...(m as RawSourceMap),
-              sourcesContent: combinedMap.sourcesContent,
-            },
-            combinedMap as RawSourceMap,
-          ]) as SourceMap;
         }
+        //  else {
+        //   combinedMap = combineSourcemaps(cleanUrl(this.filename), [
+        //     {
+        //       ...(m as RawSourceMap),
+        //       sourcesContent: combinedMap.sourcesContent,
+        //     },
+        //     combinedMap as RawSourceMap,
+        //   ]) as SourceMap;
+        // }
       }
       if (!combinedMap) {
         return null;

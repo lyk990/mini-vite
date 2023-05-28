@@ -16,7 +16,7 @@ import getEtag from "etag";
 import { getDepsOptimizer } from "../optimizer/optimizer";
 import type { SourceDescription, SourceMap } from "rollup";
 import { isFileServingAllowed } from "./middlewares/static";
-import { ModuleNode } from "./moduleGraph";
+// import { ModuleNode } from "./moduleGraph";
 import colors from "picocolors";
 import path from "node:path";
 // import { checkPublicFile } from "../plugins/asset";
@@ -129,9 +129,9 @@ async function loadAndTransform(
   const loadStart = debugLoad ? performance.now() : 0;
   const loadResult = await pluginContainer.load(id, { ssr });
   if (loadResult == null) {
-    if (options.html && !id.endsWith(".html")) {
-      return null;
-    }
+    // if (options.html && !id.endsWith(".html")) {
+    //   return null;
+    // }
     if (options.ssr || isFileServingAllowed(file, server)) {
       try {
         code = await fs.readFile(file, "utf-8");
@@ -173,27 +173,27 @@ async function loadAndTransform(
   }
   if (code == null) {
     // const isPublicFile = checkPublicFile(url, config);
-    const msg =
-      // isPublicFile
-      //   ? `This file is in /public and will be copied as-is during build without ` +
-      //     `going through the plugin transforms, and therefore should not be ` +
-      //     `imported from source code. It can only be referenced via HTML tags.`
-      // :
-      `Does the file exist?`;
-    const importerMod: ModuleNode | undefined = server.moduleGraph.idToModuleMap
-      .get(id)
-      ?.importers.values()
-      .next().value;
-    const importer = importerMod?.file || importerMod?.url;
-    const err: any = new Error(
-      `Failed to load url ${url} (resolved id: ${id})${
-        importer ? ` in ${importer}` : ""
-      }. ${msg}`
-    );
-    err.code =
-      // isPublicFile ? ERR_LOAD_PUBLIC_URL :
-      ERR_LOAD_URL;
-    throw err;
+    // const msg =
+    //   // isPublicFile
+    //   //   ? `This file is in /public and will be copied as-is during build without ` +
+    //   //     `going through the plugin transforms, and therefore should not be ` +
+    //   //     `imported from source code. It can only be referenced via HTML tags.`
+    //   // :
+    //   `Does the file exist?`;
+    // const importerMod: ModuleNode | undefined = server.moduleGraph.idToModuleMap
+    //   .get(id)
+    //   ?.importers.values()
+    //   .next().value;
+    // const importer = importerMod?.file || importerMod?.url;
+    // const err: any = new Error(
+    //   `Failed to load url ${url} (resolved id: ${id})${
+    //     importer ? ` in ${importer}` : ""
+    //   }. ${msg}`
+    // );
+    // err.code =
+    //   // isPublicFile ? ERR_LOAD_PUBLIC_URL :
+    //   ERR_LOAD_URL;
+    throw new Error(`Failed to load url`);
   }
   const mod = await moduleGraph.ensureEntryFromUrl(url, ssr);
   ensureWatchedFile(watcher, mod.file, root);
