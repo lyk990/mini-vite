@@ -1,7 +1,7 @@
 import glob from "fast-glob";
 import type { WatchOptions } from "dep-types/chokidar";
 import type { ResolvedConfig } from ".";
-
+/**热更新Chokidar 配置项 */
 export function resolveChokidarOptions(
   config: ResolvedConfig,
   options: WatchOptions | undefined

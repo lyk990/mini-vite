@@ -47,6 +47,7 @@ export function cleanUrl(url: string): string {
 }
 
 export const isWindows = os.platform() === "win32";
+/**根据操作系统，使用适当的路径分隔符（例如 / 或 \） */
 export function normalizePath(id: string): string {
   return path.posix.normalize(isWindows ? slash(id) : id);
 }
@@ -316,7 +317,6 @@ const cleanSrcSetRE =
 
 function splitSrcSet(srcs: string) {
   const parts: string[] = [];
-  // There could be a ',' inside of url(data:...), linear-gradient(...) or "data:..."
   const cleanedSrcs = srcs.replace(cleanSrcSetRE, blankReplacer);
   let startIndex = 0;
   let splitIndex: number;
@@ -469,7 +469,7 @@ export const usingDynamicImport = typeof jest === "undefined";
 
 const _require = createRequire(import.meta.url);
 export const dynamicImport = usingDynamicImport
-  ? new Function("file", "return import(file)")
+  ? new Function("file", "return import(file)") // NOTE
   : _require;
 
 const knownTsRE = /\.(?:ts|mts|cts|tsx)(?:$|\?)/;
@@ -783,7 +783,11 @@ function normalizeSingleAlias({
   }
   return alias;
 }
-
+/**normalizeAlias 函数用于规范化别名配置。
+确保别名路径以 / 开头：如果别名路径不以 / 开头，则会在前面添加 /。
+确保别名路径以 / 结尾：如果别名路径不以 / 结尾，则会在末尾添加 /。
+处理别名路径中的 ~ 符号：将别名路径中的 ~ 替换为根目录路径。
+ */
 export function normalizeAlias(o: AliasOptions = []): Alias[] {
   return Array.isArray(o)
     ? o.map(normalizeSingleAlias)

@@ -15,7 +15,7 @@ export function getShortName(file: string, root: string): string {
 }
 export const debugHmr = createDebugger("vite:hmr");
 const normalizedClientDir = normalizePath(CLIENT_DIR);
-
+/**处理热更新 */
 export async function handleHMRUpdate(
   file: string,
   server: ViteDevServer,

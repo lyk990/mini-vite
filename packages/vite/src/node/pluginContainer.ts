@@ -52,7 +52,6 @@ export interface PluginContainer {
       assertions?: Record<string, string>;
       custom?: CustomPluginOptions;
       skip?: Set<Plugin>;
-      // ssr?: boolean;
       scan?: boolean;
       isEntry?: boolean;
     }
@@ -62,13 +61,12 @@ export interface PluginContainer {
     id: string,
     options?: {
       inMap?: SourceDescription["map"];
-      // ssr?: boolean;
     }
   ): Promise<SourceDescription | null>;
   load(id: string, options?: {}): Promise<LoadResult | null>;
   close(): Promise<void>;
 }
-// 创建插件容器
+/**创建插件容器 */
 export async function createPluginContainer(
   config: ResolvedConfig,
   moduleGraph?: ModuleGraph

@@ -136,7 +136,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         try {
           const depModule = await moduleGraph._ensureEntryFromUrl(
             unwrapId(url),
-            // ssr,
             canSkipImportAnalysis(url) || forceSkipImportAnalysis,
             resolved
           );
@@ -149,7 +148,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         }
 
         url = joinUrlSegments(base, url);
-        // }
 
         return [url, resolved.id];
       };

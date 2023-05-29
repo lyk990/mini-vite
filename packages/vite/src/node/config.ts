@@ -128,8 +128,7 @@ export type ResolvedConfig = Readonly<
     experimental: ExperimentalOptions;
     mode: string;
     esbuild: ESBuildOptions | false;
-    rawBase: string; // REMOVE
-    mainConfig: ResolvedConfig | null; // REMOVE
+    rawBase: string;
   } & PluginHookUtils
 >;
 
@@ -139,6 +138,7 @@ export interface PluginHookUtils {
     hookName: K
   ) => NonNullable<HookHandler<Plugin[K]>>[];
 }
+/**解析所有配置 */
 export async function resolveConfig(
   inlineConfig: InlineConfig,
   command: "build" | "serve",
@@ -151,18 +151,16 @@ export async function resolveConfig(
   const packageCache: PackageCache = new Map();
 
   process.env.NODE_ENV = defaultNodeEnv;
-
   const configEnv = {
     mode,
     command,
   };
 
   let { configFile } = config;
-  // configFile为undefined时，会在loadConfigFromFile中自动寻找
   if (configFile !== false) {
+    // configFile为undefined，所以会进到这个if语句
     const loadResult = await loadConfigFromFile(
       configEnv,
-      // configFile,
       config.root,
       config.logLevel
     );
@@ -325,7 +323,6 @@ export async function resolveConfig(
     cacheDir,
     command,
     mode,
-    mainConfig: null,
     plugins: userPlugins,
     esbuild:
       config.esbuild === false
@@ -382,9 +379,6 @@ export async function resolveConfig(
 }
 
 /**通过enforce对plugin进行分类，并按顺序进行排列。
- * Alias -> 带有 enforce: 'pre' 的用户插件
- * ->Vite 核心插件-> 没有 enforce 值的用户插件 ->
- * Vite 构建插件 ->带有 enforce: 'post' 的用户插件 -> Vite 后置构建插件
  */
 export function sortUserPlugins(
   plugins: (Plugin | Plugin[])[] | undefined
@@ -404,7 +398,7 @@ export function sortUserPlugins(
   return [prePlugins, normalPlugins, postPlugins];
 }
 
-/**根据相关目录获取配置文件 */
+/**获取vite.config.ts配置文件中的内容 */
 export async function loadConfigFromFile(
   configEnv: ConfigEnv,
   configRoot: string = process.cwd(),
@@ -418,12 +412,11 @@ export async function loadConfigFromFile(
   // 没有配置文件，就遍历默认配置文件 DEFAULT_CONFIG_FILES  'vite.config.js',
   for (const filename of DEFAULT_CONFIG_FILES) {
     const filePath = path.resolve(configRoot, filename);
-    //fs.existsSync() 同步方法用于检测文件是否存在，返回布尔值类型
+    //fs.existsSync() 用于检测文件是否存在，返回布尔值类型
     if (!fs.existsSync(filePath)) continue;
     resolvedPath = filePath;
     break;
   }
-  // }
   if (!resolvedPath) {
     debug?.("no config file found.");
     return null;
@@ -431,6 +424,7 @@ export async function loadConfigFromFile(
   let isESM = false;
   try {
     const pkg = lookupFile(configRoot, ["package.json"]);
+    // 读取package.json文件，判断是否为esm模块
     isESM =
       !!pkg && JSON.parse(fs.readFileSync(pkg, "utf-8")).type === "module";
   } catch (e) {}
@@ -460,7 +454,7 @@ export async function loadConfigFromFile(
     throw e;
   }
 }
-/**打包成对应得cjs或者esm得文件 */
+/**打包成对应得cjs或者esm文件 */
 async function bundleConfigFile(
   fileName: string,
   isESM: boolean
@@ -525,7 +519,6 @@ async function bundleConfigFile(
                 false
               )?.id;
               if (idFsPath && isIdESM) {
-                // pathToFileURL 用来将文件路径转换成文件URL路径
                 idFsPath = pathToFileURL(idFsPath).href;
               }
               return {
@@ -565,7 +558,7 @@ async function bundleConfigFile(
     dependencies: result.metafile ? Object.keys(result.metafile.inputs) : [],
   };
 }
-
+/**从打包后的文件加载配置信息 */
 async function loadConfigFromBundledFile(
   fileName: string,
   bundledCode: string
@@ -582,13 +575,13 @@ async function loadConfigFromBundledFile(
     fs.unlink(fileNameTmp, () => {});
   }
 }
-
+/**获取optimizeDeps依赖预构建的配置项 */
 export function getDepOptimizationConfig(
   config: ResolvedConfig
 ): DepOptimizationConfig {
   return config.optimizeDeps;
 }
-
+/**执行vite.config.ts中的钩子函数 */
 async function runConfigHook(
   config: InlineConfig,
   plugins: Plugin[],

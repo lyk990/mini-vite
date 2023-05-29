@@ -21,7 +21,7 @@ import type {
   BuildContext,
   BuildOptions as EsbuildBuildOptions,
 } from "esbuild";
-import colors from 'picocolors'
+import colors from "picocolors";
 
 const debug = createDebugger("vite:deps");
 
@@ -116,8 +116,7 @@ export interface OptimizedDepInfo {
 
 /**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
-  config: ResolvedConfig,
-  // ssr: boolean = false
+  config: ResolvedConfig
 ): Promise<DepOptimizationMetadata | undefined> {
   const depsCacheDir = getDepsCacheDir(config);
   let cachedMetadata: DepOptimizationMetadata | undefined;
@@ -228,7 +227,7 @@ export function optimizedDepInfoFromFile(
 /**将esbuild扫描后的依赖放入node_moudles/.vite中 */
 export function runOptimizeDeps(
   resolvedConfig: ResolvedConfig,
-  depsInfo: Record<string, OptimizedDepInfo>,
+  depsInfo: Record<string, OptimizedDepInfo>
 ): {
   cancel: () => Promise<void>;
   result: Promise<DepOptimizationResult>;
@@ -490,10 +489,8 @@ async function prepareEsbuildOptimizerRun(
 
   if (optimizerContext.cancelled) return { context: undefined, idToExports };
   const define = {
-    "process.env.NODE_ENV":
-      JSON.stringify(process.env.NODE_ENV || config.mode),
+    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || config.mode),
   };
-
 
   const external = [...(optimizeDeps?.exclude ?? [])];
   const plugins = [...pluginsFromConfig];
@@ -501,7 +498,7 @@ async function prepareEsbuildOptimizerRun(
   const context = await esbuild.context({
     absWorkingDir: process.cwd(),
     entryPoints: Object.keys(flatIdDeps),
-    bundle: true, // 递归扫描依赖
+    bundle: true, // esbuild配置项，是否递归扫描依赖
     platform: "browser",
     define,
     format: "esm",
@@ -603,7 +600,6 @@ export function newDepOptimizationProcessing(): DepOptimizationProcessing {
 export async function extractExportsData(
   filePath: string,
   config: ResolvedConfig
-  // ssr: boolean
 ): Promise<ExportsData> {
   await init;
 

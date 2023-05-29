@@ -39,6 +39,7 @@ const wsServerEvents = [
   "listening",
   "message",
 ];
+/**创建websocket服务器，并将本地服务器与浏览器建立通信 */
 export function createWebSocketServer(
   server: Server | null,
   config: ResolvedConfig
@@ -122,7 +123,7 @@ export function createWebSocketServer(
     }
   });
   let bufferedError: ErrorPayload | null = null;
-
+  /**使用 WebSocket，实时服务器和客户端之间建立通信 */
   function getSocketClient(socket: WebSocketRaw) {
     if (!clientsMap.has(socket)) {
       clientsMap.set(socket, {

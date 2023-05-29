@@ -88,13 +88,12 @@ export interface ViteDevServer {
 }
 
 /**开启服务器,1、resolveHostname,2、 httpServerStart*/
-async function startServer(server: ViteDevServer, inlinePort?: number) {
+async function startServer(server: ViteDevServer) {
   const httpServer = server.httpServer;
   if (!httpServer) {
     throw new Error("Cannot call server.listen in middleware mode.");
   }
-  const port = inlinePort ?? DEFAULT_DEV_PORT;
-  // FEATURE 查询本地服务器ip地址
+  const port = DEFAULT_DEV_PORT;
   let hostName = DEFAULT_HOST_NAME;
   await httpServerStart(httpServer, {
     port,
@@ -107,9 +106,9 @@ async function startServer(server: ViteDevServer, inlinePort?: number) {
 export async function createServer(
   inlineConfig: InlineConfig = {}
 ): Promise<ViteDevServer> {
-  return _createServer(inlineConfig, { ws: true });
+  return _createServer(inlineConfig);
 }
-
+/**关闭http服务器 */
 function createServerCloseFn(server: http.Server | null) {
   if (!server) {
     return () => {};
@@ -147,8 +146,7 @@ function createServerCloseFn(server: http.Server | null) {
 }
 
 export async function _createServer(
-  inlineConfig: InlineConfig = {},
-  options: { ws: boolean }
+  inlineConfig: InlineConfig = {}
 ): Promise<ViteDevServer> {
   const config = await resolveConfig(inlineConfig, "serve");
 
@@ -192,6 +190,7 @@ export async function _createServer(
     await handleFileAddUnlink(file, server);
     await onHMRUpdate(file, true);
   };
+  // 文件改变时
   watcher.on("change", async (file) => {
     file = normalizePath(file);
     moduleGraph.onFileChange(file);
@@ -218,8 +217,8 @@ export async function _createServer(
       return transformRequest(url, server, options);
     },
     transformIndexHtml: null!,
-    async listen(port?: number) {
-      await startServer(server, port);
+    async listen() {
+      await startServer(server);
       if (httpServer) {
         server.resolvedUrls = await resolveServerUrls(
           httpServer,
@@ -339,7 +338,7 @@ async function restartServer(server: ViteDevServer) {
 
   let newServer = null;
   try {
-    newServer = await _createServer(inlineConfig, { ws: false });
+    newServer = await _createServer(inlineConfig);
   } catch (err: any) {
     server.config.logger.error(err.message, {
       timestamp: true,
@@ -381,7 +380,7 @@ async function restartServer(server: ViteDevServer) {
 
   newServer._restartPromise = null;
 }
-
+/**获取vite.config.ts中的server配置项*/
 export function resolveServerOptions(
   root: string,
   raw: ServerOptions | undefined

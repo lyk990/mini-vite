@@ -1,7 +1,7 @@
 import path from "node:path";
 import { BuildOptions, ResolvedBuildOptions } from "vite";
 import type { InternalModuleFormat } from "rollup";
-
+/**build配置 */
 export function resolveBuildOptions(
   raw: BuildOptions | undefined
 ): ResolvedBuildOptions {

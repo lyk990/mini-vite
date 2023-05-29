@@ -2,14 +2,14 @@ import type { Logger } from "./logger";
 import type { Server as HttpServer } from "node:http";
 import type { Connect } from "dep-types/connect";
 
-/**创建http服务器 */
+/**创建http服务器，返回http.Server 的新实例。 */
 export async function resolveHttpServer(
   app: Connect.Server
 ): Promise<HttpServer> {
   const { createServer } = await import("node:http");
   return createServer(app);
 }
-
+/**开启服务器，并监听服务器端口 */
 export async function httpServerStart(
   httpServer: HttpServer,
   serverOptions: {

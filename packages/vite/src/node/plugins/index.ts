@@ -11,6 +11,7 @@ import { assetPlugin } from "./asset";
 import { htmlInlineProxyPlugin } from "./html";
 import aliasPlugin from "@rollup/plugin-alias";
 
+/**项目中所有的plugin */
 export async function resolvePlugins(
   config: ResolvedConfig,
   prePlugins: Plugin[],
@@ -42,7 +43,7 @@ export async function resolvePlugins(
     importAnalysisPlugin(config),
   ].filter(Boolean) as Plugin[]; // NOTE Bolean 写法
 }
-
+/**创建plugn钩子函数 */
 export function createPluginHookUtils(
   plugins: readonly Plugin[]
 ): PluginHookUtils {

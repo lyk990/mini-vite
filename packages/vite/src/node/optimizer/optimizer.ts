@@ -21,21 +21,15 @@ export function getDepsOptimizer(
   config: ResolvedConfig
 ): DepsOptimizer | undefined {
   const isDevSsr = config.command !== "build";
-  return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(
-    config.mainConfig || config
-  );
+  return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(config);
 }
 
 /**初始化预构建依赖 */
-export async function initDepsOptimizer(
-  config: ResolvedConfig
-): Promise<void> {
+export async function initDepsOptimizer(config: ResolvedConfig): Promise<void> {
   await createDepsOptimizer(config);
 }
 
-async function createDepsOptimizer(
-  config: ResolvedConfig
-): Promise<void> {
+async function createDepsOptimizer(config: ResolvedConfig): Promise<void> {
   const sessionTimestamp = Date.now().toString();
   const cachedMetadata = await loadCachedDepOptimizationMetadata(config);
   let metadata =

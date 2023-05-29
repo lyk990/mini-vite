@@ -243,7 +243,7 @@ export async function parseImportGlob(
 
   return (await Promise.all(tasks)).filter(Boolean);
 }
-
+/**获取受影响的hmr模块 */
 export function getAffectedGlobModules(
   file: string,
   server: ViteDevServer
@@ -264,7 +264,6 @@ export async function transformGlobImport(
   id: string,
   root: string,
   resolveId: IdResolver,
-  // isProduction: boolean,
   restoreQueryExtension = false
 ): Promise<TransformGlobImportResult | null> {
   id = slash(id);
