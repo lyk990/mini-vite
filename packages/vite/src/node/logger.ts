@@ -1,8 +1,8 @@
-import colors from 'picocolors'
+import colors from "picocolors";
 import type { RollupError } from "rollup";
-import type { ResolvedServerUrls } from './server'
+import type { ResolvedServerUrls } from "./server";
 export type LogType = "error" | "warn" | "info";
-export type LogLevel = LogType | 'silent'
+export type LogLevel = LogType | "silent";
 export interface Logger {
   info(msg: string, options?: LogOptions): void;
   warn(msg: string, options?: LogOptions): void;
@@ -18,6 +18,7 @@ export interface LogOptions {
 export interface LogErrorOptions extends LogOptions {
   error?: Error | RollupError | null;
 }
+/**控制台打印本地服务器url */
 export function printServerUrls(
   urls: ResolvedServerUrls,
   optionsHost: string | boolean | undefined,

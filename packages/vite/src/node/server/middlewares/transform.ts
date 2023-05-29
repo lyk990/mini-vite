@@ -21,13 +21,12 @@ import {
   ERR_OPTIMIZE_DEPS_PROCESSING_ERROR,
   ERR_OUTDATED_OPTIMIZED_DEP,
 } from "../../plugins/optimizedDeps";
-import { getDepsOptimizer } from "../../optimizer/optimizer";
 import { ViteDevServer } from "../..";
 import { isHTMLProxy } from "../../plugins/html";
 
 const knownIgnoreList = new Set(["/", "/favicon.ico"]);
 const debugCache = createDebugger("vite:cache");
-
+/**transform核心中间件，可以拦截请求，修改请求URL、添加请求头 */
 export function transformMiddleware(
   server: ViteDevServer
 ): Connect.NextHandleFunction {
@@ -83,10 +82,8 @@ export function transformMiddleware(
           html: req.headers.accept?.includes("text/html"),
         });
         if (result) {
-          const depsOptimizer = getDepsOptimizer(server.config);
           const type = isDirectCSSRequest(url) ? "css" : "js";
-          const isDep =
-            DEP_VERSION_RE.test(url) || depsOptimizer?.isOptimizedDepUrl(url);
+          const isDep = DEP_VERSION_RE.test(url);
           return send(req, res, result.code, type, {
             etag: result.etag,
             cacheControl: isDep ? "max-age=31536000,immutable" : "no-cache",

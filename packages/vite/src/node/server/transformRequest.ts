@@ -13,7 +13,6 @@ import {
 import { promises as fs } from "node:fs";
 import convertSourceMap from "convert-source-map";
 import getEtag from "etag";
-import { getDepsOptimizer } from "../optimizer/optimizer";
 import type { SourceDescription, SourceMap } from "rollup";
 import { isFileServingAllowed } from "./middlewares/static";
 import colors from "picocolors";
@@ -33,7 +32,7 @@ export interface TransformResult {
   deps?: string[];
   dynamicDeps?: string[];
 }
-
+/**对transformMiddleware拦截的内容进行transform和resolveId */
 export function transformRequest(
   url: string,
   server: ViteDevServer,
@@ -56,7 +55,7 @@ export function transformRequest(
       });
   }
 
-  const request = doTransform(url, server, options, timestamp);
+  const request = doTransform(url, server, timestamp);
 
   let cleared = false;
   const clearCache = () => {
@@ -75,11 +74,10 @@ export function transformRequest(
 
   return request;
 }
-
+/**transform核心方法 */
 async function doTransform(
   url: string,
   server: ViteDevServer,
-  options: TransformOptions,
   timestamp: number
 ) {
   url = removeTimestampQuery(url);
@@ -95,8 +93,7 @@ async function doTransform(
   }
   const id =
     module?.id ?? (await pluginContainer.resolveId(url, undefined))?.id ?? url;
-  const result = loadAndTransform(id, url, server, options, timestamp);
-  getDepsOptimizer(config)?.delayDepsOptimizerUntil(id, () => result);
+  const result = loadAndTransform(id, url, server, timestamp);
   return result;
 }
 
@@ -104,7 +101,6 @@ async function loadAndTransform(
   id: string,
   url: string,
   server: ViteDevServer,
-  options: TransformOptions,
   timestamp: number
 ) {
   const { config, pluginContainer, moduleGraph, watcher } = server;
@@ -206,7 +202,7 @@ async function loadAndTransform(
   const result = {
     code,
     map,
-    etag: getEtag(code, { weak: true }),
+    etag: getEtag(code, { weak: true }), // NOTE 协商缓存
   } as TransformResult;
 
   if (timestamp > mod.lastInvalidationTimestamp) {
@@ -215,7 +211,7 @@ async function loadAndTransform(
 
   return result;
 }
-
+/**创建sourceMap */
 function createConvertSourceMapReadMap(originalFileName: string) {
   return (filename: string) => {
     return fs.readFile(

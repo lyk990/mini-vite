@@ -27,7 +27,6 @@ import { ResolvedConfig } from "../config";
 import { debugHmr, lexAcceptedHmrDeps, normalizeHmrUrl } from "../server/hmr";
 import { isCSSRequest, isDirectCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
-import { getDepsOptimizer } from "../optimizer";
 import fs from "node:fs";
 import colors from "picocolors";
 import { findStaticImports, parseStaticImport } from "mlly";
@@ -80,8 +79,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         );
       }
 
-      const depsOptimizer = getDepsOptimizer(config);
-
       const { moduleGraph } = server;
       const importerModule = moduleGraph.getModuleById(importer)!;
       if (!imports.length && !(this as any)._addedImports) {
@@ -120,10 +117,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
 
         if (resolved.id.startsWith(root + "/")) {
           url = resolved.id.slice(root.length);
-        } else if (
-          depsOptimizer?.isOptimizedDepFile(resolved.id) ||
-          fs.existsSync(cleanUrl(resolved.id))
-        ) {
+        } else if (fs.existsSync(cleanUrl(resolved.id))) {
           url = path.posix.join(FS_PREFIX, resolved.id);
         } else {
           url = resolved.id;

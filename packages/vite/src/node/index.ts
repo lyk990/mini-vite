@@ -20,6 +20,5 @@ export type {
   DepOptimizationConfig,
   DepOptimizationResult,
   OptimizedDepInfo,
-  DepsOptimizer,
   ExportsData,
 } from "./optimizer";

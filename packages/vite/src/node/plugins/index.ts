@@ -5,7 +5,6 @@ import { clientInjectionsPlugin } from "./clientInjections";
 import { cssPlugin, cssPostPlugin } from "./css";
 import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
-import { getDepsOptimizer } from "../optimizer/optimizer";
 import { esbuildPlugin } from "./esbuild";
 import { assetPlugin } from "./asset";
 import { htmlInlineProxyPlugin } from "./html";
@@ -29,8 +28,6 @@ export async function resolvePlugins(
       isBuild,
       packageCache: config.packageCache,
       asSrc: true,
-      getDepsOptimizer: () => getDepsOptimizer(config),
-      shouldExternalize: undefined,
     }),
     htmlInlineProxyPlugin(config),
     cssPlugin(config),

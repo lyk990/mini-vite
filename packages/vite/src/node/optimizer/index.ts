@@ -13,7 +13,6 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import { scanImports } from "./scan";
 import { init, parse } from "es-module-lexer";
-export { getDepsOptimizer } from "./optimizer";
 import { promisify } from "node:util";
 import esbuild, { build } from "esbuild";
 import { ESBUILD_MODULES_TARGET } from "../constants";
@@ -43,21 +42,6 @@ export interface DepOptimizationMetadata {
   depInfoList: OptimizedDepInfo[];
 }
 
-export interface DepsOptimizer {
-  metadata: DepOptimizationMetadata;
-  scanProcessing?: Promise<void>;
-  registerMissingImport: (id: string, resolved: string) => OptimizedDepInfo;
-  run: () => void;
-  isOptimizedDepFile: (id: string) => boolean;
-  isOptimizedDepUrl: (url: string) => boolean;
-  getOptimizedDepId: (depInfo: OptimizedDepInfo) => string;
-  delayDepsOptimizerUntil: (id: string, done: () => Promise<any>) => void;
-  registerWorkersSource: (id: string) => void;
-  resetRegisteredIds: () => void;
-  ensureFirstRun: () => void;
-  close: () => Promise<void>;
-  options: DepOptimizationOptions;
-}
 
 export type DepOptimizationOptions = DepOptimizationConfig & {
   entries?: string | string[];

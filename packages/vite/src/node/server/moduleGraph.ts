@@ -57,14 +57,10 @@ export class ModuleGraph {
   >();
 
   constructor(
-    private resolveId: (
-      url: string
-    ) => Promise<PartialResolvedId | null>
+    private resolveId: (url: string) => Promise<PartialResolvedId | null>
   ) {}
 
-  async getModuleByUrl(
-    rawUrl: string
-  ): Promise<ModuleNode | undefined> {
+  async getModuleByUrl(rawUrl: string): Promise<ModuleNode | undefined> {
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl));
     const mod = this._getUnresolvedUrlToModule(rawUrl);
     if (mod) {
@@ -199,7 +195,7 @@ export class ModuleGraph {
     mod.importedBindings = importedBindings;
     return noLongerImported;
   }
-
+  /**确保url对应的入口文件存在 */
   async ensureEntryFromUrl(
     rawUrl: string,
     setIsSelfAccepting = true
@@ -218,19 +214,18 @@ export class ModuleGraph {
       return mod;
     }
     const modPromise = (async () => {
-      const [url, resolvedId, meta] = await this._resolveUrl(
-        rawUrl,
-        resolved
-      );
+      const [url, resolvedId, meta] = await this._resolveUrl(rawUrl, resolved);
       mod = this.idToModuleMap.get(resolvedId);
       if (!mod) {
         mod = new ModuleNode(url, setIsSelfAccepting);
+
         if (meta) mod.meta = meta;
         this.urlToModuleMap.set(url, mod);
         mod.id = resolvedId;
         this.idToModuleMap.set(resolvedId, mod);
         const file = (mod.file = cleanUrl(resolvedId));
         let fileMappedModules = this.fileToModulesMap.get(file);
+
         if (!fileMappedModules) {
           fileMappedModules = new Set();
           this.fileToModulesMap.set(file, fileMappedModules);
@@ -239,6 +234,7 @@ export class ModuleGraph {
       } else if (!this.urlToModuleMap.has(url)) {
         this.urlToModuleMap.set(url, mod);
       }
+
       this._setUnresolvedUrlToModule(rawUrl, mod);
       return mod;
     })();

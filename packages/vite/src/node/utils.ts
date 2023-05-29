@@ -51,6 +51,7 @@ export const isWindows = os.platform() === "win32";
 export function normalizePath(id: string): string {
   return path.posix.normalize(isWindows ? slash(id) : id);
 }
+/**解析本地服务器地址 */
 export async function resolveServerUrls(
   server: Server,
   options: CommonServerOptions,
@@ -136,7 +137,7 @@ export const externalRE = /^(https?:)?\/\//;
 export const dataUrlRE = /^\s*data:/i;
 export const virtualModuleRE = /^virtual-module:.*/;
 export const virtualModulePrefix = "virtual-module:";
-
+/**将文件添加到热更新监听中 */
 export function ensureWatchedFile(
   watcher: FSWatcher,
   file: string | null,
@@ -562,6 +563,7 @@ export function removeImportQuery(url: string): string {
   return url.replace(importQueryRE, "$1").replace(trailingSeparatorRE, "");
 }
 const timestampRE = /\bt=\d{13}&?\b/;
+/**移除时间戳参数 */
 export function removeTimestampQuery(url: string): string {
   return url.replace(timestampRE, "").replace(trailingSeparatorRE, "");
 }

@@ -19,7 +19,6 @@ import colors from "picocolors";
 import fs from "node:fs";
 import { resolvePackageData } from "../packages";
 import { exports, imports } from "resolve.exports";
-import type { DepsOptimizer } from "../optimizer";
 
 export interface ResolveOptions {
   mainFields?: string[];
@@ -42,7 +41,6 @@ export interface InternalResolveOptions extends Required<ResolveOptions> {
   tryEsmOnly?: boolean;
   scan?: boolean;
   ssrOptimizeCheck?: boolean;
-  getDepsOptimizer?: () => DepsOptimizer | undefined;
   shouldExternalize?: (id: string) => boolean | undefined;
   idOnly?: boolean;
 }

@@ -23,7 +23,7 @@ import chokidar from "chokidar";
 import { createWebSocketServer, WebSocketServer } from "./ws";
 import { handleFileAddUnlink, handleHMRUpdate } from "./hmr";
 import { bindShortcuts, BindShortcutsOptions } from "../shortcuts";
-import { getDepsOptimizer, initDepsOptimizer } from "../optimizer/optimizer";
+import { initDepsOptimizer } from "../optimizer/optimizer";
 import type * as net from "node:net";
 import { transformRequest } from "./transformRequest";
 import {
@@ -87,7 +87,7 @@ export interface ViteDevServer {
   ): Promise<TransformResult | null>;
 }
 
-/**开启服务器,1、resolveHostname,2、 httpServerStart*/
+/**开启http服务器*/
 async function startServer(server: ViteDevServer) {
   const httpServer = server.httpServer;
   if (!httpServer) {
@@ -103,11 +103,6 @@ async function startServer(server: ViteDevServer) {
   });
 }
 
-export async function createServer(
-  inlineConfig: InlineConfig = {}
-): Promise<ViteDevServer> {
-  return _createServer(inlineConfig);
-}
 /**关闭http服务器 */
 function createServerCloseFn(server: http.Server | null) {
   if (!server) {
@@ -143,6 +138,12 @@ function createServerCloseFn(server: http.Server | null) {
         resolve();
       }
     });
+}
+
+export async function createServer(
+  inlineConfig: InlineConfig = {}
+): Promise<ViteDevServer> {
+  return _createServer(inlineConfig);
 }
 
 export async function _createServer(
@@ -248,8 +249,6 @@ export async function _createServer(
         watcher.close(),
         ws.close(),
         container.close(),
-        getDepsOptimizer(server.config)?.close(),
-        getDepsOptimizer(server.config)?.close(),
         closeHttpServer(),
       ]);
       server.resolvedUrls = null;

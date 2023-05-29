@@ -11,18 +11,8 @@ import {
   extractExportsData,
   addOptimizedDepInfo,
   OptimizedDepInfo,
-  DepsOptimizer,
 } from "./index";
 
-const depsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
-const devSsrDepsOptimizerMap = new WeakMap<ResolvedConfig, DepsOptimizer>();
-
-export function getDepsOptimizer(
-  config: ResolvedConfig
-): DepsOptimizer | undefined {
-  const isDevSsr = config.command !== "build";
-  return (isDevSsr ? devSsrDepsOptimizerMap : depsOptimizerMap).get(config);
-}
 
 /**初始化预构建依赖 */
 export async function initDepsOptimizer(config: ResolvedConfig): Promise<void> {
