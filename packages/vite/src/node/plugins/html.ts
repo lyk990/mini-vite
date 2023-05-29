@@ -29,7 +29,7 @@ export const htmlProxyMap = new WeakMap<
   ResolvedConfig,
   Map<string, Array<{ code: string; map?: SourceMapInput }>>
 >();
-
+/**获取plugin处理index.html的hook，并对hooks进行排序 */
 export function resolveHtmlTransforms(
   plugins: readonly Plugin[]
 ): [
@@ -63,13 +63,19 @@ export function resolveHtmlTransforms(
 
   return [preHooks, normalHooks, postHooks];
 }
-/**遍历hooks */
+/**
+ * 遍历并执行tranformRequest中的hooks
+ * 得到@vite/client的路径和index.html的内容
+ * 并将其注入到head和body中
+ */
 export async function applyHtmlTransforms(
   html: string,
   hooks: IndexHtmlTransformHook[],
   ctx: IndexHtmlTransformContext
 ): Promise<string> {
   for (const hook of hooks) {
+    // 执行hook之后得到index.html的内容和 需要注入到index.html中的标签(tags)
+    // tags中有需要注入的@vite/client
     const res = await hook(html, ctx);
     if (!res) {
       continue;
@@ -111,7 +117,10 @@ export async function applyHtmlTransforms(
 
   return html;
 }
-/**序列化标签 */
+/**
+ * const tags = [{ tag: 'script', attrs: { src: 'main.js' } ]
+ * 将tags中的内容转换成html字符串
+ * */
 function serializeTags(
   tags: HtmlTagDescriptor["children"],
   indent: string = ""
@@ -125,7 +134,10 @@ function serializeTags(
   }
   return "";
 }
-
+/**
+ * const attrs= { id: 'my-element', class: 'my-class' }
+ * 将attrs中的内容转换成html字符串
+ */
 function serializeAttrs(attrs: HtmlTagDescriptor["attrs"]): string {
   let res = "";
   for (const key in attrs) {
@@ -137,11 +149,11 @@ function serializeAttrs(attrs: HtmlTagDescriptor["attrs"]): string {
   }
   return res;
 }
-
+/**给字符串增加缩进 */
 function incrementIndent(indent: string = "") {
   return `${indent}${indent[0] === "\t" ? "\t" : "  "}`;
 }
-
+/**将ast转换成html字符串 */
 function serializeTag(
   { tag, attrs, children }: HtmlTagDescriptor,
   indent: string = ""
@@ -155,7 +167,7 @@ function serializeTag(
     )}</${tag}>`;
   }
 }
-/**注入并替换 */
+/**指定的内容注入到head标签 */
 function injectToHead(
   html: string,
   tags: HtmlTagDescriptor[],
@@ -186,7 +198,7 @@ function injectToHead(
   }
   return prependInjectFallback(html, tags);
 }
-
+/**指定的内容注入到body标签 */
 function injectToBody(
   html: string,
   tags: HtmlTagDescriptor[],
@@ -221,7 +233,7 @@ function injectToBody(
     return html + `\n` + serializeTags(tags);
   }
 }
-
+/**如果没有head标签的话 */
 function prependInjectFallback(html: string, tags: HtmlTagDescriptor[]) {
   if (htmlPrependInjectRE.test(html)) {
     return html.replace(htmlPrependInjectRE, `$&\n${serializeTags(tags)}`);
@@ -231,7 +243,7 @@ function prependInjectFallback(html: string, tags: HtmlTagDescriptor[]) {
   }
   return serializeTags(tags) + html;
 }
-
+/**将html文件转换成ast */
 export async function traverseHtml(
   html: string,
   filePath: string,
@@ -247,7 +259,7 @@ export async function traverseHtml(
   });
   traverseNodes(ast, visitor);
 }
-
+/**捕获ast转换失败的错误，语法错误或无效的语法结构，就会抛出错误 */
 function handleParseError(
   parserError: ParserError,
   html: string,
@@ -271,7 +283,7 @@ function handleParseError(
       `${parseError.frame}`
   );
 }
-
+/**对document根节点进行处理 */
 function traverseNodes(
   node: DefaultTreeAdapterMap["node"],
   visitor: (node: DefaultTreeAdapterMap["node"]) => void
@@ -285,7 +297,7 @@ function traverseNodes(
     node.childNodes.forEach((childNode) => traverseNodes(childNode, visitor));
   }
 }
-
+/**将ast解析抛出的错误进行格式化处理，方便定位问题 */
 function formatParseError(parserError: ParserError, id: string, html: string) {
   const formattedError = {
     code: parserError.code,
@@ -305,7 +317,7 @@ export function nodeIsElement(
 ): node is DefaultTreeAdapterMap["element"] {
   return node.nodeName[0] !== "#";
 }
-
+/**获取script节点的相关信息 */
 export function getScriptInfo(node: DefaultTreeAdapterMap["element"]): {
   src: Token.Attribute | undefined;
   sourceCodeLocation: Token.Location | undefined;
@@ -333,11 +345,14 @@ export function getScriptInfo(node: DefaultTreeAdapterMap["element"]): {
 }
 
 const attrValueStartRE = /=\s*(.)/;
+/** 将<link> 标签的 href 属性值替换为newValue */
 export function overwriteAttrValue(
   s: MagicString,
   sourceCodeLocation: Token.Location,
   newValue: string
 ): MagicString {
+  // 对link标签做切割, srcString ='href="/vite.svg"'
+  //  newValue = "/vite.svg"
   const srcString = s.slice(
     sourceCodeLocation.startOffset,
     sourceCodeLocation.endOffset
@@ -370,7 +385,7 @@ export const assetAttrsConfig: Record<string, string[]> = {
 export function getAttrKey(attr: Token.Attribute): string {
   return attr.prefix === undefined ? attr.name : `${attr.prefix}:${attr.name}`;
 }
-
+/**将html文件中的请求，代理到本地服务器 */
 export function htmlInlineProxyPlugin(config: ResolvedConfig): Plugin {
   htmlProxyMap.set(config, new Map());
   return {

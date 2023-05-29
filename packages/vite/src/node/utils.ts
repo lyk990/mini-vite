@@ -578,7 +578,7 @@ export function transformStableResult(s: MagicString): TransformResult {
     map: null,
   };
 }
-
+/**移除字符串开头的斜杠 */
 export function removeLeadingSlash(str: string): string {
   return str[0] === "/" ? str.slice(1) : str;
 }

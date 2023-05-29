@@ -1,7 +1,7 @@
 import { ViteDevServer } from "../..";
 import type { Connect } from "dep-types/connect";
 import { Options } from "sirv"; // NOTE patchedDependencies
-import sirv from "sirv";
+import sirv from "sirv"; // NOTE vite中的核心插件，用于处理静态资源
 import {
   cleanUrl,
   fsPathFromUrl,
@@ -40,11 +40,12 @@ const sirvOptions = ({
     shouldServe,
   };
 };
-
+/**对public静态资源进行处理 */
 export function servePublicMiddleware(
   dir: string,
   headers?: OutgoingHttpHeaders
 ): Connect.NextHandleFunction {
+  // 不需要为sirv或指定默认端口，开发服务器会自动选择vite本地服务器端口。
   const serve = sirv(
     dir,
     sirvOptions({
@@ -61,14 +62,7 @@ export function servePublicMiddleware(
   };
 }
 
-export function serveRawFsMiddleware(
-  server: ViteDevServer
-): Connect.NextHandleFunction {
-  return function viteServeRawFsMiddleware(req, res, next) {
-    next();
-  };
-}
-
+/**静态资源中间件 */
 export function serveStaticMiddleware(
   dir: string,
   server: ViteDevServer
@@ -91,6 +85,9 @@ export function serveStaticMiddleware(
     }
 
     const url = new URL(req.url!, "http://example.com");
+    // 在 URL 中，某些字符是需要进行编码的，例如空格会被编码为 %20，
+    // 需要将这些编码后的 URI 组件解码为原始的字符串形式，
+    // 这时就可以使用 decodeURIComponent 函数
     const pathname = decodeURIComponent(url.pathname);
 
     let redirectedPathname: string | undefined;
@@ -115,7 +112,7 @@ export function serveStaticMiddleware(
     serve(req, res, next);
   };
 }
-
+/**是否有权限去处理文件 */
 export function isFileServingAllowed(
   url: string,
   server: ViteDevServer

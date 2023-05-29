@@ -34,7 +34,7 @@ interface AssetNode {
   end: number;
   code: string;
 }
-
+/**index.html中间件，改造index.html,用来注入脚本，处理预加载资源等 */
 export function indexHtmlMiddleware(
   server: ViteDevServer
 ): Connect.NextHandleFunction {
@@ -62,7 +62,7 @@ export function indexHtmlMiddleware(
     next();
   };
 }
-
+/**去掉'/',得到文件名 */
 function getHtmlFilename(url: string, server: ViteDevServer) {
   return decodeURIComponent(
     normalizePath(path.join(server.config.root, url.slice(1)))
@@ -93,7 +93,7 @@ export function createDevHtmlTransformFn(
     );
   };
 }
-
+/**拦截index.html，注入脚本 */
 const devHtmlHook: IndexHtmlTransformHook = async (
   html,
   { path: htmlPath, filename, server }
@@ -192,7 +192,7 @@ const devHtmlHook: IndexHtmlTransformHook = async (
     ],
   };
 };
-
+/**调用transformRequest方法，对请求进行预处理 */
 function preTransformRequest(server: ViteDevServer, url: string, base: string) {
   if (!server.config.server.preTransformRequests) return;
 

@@ -32,7 +32,6 @@ import {
 } from "./middlewares/indexHtml";
 import {
   servePublicMiddleware,
-  serveRawFsMiddleware,
   serveStaticMiddleware,
 } from "./middlewares/static";
 import path from "node:path";
@@ -283,7 +282,6 @@ export async function _createServer(
   }
 
   middlewares.use(transformMiddleware(server));
-  middlewares.use(serveRawFsMiddleware(server));
   middlewares.use(serveStaticMiddleware(root, server));
   middlewares.use(htmlFallbackMiddleware(root));
 
