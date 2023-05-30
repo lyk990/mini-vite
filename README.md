@@ -31,3 +31,5 @@ pnpm run serve # 调试mini-vite源码
 ## 流程图
 ### 预构建依赖
 ![image](https://github.com/lyk990/mini-vite/assets/83712416/247125f6-655e-42dd-88aa-96eeae564998)
+### 编译构建
+![image](https://github.com/lyk990/mini-vite/assets/83712416/020331fc-1450-45aa-a2af-ebcf18411f59)
