@@ -152,7 +152,7 @@ export function ensureWatchedFile(
     watcher.add(path.resolve(file));
   }
 }
-
+/**比较数组顺序、元素、长度是否相等 */
 export function arrayEqual(a: any[], b: any[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
@@ -161,7 +161,11 @@ export function arrayEqual(a: any[], b: any[]): boolean {
   }
   return true;
 }
-
+/**
+ * 用于检测 DNS 解析顺序变化的函数
+ * 不同的 DNS 解析器可能会以不同的顺序解析相同的域名，
+ * 这可能导致在不同的环境中获取到不同的 IP 地址
+ */
 export function diffDnsOrderChange(
   oldUrls: ViteDevServer["resolvedUrls"],
   newUrls: ViteDevServer["resolvedUrls"]

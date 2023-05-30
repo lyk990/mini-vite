@@ -270,6 +270,20 @@ export async function _createServer(
   };
   server.transformIndexHtml = createDevHtmlTransformFn(server);
 
+  if (!middlewareMode) {
+    exitProcess = async () => {
+      try {
+        await server.close();
+      } finally {
+        process.exit();
+      }
+    };
+    process.once("SIGTERM", exitProcess);
+    if (process.env.CI !== "true") {
+      process.stdin.on("end", exitProcess);
+    }
+  }
+
   const postHooks: ((() => void) | void)[] = [];
   for (const hook of config.getSortedPluginHooks("configureServer")) {
     postHooks.push(await hook(server));
@@ -297,6 +311,7 @@ export async function _createServer(
 
     initingServer = (async function () {
       await container.buildStart({});
+      // 初始化依赖预构建
       await initDepsOptimizer(config);
       initingServer = undefined;
       serverInited = true;
@@ -357,6 +372,7 @@ async function restartServer(server: ViteDevServer) {
   if (!middlewareMode) {
     await server.listen(port, true);
     logger.info("server restarted.", { timestamp: true });
+
     if (
       (port ?? DEFAULT_DEV_PORT) !== (prevPort ?? DEFAULT_DEV_PORT) ||
       host !== prevHost ||

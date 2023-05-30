@@ -17,7 +17,7 @@ export function searchForPackageRoot(current: string, root = current): string {
 
   return searchForPackageRoot(dir, root);
 }
-
+/**搜索工作区根目录 */
 export function searchForWorkspaceRoot(
   current: string,
   root = searchForPackageRoot(current)

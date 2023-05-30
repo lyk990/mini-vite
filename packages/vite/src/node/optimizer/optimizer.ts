@@ -7,12 +7,10 @@ import {
   initDepsOptimizerMetadata,
   getOptimizedDepPath,
   depsFromOptimizedDepInfo,
-  newDepOptimizationProcessing,
   extractExportsData,
   addOptimizedDepInfo,
   OptimizedDepInfo,
 } from "./index";
-
 
 /**初始化预构建依赖 */
 export async function initDepsOptimizer(config: ResolvedConfig): Promise<void> {
@@ -22,9 +20,9 @@ export async function initDepsOptimizer(config: ResolvedConfig): Promise<void> {
 async function createDepsOptimizer(config: ResolvedConfig): Promise<void> {
   const sessionTimestamp = Date.now().toString();
   const cachedMetadata = await loadCachedDepOptimizationMetadata(config);
+  // 有缓存的话，就直接使用缓存的metadata，否则就初始化metadata
   let metadata =
     cachedMetadata || initDepsOptimizerMetadata(config, sessionTimestamp);
-  let depOptimizationProcessing = newDepOptimizationProcessing();
 
   let discover;
   if (!cachedMetadata) {
@@ -36,10 +34,15 @@ async function createDepsOptimizer(config: ResolvedConfig): Promise<void> {
     }
 
     const knownDeps = prepareKnownDeps();
-    //  通过调用runOptimizeDeps方法将依赖信息写入metadata.json文件中
+    // 将依赖信息写入metadata.json文件中
     (await runOptimizeDeps(config, knownDeps).result).commit();
   }
-
+  /**
+   * 在编写代码时可能会忽略某些依赖项的引入，
+   * 或者某些依赖项的引入被误删或错误修改。
+   * addMissingDep 函数的作用就是检测模块中缺失的依赖项，
+   * 并自动向模块添加这些缺失的依赖项。
+   * */
   function addMissingDep(id: string, resolved: string) {
     return addOptimizedDepInfo(metadata, "discovered", {
       id,
@@ -50,18 +53,17 @@ async function createDepsOptimizer(config: ResolvedConfig): Promise<void> {
         depsFromOptimizedDepInfo(metadata.optimized),
         depsFromOptimizedDepInfo(metadata.discovered)
       ),
-      processing: depOptimizationProcessing.promise,
       exportsData: extractExportsData(resolved, config),
     });
   }
-
+  /**将依赖项处理成所需要的结构 */
   function prepareKnownDeps() {
     const knownDeps: Record<string, OptimizedDepInfo> = {};
     for (const dep of Object.keys(metadata.optimized)) {
       knownDeps[dep] = { ...metadata.optimized[dep] };
     }
     for (const dep of Object.keys(metadata.discovered)) {
-      const { processing, ...info } = metadata.discovered[dep];
+      const { ...info } = metadata.discovered[dep];
       knownDeps[dep] = info;
     }
     return knownDeps;

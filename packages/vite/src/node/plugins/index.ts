@@ -7,7 +7,6 @@ import { importAnalysisPlugin } from "./importAnalysis";
 import { resolvePlugin } from "./resolve";
 import { esbuildPlugin } from "./esbuild";
 import { assetPlugin } from "./asset";
-import { htmlInlineProxyPlugin } from "./html";
 import aliasPlugin from "@rollup/plugin-alias";
 
 /**项目中所有的plugin */
@@ -29,7 +28,6 @@ export async function resolvePlugins(
       packageCache: config.packageCache,
       asSrc: true,
     }),
-    htmlInlineProxyPlugin(config),
     cssPlugin(config),
     esbuildPlugin(config),
     assetPlugin(config),

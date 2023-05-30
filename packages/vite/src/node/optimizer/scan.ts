@@ -46,19 +46,17 @@ export function scanImports(config: ResolvedConfig): {
     missing: Record<string, string>;
   }>;
 } {
-  //依赖扫描入口文件
   const deps: Record<string, string> = {};
   const missing: Record<string, string> = {};
   let entries: string[];
-
   const esbuildContext: Promise<BuildContext | undefined> = computeEntries(
     config
   ).then((computedEntries) => {
+    //依赖扫描入口文件
     entries = computedEntries;
     return prepareEsbuildScanner(config, entries, deps, missing);
   });
 
-  // 依赖打包
   const result = esbuildContext.then((context) => {
     return context!.rebuild().then(() => {
       return {
@@ -134,7 +132,7 @@ function esbuildScanPlugin(
       transpiledContents,
       id,
       config.root,
-      resolve,
+      resolve
     );
 
     return result?.s.toString() || transpiledContents;
@@ -408,7 +406,7 @@ function globEntries(pattern: string | string[], config: ResolvedConfig) {
     suppressErrors: true,
   });
 }
-/**esbuild依赖预构建初始化配置*/
+/**依赖打包*/
 async function prepareEsbuildScanner(
   config: ResolvedConfig,
   entries: string[],

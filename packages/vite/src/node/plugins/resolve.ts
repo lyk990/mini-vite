@@ -34,14 +34,11 @@ export interface InternalResolveOptions extends Required<ResolveOptions> {
   packageCache?: PackageCache;
   asSrc?: boolean;
   tryIndex?: boolean;
-  tryPrefix?: string;
   preferRelative?: boolean;
   isRequire?: boolean;
   isFromTsImporter?: boolean;
   tryEsmOnly?: boolean;
   scan?: boolean;
-  ssrOptimizeCheck?: boolean;
-  shouldExternalize?: (id: string) => boolean | undefined;
   idOnly?: boolean;
 }
 const startsWithWordCharRE = /^\w/;
@@ -249,7 +246,7 @@ function tryFsResolve(
   const res = tryCleanFsResolve(file, options);
   if (res) return res + postfix;
 }
-
+/**解析package.json的入口路径 */
 export function resolvePackageEntry(
   id: string,
   { dir, data, setResolvedCache, getResolvedCache }: PackageData,

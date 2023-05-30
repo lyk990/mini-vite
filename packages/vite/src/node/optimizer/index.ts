@@ -1,4 +1,4 @@
-import { DepOptimizationProcessing, transformWithEsbuild } from "vite";
+import { transformWithEsbuild } from "vite";
 import { ResolvedConfig, getDepOptimizationConfig } from "../config";
 import {
   createDebugger,
@@ -42,7 +42,6 @@ export interface DepOptimizationMetadata {
   depInfoList: OptimizedDepInfo[];
 }
 
-
 export type DepOptimizationOptions = DepOptimizationConfig & {
   entries?: string | string[];
   force?: boolean;
@@ -77,7 +76,6 @@ export interface OptimizedDepInfo {
   needsInterop?: boolean;
   browserHash?: string;
   fileHash?: string;
-  processing?: Promise<void>;
   exportsData?: Promise<ExportsData>;
 }
 
@@ -86,17 +84,6 @@ export type ExportsData = {
   exports: readonly string[];
   jsxLoader?: boolean;
 };
-
-export interface OptimizedDepInfo {
-  id: string;
-  file: string;
-  src?: string;
-  needsInterop?: boolean;
-  browserHash?: string;
-  fileHash?: string;
-  processing?: Promise<void>;
-  exportsData?: Promise<ExportsData>;
-}
 
 /**查看预构建依赖缓存 */
 export async function loadCachedDepOptimizationMetadata(
@@ -369,10 +356,11 @@ export function runOptimizeDeps(
     result: runResult,
   };
 }
-
+/**处理依赖缓存的路径 */
 function getProcessingDepsCacheDir(config: ResolvedConfig) {
   return getDepsCacheDirPrefix(config) + getDepsCacheSuffix() + getTempSuffix();
 }
+
 function getDepsCacheDirPrefix(config: ResolvedConfig): string {
   return normalizePath(path.resolve(config.cacheDir, "deps"));
 }
@@ -393,7 +381,7 @@ function getTempSuffix() {
   );
 }
 const GRACEFUL_RENAME_TIMEOUT = 5000;
-
+/**将依赖元数据转换成字符串 */
 function stringifyDepsOptimizerMetadata(
   metadata: DepOptimizationMetadata,
   depsCacheDir: string
@@ -429,7 +417,7 @@ function stringifyDepsOptimizerMetadata(
     2
   );
 }
-/**esbuild打包初始化 */
+
 async function prepareEsbuildOptimizerRun(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,
@@ -506,7 +494,11 @@ async function prepareEsbuildOptimizerRun(
   });
   return { context, idToExports };
 }
-
+/**
+ * 用于在文件重命名文件名是否重复
+ * 函数会先检查目标文件是否已经存在，如果目标文件已经存在，
+ * 则会生成一个新的目标文件名
+ * */
 const safeRename = promisify(function gracefulRename(
   from: string,
   to: string,
@@ -532,7 +524,7 @@ const safeRename = promisify(function gracefulRename(
     if (cb) cb(er);
   });
 });
-
+/**初始化metadata,生成json结构 */
 export function initDepsOptimizerMetadata(
   config: ResolvedConfig,
   timestamp?: string
@@ -572,15 +564,10 @@ export function depsFromOptimizedDepInfo(
     Object.entries(depsInfo).map((d) => [d[0], d[1].src!])
   );
 }
-
-export function newDepOptimizationProcessing(): DepOptimizationProcessing {
-  let resolve: () => void;
-  const promise = new Promise((_resolve) => {
-    resolve = _resolve;
-  }) as Promise<void>;
-  return { promise, resolve: resolve! };
-}
-
+/**
+ * 获取export导出的信息,通过解析模块的ast
+ * 对依赖项进行处理
+ */
 export async function extractExportsData(
   filePath: string,
   config: ResolvedConfig
@@ -704,7 +691,11 @@ const lockfileFormats = [
   return process.env.npm_config_user_agent?.startsWith(manager) ? 1 : -1;
 });
 const lockfileNames = lockfileFormats.map((l) => l.name);
-
+/** NOTE vite优化
+ * 将pnpm-lock.yaml中的依赖项与hash值绑定
+ * 通过对比新的哈希值和之前的哈希值，可以确定哪些依赖项发生了变化
+ * 发生变化的依赖项及其相关模块会被重新构建，未发生变化的依赖项则被复用
+ */
 export function getDepHash(config: ResolvedConfig): string {
   const lockfilePath = lookupFile(config.root, lockfileNames);
   let content = lockfilePath ? fs.readFileSync(lockfilePath, "utf-8") : "";
