@@ -12,7 +12,7 @@ export function htmlFallbackMiddleware(
     rewrites: [
       {
         from: /\/$/,
-        to({ parsedUrl, request }: any) {
+        to({ parsedUrl }: any) {
           const rewritten =
             decodeURIComponent(parsedUrl.pathname) + "index.html";
 

@@ -55,7 +55,7 @@ export function transformRequest(
       });
   }
 
-  const request = doTransform(url, server, timestamp);
+  const request = doTransform(url, server, options, timestamp);
 
   let cleared = false;
   const clearCache = () => {
@@ -78,6 +78,7 @@ export function transformRequest(
 async function doTransform(
   url: string,
   server: ViteDevServer,
+  options: TransformOptions,
   timestamp: number
 ) {
   url = removeTimestampQuery(url);
@@ -93,7 +94,7 @@ async function doTransform(
   }
   const id =
     module?.id ?? (await pluginContainer.resolveId(url, undefined))?.id ?? url;
-  const result = loadAndTransform(id, url, server, timestamp);
+  const result = loadAndTransform(id, url, server, options, timestamp);
   return result;
 }
 
@@ -101,6 +102,7 @@ async function loadAndTransform(
   id: string,
   url: string,
   server: ViteDevServer,
+  options: TransformOptions,
   timestamp: number
 ) {
   const { config, pluginContainer, moduleGraph, watcher } = server;
@@ -116,6 +118,9 @@ async function loadAndTransform(
   const loadStart = debugLoad ? performance.now() : 0;
   const loadResult = await pluginContainer.load(id);
   if (loadResult == null) {
+    if (options.html && !id.endsWith(".html")) {
+      return null;
+    }
     if (isFileServingAllowed(file, server)) {
       try {
         code = await fs.readFile(file, "utf-8");
