@@ -258,7 +258,7 @@ export function getAffectedGlobModules(
   });
   return modules;
 }
-
+/**转换和处理包含 glob 导入的 JavaScript 文件 */
 export async function transformGlobImport(
   code: string,
   id: string,
@@ -278,7 +278,6 @@ export async function transformGlobImport(
   );
   const matchedFiles = new Set<string>();
 
-  // TODO: backwards compatibility
   matches.forEach((i) => {
     if (i.type === "globEager") i.options.eager = true;
     if (i.type === "globEagerDefault") {
