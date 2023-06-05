@@ -22,9 +22,6 @@ const debugLoad = createDebugger("vite:load");
 const debugTransform = createDebugger("vite:transform");
 const debugCache = createDebugger("vite:cache");
 
-export const ERR_LOAD_PUBLIC_URL = "ERR_LOAD_PUBLIC_URL";
-export const ERR_LOAD_URL = "ERR_LOAD_URL";
-
 export interface TransformResult {
   code: string;
   map: SourceMap | null;
@@ -32,6 +29,7 @@ export interface TransformResult {
   deps?: string[];
   dynamicDeps?: string[];
 }
+
 /**对transformMiddleware拦截的内容进行transform和resolveId */
 export function transformRequest(
   url: string,

@@ -418,6 +418,7 @@ function stringifyDepsOptimizerMetadata(
   );
 }
 
+/**将打包预构建的库放到.vite/deps文件夹下面 */
 async function prepareEsbuildOptimizerRun(
   resolvedConfig: ResolvedConfig,
   depsInfo: Record<string, OptimizedDepInfo>,

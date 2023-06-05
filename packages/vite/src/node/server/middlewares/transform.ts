@@ -1,5 +1,5 @@
 import type { Connect } from "dep-types/connect";
-import { ERR_LOAD_URL, transformRequest } from "../transformRequest";
+import { transformRequest } from "../transformRequest";
 import { send } from "vite";
 import {
   isCSSRequest,
@@ -17,10 +17,6 @@ import {
   unwrapId,
 } from "../../utils";
 import { DEP_VERSION_RE, NULL_BYTE_PLACEHOLDER } from "../../constants";
-import {
-  ERR_OPTIMIZE_DEPS_PROCESSING_ERROR,
-  ERR_OUTDATED_OPTIMIZED_DEP,
-} from "../../plugins/optimizedDeps";
 import { ViteDevServer } from "../..";
 import { isHTMLProxy } from "../../plugins/html";
 
@@ -93,26 +89,7 @@ export function transformMiddleware(
         }
       }
     } catch (e) {
-      if (e?.code === ERR_OPTIMIZE_DEPS_PROCESSING_ERROR) {
-        if (!res.writableEnded) {
-          res.statusCode = 504;
-          res.statusMessage = "Optimize Deps Processing Error";
-          res.end();
-        }
-        logger.error(e.message);
-        return;
-      }
-      if (e?.code === ERR_OUTDATED_OPTIMIZED_DEP) {
-        if (!res.writableEnded) {
-          res.statusCode = 504;
-          res.statusMessage = "Outdated Optimize Dep";
-          res.end();
-        }
-        return;
-      }
-      if (e?.code === ERR_LOAD_URL) {
-        return next();
-      }
+      logger.error("transform error: " + e.message);
       return next(e);
     }
 
