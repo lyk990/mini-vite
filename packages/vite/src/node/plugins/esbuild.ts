@@ -10,7 +10,6 @@ import type {
 } from "esbuild";
 import {
   cleanUrl,
-  createDebugger,
   createFilter,
   generateCodeFrame,
 } from "../utils";
@@ -19,8 +18,6 @@ import type { TSConfckParseOptions } from "tsconfck";
 import type { SourceMap } from "rollup";
 import { parse } from "tsconfck";
 import { transform } from "esbuild";
-
-const debug = createDebugger("vite:esbuild");
 
 const validExtensionRE = /\.\w+$/;
 const jsxExtensionsRE = /\.(?:j|t)sx\b/;
@@ -104,7 +101,7 @@ export function esbuildPlugin(config: ResolvedConfig): Plugin {
     },
   };
 }
-
+/**使用 esbuild 将 JavaScript 或 TypeScript 模块进行转换*/
 export async function transformWithEsbuild(
   code: string,
   filename: string,
@@ -134,6 +131,8 @@ export async function transformWithEsbuild(
       "useDefineForClassFields",
     ];
     const compilerOptionsForFile: TSCompilerOptions = {};
+    // 判断处理文件是否是ts文件，是ts文件的话就读取tsconifg.json
+    // 中的compilerOptions配置
     if (loader === "ts" || loader === "tsx") {
       const loadedTsconfig = await loadTsconfigJsonForFile(filename);
       const loadedCompilerOptions = loadedTsconfig.compilerOptions ?? {};
@@ -150,7 +149,8 @@ export async function transformWithEsbuild(
       ...compilerOptionsForFile,
       ...tsconfigRaw?.compilerOptions,
     };
-
+    // config.build中的配置项存在时，就对compilerOptions
+    // 中的配置项进行重置
     if (options) {
       options.jsx && (compilerOptions.jsx = undefined);
       options.jsxFactory && (compilerOptions.jsxFactory = undefined);
@@ -189,15 +189,7 @@ export async function transformWithEsbuild(
       map,
     };
   } catch (e: any) {
-    debug?.(`esbuild error with options used: `, resolvedOptions);
-    if (e.errors) {
-      e.frame = "";
-      e.errors.forEach((m: Message) => {
-        e.frame += `\n` + prettifyMessage(m, code);
-      });
-      e.loc = e.errors[0].location;
-    }
-    throw e;
+    throw new Error("transformWithEsbuild failed");
   }
 }
 
