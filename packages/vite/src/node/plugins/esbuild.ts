@@ -192,7 +192,7 @@ export async function transformWithEsbuild(
     throw new Error("transformWithEsbuild failed");
   }
 }
-
+/**打印警告信息 */
 function prettifyMessage(m: Message, code: string): string {
   let res = colors.yellow(m.text);
   if (m.location) {
@@ -208,7 +208,7 @@ function prettifyMessage(m: Message, code: string): string {
   }
   return res + `\n`;
 }
-
+/**根据给定的文件路径，查找并加载与该文件相关联的 tsconfig.json 文件内容。 */
 async function loadTsconfigJsonForFile(
   filename: string
 ): Promise<TSConfigJSON> {

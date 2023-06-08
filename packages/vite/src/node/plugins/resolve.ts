@@ -60,6 +60,8 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
     name: "vite:resolve",
 
     async resolveId(id, importer, resolveOpts) {
+      // 虚拟模块通常是在构建过程中动态生成或处理的临时模块
+      // 它们可能不对应于实际的物理文件
       if (
         id[0] === "\0" ||
         id.startsWith("virtual:") ||
@@ -138,7 +140,7 @@ export function resolvePlugin(resolveOptions: InternalResolveOptions): Plugin {
     },
   };
 }
-
+/**指定是否尝试使用 Node.js 的模块解析算法来解析模块的依赖关系 */
 export function tryNodeResolve(
   id: string,
   importer: string | null | undefined,
@@ -184,6 +186,7 @@ export function tryNodeResolve(
   }
   return { id: resolved };
 }
+
 function resolveExportsOrImports(
   pkg: PackageData["data"],
   key: string,
@@ -226,7 +229,7 @@ function splitFileAndPostfix(path: string) {
   const file = cleanUrl(path);
   return { file, postfix: path.slice(file.length) };
 }
-
+/**尝试解析给定的文件系统路径 */
 function tryFsResolve(
   fsPath: string,
   options: InternalResolveOptions
@@ -320,7 +323,11 @@ function getRealPath(resolved: string, preserveSymlinks?: boolean): string {
   }
   return normalizePath(resolved);
 }
-
+/**
+ * 创建一个临时的干净文件系统，将模块路径映射到该文件系统中，
+ * 并在该环境下进行解析,避免缓存和其他外部因素对解析过程的干扰，
+ * 确保每次解析都是基于最新的文件状态。
+ * */
 function tryCleanFsResolve(
   file: string,
   options: InternalResolveOptions
