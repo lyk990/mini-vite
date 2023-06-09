@@ -20,7 +20,6 @@ import {
   processSrcSet,
   stripBomTag,
 } from "../utils";
-import postcssrc from "postcss-load-config";
 import type { ViteDevServer } from "../";
 import colors from "picocolors";
 import { Logger } from "../logger";
@@ -51,19 +50,9 @@ const cssNotProcessedRE = /(?:gradient|element|cross-fade|image)\(/;
 const inlineCSSRE = /(?:\?|&)inline-css\b/;
 const usedRE = /(?:\?|&)used\b/;
 
-interface PostCSSConfigResult {
-  options: PostCSS.ProcessOptions;
-  plugins: PostCSS.AcceptedPlugin[];
-}
-
 const cssModulesCache = new WeakMap<
   ResolvedConfig,
   Map<string, Record<string, string>>
->();
-
-const postcssConfigCache = new WeakMap<
-  ResolvedConfig,
-  PostCSSConfigResult | null | Promise<PostCSSConfigResult | null>
 >();
 
 export const removedPureCssFilesCache = new WeakMap<
@@ -92,8 +81,6 @@ export const isDirectCSSRequest = (request: string): boolean =>
 export function cssPlugin(config: ResolvedConfig): Plugin {
   let server: ViteDevServer;
   let moduleCache: Map<string, Record<string, string>>;
-
-  resolvePostcssConfig(config);
 
   return {
     name: "vite:css",
@@ -133,28 +120,6 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
       };
     },
   };
-}
-
-async function resolvePostcssConfig(
-  config: ResolvedConfig
-): Promise<PostCSSConfigResult | null> {
-  let result = postcssConfigCache.get(config);
-  if (result !== undefined) {
-    return await result;
-  }
-
-  const inlineOptions = config.css?.postcss as any;
-  const searchPath =
-    typeof inlineOptions === "string" ? inlineOptions : config.root;
-  result = postcssrc({}, searchPath).catch((e) => {
-    return null;
-  });
-  result.then((resolved) => {
-    postcssConfigCache.set(config, resolved);
-  });
-
-  postcssConfigCache.set(config, result);
-  return result;
 }
 
 const UrlRewritePostcssPlugin: PostCSS.PluginCreator<{
