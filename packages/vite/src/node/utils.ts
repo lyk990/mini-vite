@@ -305,64 +305,6 @@ export function injectQuery(url: string, queryToInject: string): string {
   }`;
 }
 
-interface ImageCandidate {
-  url: string;
-  descriptor: string;
-}
-function reduceSrcset(ret: { url: string; descriptor: string }[]) {
-  return ret.reduce((prev, { url, descriptor }, index) => {
-    descriptor ??= "";
-    return (prev +=
-      url + ` ${descriptor}${index === ret.length - 1 ? "" : ", "}`);
-  }, "");
-}
-
-const cleanSrcSetRE =
-  /(?:url|image|gradient|cross-fade)\([^)]*\)|"([^"]|(?<=\\)")*"|'([^']|(?<=\\)')*'/g;
-
-function splitSrcSet(srcs: string) {
-  const parts: string[] = [];
-  const cleanedSrcs = srcs.replace(cleanSrcSetRE, blankReplacer);
-  let startIndex = 0;
-  let splitIndex: number;
-  do {
-    splitIndex = cleanedSrcs.indexOf(",", startIndex);
-    parts.push(
-      srcs.slice(startIndex, splitIndex !== -1 ? splitIndex : undefined)
-    );
-    startIndex = splitIndex + 1;
-  } while (splitIndex !== -1);
-  return parts;
-}
-const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g;
-const imageSetUrlRE = /^(?:[\w\-]+\(.*?\)|'.*?'|".*?"|\S*)/;
-
-function splitSrcSetDescriptor(srcs: string): ImageCandidate[] {
-  return splitSrcSet(srcs)
-    .map((s) => {
-      const src = s.replace(escapedSpaceCharacters, " ").trim();
-      const [url] = imageSetUrlRE.exec(src) || [""];
-
-      return {
-        url,
-        descriptor: src?.slice(url.length).trim(),
-      };
-    })
-    .filter(({ url }) => !!url);
-}
-
-export function processSrcSetSync(
-  srcs: string,
-  replacer: (arg: ImageCandidate) => string
-): string {
-  return reduceSrcset(
-    splitSrcSetDescriptor(srcs).map(({ url, descriptor }) => ({
-      url: replacer({ url, descriptor }),
-      descriptor,
-    }))
-  );
-}
-
 const knownJsSrcRE = /\.(?:[jt]sx?|m[jt]s|vue|marko|svelte|astro|imba)(?:$|\?)/;
 export const isJSRequest = (url: string): boolean => {
   url = cleanUrl(url);
@@ -625,18 +567,6 @@ export async function asyncReplace(
   return rewritten;
 }
 
-export function processSrcSet(
-  srcs: string,
-  replacer: (arg: ImageCandidate) => Promise<string>
-): Promise<string> {
-  return Promise.all(
-    splitSrcSetDescriptor(srcs).map(async ({ url, descriptor }) => ({
-      url: await replacer({ url, descriptor }),
-      descriptor,
-    }))
-  ).then((ret) => reduceSrcset(ret));
-}
-
 const internalPrefixes = [
   FS_PREFIX,
   VALID_ID_PREFIX,
@@ -831,19 +761,6 @@ function hasCorrectCase(file: string, assets: string): boolean {
   if (fs.readdirSync(parent).includes(path.basename(file))) {
     return hasCorrectCase(parent, assets);
   }
-
   return false;
 }
 
-export const requestQuerySplitRE = /\?(?!.*[/|}])/;
-export function parseRequest(id: string): Record<string, string> | null {
-  const [_, search] = id.split(requestQuerySplitRE, 2);
-  if (!search) {
-    return null;
-  }
-  return Object.fromEntries(new URLSearchParams(search));
-}
-
-export function emptyCssComments(raw: string): string {
-  return raw.replace(multilineCommentsRE, (s) => " ".repeat(s.length));
-}
