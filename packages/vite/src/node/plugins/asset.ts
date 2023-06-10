@@ -8,7 +8,6 @@ import {
 import type {
   PluginContext,
 } from "rollup";
-import * as mrmime from "mrmime";
 import type { Plugin } from "rollup";
 
 export const assetUrlRE = /__VITE_ASSET__([a-z\d]+)__(?:\$_(.*?)__)?/g;
@@ -49,8 +48,6 @@ function fileToDevUrl(id: string, config: ResolvedConfig) {
 }
 
 export function assetPlugin(config: ResolvedConfig): Plugin {
-  registerCustomMime();
-
   return {
     name: "vite:asset",
 
@@ -80,12 +77,4 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
     },
 
   };
-}
-
-export function registerCustomMime(): void {
-  mrmime.mimes["ico"] = "image/x-icon";
-  mrmime.mimes["flac"] = "audio/flac";
-  mrmime.mimes["aac"] = "audio/aac";
-  mrmime.mimes["opus"] = "audio/ogg";
-  mrmime.mimes["eot"] = "application/vnd.ms-fontobject";
 }

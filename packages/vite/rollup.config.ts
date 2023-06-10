@@ -5,7 +5,6 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import typescript from "@rollup/plugin-typescript";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
-import MagicString from "magic-string";
 import type { Plugin, RollupOptions } from "rollup";
 import { defineConfig } from "rollup";
 
@@ -78,7 +77,6 @@ const sharedNodeOptions = defineConfig({
 });
 
 function createNodePlugins(
-  isProduction: boolean,
   sourceMap: boolean,
   declarationDir: string | false
 ): (Plugin | false)[] {
@@ -90,30 +88,6 @@ function createNodePlugins(
       declaration: declarationDir !== false,
       declarationDir: declarationDir !== false ? declarationDir : undefined,
     }),
-
-    isProduction &&
-      shimDepsPlugin({
-        "fsevents-handler.js": {
-          src: `require('fsevents')`,
-          replacement: `__require('fsevents')`,
-        },
-        "process-content.js": {
-          src: 'require("sugarss")',
-          replacement: `__require('sugarss')`,
-        },
-        "lilconfig/dist/index.js": {
-          pattern: /: require,/g,
-          replacement: `: __require,`,
-        },
-        "postcss-load-config/src/index.js": {
-          pattern: /require(?=\((configFile|'ts-node')\))/g,
-          replacement: `__require`,
-        },
-        "json-stable-stringify/index.js": {
-          pattern: /^var json = typeof JSON.+require\('jsonify'\);$/gm,
-          replacement: "var json = JSON",
-        },
-      }),
 
     commonjs({
       extensions: [".js"],
@@ -141,7 +115,6 @@ function createNodeConfig(isProduction: boolean) {
       ...(isProduction ? [] : Object.keys(pkg.devDependencies)),
     ],
     plugins: createNodePlugins(
-      isProduction,
       !isProduction,
       isProduction ? false : "./dist/node"
     ),
@@ -159,68 +132,3 @@ export default (commandLineArgs: any): RollupOptions[] => {
   ]);
 };
 
-interface ShimOptions {
-  src?: string;
-  replacement: string;
-  pattern?: RegExp;
-}
-
-function shimDepsPlugin(deps: Record<string, ShimOptions>): Plugin {
-  const transformed: Record<string, boolean> = {};
-
-  return {
-    name: "shim-deps",
-    transform(code, id) {
-      for (const file in deps) {
-        if (id.replace(/\\/g, "/").endsWith(file)) {
-          const { src, replacement, pattern } = deps[file];
-
-          const magicString = new MagicString(code);
-          if (src) {
-            const pos = code.indexOf(src);
-            if (pos < 0) {
-              this.error(
-                `Could not find expected src "${src}" in file "${file}"`
-              );
-            }
-            transformed[file] = true;
-            magicString.overwrite(pos, pos + src.length, replacement);
-            console.log(`shimmed: ${file}`);
-          }
-
-          if (pattern) {
-            let match;
-            while ((match = pattern.exec(code))) {
-              transformed[file] = true;
-              const start = match.index;
-              const end = start + match[0].length;
-              magicString.overwrite(start, end, replacement);
-            }
-            if (!transformed[file]) {
-              this.error(
-                `Could not find expected pattern "${pattern}" in file "${file}"`
-              );
-            }
-            console.log(`shimmed: ${file}`);
-          }
-
-          return {
-            code: magicString.toString(),
-            map: magicString.generateMap({ hires: true }),
-          };
-        }
-      }
-    },
-    buildEnd(err) {
-      if (!err) {
-        for (const file in deps) {
-          if (!transformed[file]) {
-            this.error(
-              `Did not find "${file}" which is supposed to be shimmed, was the file renamed?`
-            );
-          }
-        }
-      }
-    },
-  };
-}

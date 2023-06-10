@@ -45,18 +45,6 @@
     "overrides": {
       "mini-vite": "workspace:*"
     },
-    "packageExtensions": {
-      "postcss-load-config": {
-        "peerDependencies": {
-          "postcss": "*"
-        }
-      },
-      "acorn-walk": {
-        "peerDependencies": {
-          "acorn": "*"
-        }
-      }
-    },
     "patchedDependencies": {
       "sirv@2.0.2": "patches/sirv@2.0.2.patch"
     }
