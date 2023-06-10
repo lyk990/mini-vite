@@ -51,7 +51,7 @@ export function cssPlugin(config: ResolvedConfig): Plugin {
       removedPureCssFilesCache.set(config, new Map<string, RenderedChunk>());
     },
 
-    async transform(raw, id, options) {
+    async transform(raw, id) {
       if (
         !isCSSRequest(id) ||
         commonjsProxyRE.test(id) ||
@@ -86,9 +86,6 @@ export const isModuleCSSRequest = (request: string): boolean =>
 export function cssPostPlugin(config: ResolvedConfig): Plugin {
   return {
     name: "vite:css-post",
-
-    buildStart() {},
-
     async transform(css, id) {
       if (
         !isCSSRequest(id) ||

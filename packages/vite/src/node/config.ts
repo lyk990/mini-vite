@@ -32,7 +32,6 @@ import { ResolvedServerOptions, resolveServerOptions } from "./server";
 import {
   asyncFlatten,
   createDebugger,
-  createFilter,
   dynamicImport,
   isBuiltin,
   isObject,
@@ -249,12 +248,6 @@ export async function resolveConfig(
       : path.join(resolvedRoot, `.vite`)
   );
 
-  const assetsFilter =
-    config.assetsInclude &&
-    (!Array.isArray(config.assetsInclude) || config.assetsInclude.length)
-      ? createFilter(config.assetsInclude)
-      : () => false;
-
   const createResolver: ResolvedConfig["createResolver"] = (options) => {
     let aliasContainer: PluginContainer | undefined;
     let resolverContainer: PluginContainer | undefined;
@@ -341,7 +334,7 @@ export async function resolveConfig(
       PROD: isProduction,
     },
     assetsInclude(file: string) {
-      return DEFAULT_ASSETS_RE.test(file) || assetsFilter(file);
+      return DEFAULT_ASSETS_RE.test(file);
     },
     logger,
     packageCache,

@@ -494,7 +494,10 @@ export function isOptimizable(
 
 export const multilineCommentsRE = /\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g;
 export const singlelineCommentsRE = /\/\/.*/g;
-
+/**
+ * 从字符串中移除 Unicode 字节顺序标记
+ * '\uFEFFHello, World!' 输出 "Hello, World!"
+ * */
 export function stripBomTag(content: string): string {
   if (content.charCodeAt(0) === 0xfeff) {
     return content.slice(1);
@@ -719,10 +722,11 @@ function normalizeSingleAlias({
   }
   return alias;
 }
-/**normalizeAlias 函数用于规范化别名配置。
-确保别名路径以 / 开头：如果别名路径不以 / 开头，则会在前面添加 /。
-确保别名路径以 / 结尾：如果别名路径不以 / 结尾，则会在末尾添加 /。
-处理别名路径中的 ~ 符号：将别名路径中的 ~ 替换为根目录路径。
+/**
+ * normalizeAlias 函数用于规范化别名配置。
+ * 确保别名路径以 / 开头：如果别名路径不以 / 开头，则会在前面添加 /。
+ * 确保别名路径以 / 结尾：如果别名路径不以 / 结尾，则会在末尾添加 /。
+ * 处理别名路径中的 ~ 符号：将别名路径中的 ~ 替换为根目录路径。
  */
 export function normalizeAlias(o: AliasOptions = []): Alias[] {
   return Array.isArray(o)
@@ -763,4 +767,3 @@ function hasCorrectCase(file: string, assets: string): boolean {
   }
   return false;
 }
-

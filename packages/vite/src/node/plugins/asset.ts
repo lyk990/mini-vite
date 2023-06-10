@@ -5,13 +5,7 @@ import {
   joinUrlSegments,
   removeLeadingSlash,
 } from "../utils";
-import type {
-  PluginContext,
-} from "rollup";
 import type { Plugin } from "rollup";
-
-export const assetUrlRE = /__VITE_ASSET__([a-z\d]+)__(?:\$_(.*?)__)?/g;
-export const publicAssetUrlRE = /__VITE_PUBLIC_ASSET__([a-z\d]{8})__/g;
 
 export interface GeneratedAssetMeta {
   originalName: string;
@@ -35,7 +29,6 @@ const unnededFinalQueryCharRE = /[?&]$/;
 export async function fileToUrl(
   id: string,
   config: ResolvedConfig,
-  ctx: PluginContext
 ): Promise<string> {
   return fileToDevUrl(id, config);
 }
@@ -72,7 +65,7 @@ export function assetPlugin(config: ResolvedConfig): Plugin {
       }
 
       id = id.replace(urlRE, "$1").replace(unnededFinalQueryCharRE, "");
-      const url = await fileToUrl(id, config, this);
+      const url = await fileToUrl(id, config);
       return `export default ${JSON.stringify(url)}`;
     },
 
