@@ -3,10 +3,9 @@ import {
   IndexHtmlTransformContext,
   IndexHtmlTransformHook,
 } from "vite";
-import { ResolvedConfig } from "../config";
 import { Plugin } from "../plugin";
 import { generateCodeFrame } from "../utils";
-import { RollupError, SourceMapInput } from "rollup";
+import { RollupError } from "rollup";
 import { DefaultTreeAdapterMap, ParserError, Token } from "parse5";
 import MagicString from "magic-string";
 
@@ -25,10 +24,6 @@ const unaryTags = new Set(["link", "meta", "base"]);
 
 const htmlProxyRE = /\?html-proxy=?(?:&inline-css)?&index=(\d+)\.(js|css)$/;
 
-export const htmlProxyMap = new WeakMap<
-  ResolvedConfig,
-  Map<string, Array<{ code: string; map?: SourceMapInput }>>
->();
 /**获取plugin处理index.html的hook，并对hooks进行排序 */
 export function resolveHtmlTransforms(
   plugins: readonly Plugin[]
@@ -74,7 +69,7 @@ export async function applyHtmlTransforms(
   ctx: IndexHtmlTransformContext
 ): Promise<string> {
   for (const hook of hooks) {
-    // 执行hook之后得到index.html的内容和 需要注入到index.html中的标签(tags)
+    // 执行hook之后得到index.html的内容和需要注入到index.html中的标签(tags)
     // tags中有需要注入的@vite/client
     const res = await hook(html, ctx);
     if (!res) {
@@ -315,6 +310,7 @@ function formatParseError(parserError: ParserError, id: string, html: string) {
 export function nodeIsElement(
   node: DefaultTreeAdapterMap["node"]
 ): node is DefaultTreeAdapterMap["element"] {
+  // #text
   return node.nodeName[0] !== "#";
 }
 /**获取script节点的相关信息 */
@@ -345,7 +341,7 @@ export function getScriptInfo(node: DefaultTreeAdapterMap["element"]): {
 }
 
 const attrValueStartRE = /=\s*(.)/;
-/** 将<link> 标签的 href 属性值替换为newValue */
+/** 将<link> 标签的 href 属性值替换为新的值 */
 export function overwriteAttrValue(
   s: MagicString,
   sourceCodeLocation: Token.Location,

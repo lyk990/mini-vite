@@ -1,14 +1,6 @@
 import { ViteDevServer } from "..";
 import type { Connect } from "dep-types/connect";
-import {
-  cleanUrl,
-  ensureWatchedFile,
-  joinUrlSegments,
-  normalizePath,
-  stripBase,
-  unwrapId,
-  wrapId,
-} from "../../utils";
+import { cleanUrl, normalizePath, stripBase, unwrapId } from "../../utils";
 import { CLIENT_PUBLIC_PATH } from "../../constants";
 import path from "node:path";
 import fs from "node:fs";
@@ -26,14 +18,9 @@ import {
 } from "../../plugins/html";
 import { IndexHtmlTransformHook } from "vite";
 import MagicString from "magic-string";
-import type { DefaultTreeAdapterMap, Token } from "parse5";
+import type { Token } from "parse5";
 import { ResolvedConfig } from "../../config";
 
-interface AssetNode {
-  start: number;
-  end: number;
-  code: string;
-}
 /**index.html中间件，改造index.html,用来注入脚本，处理预加载资源等 */
 export function indexHtmlMiddleware(
   server: ViteDevServer
@@ -44,13 +31,18 @@ export function indexHtmlMiddleware(
     }
 
     const url = req.url && cleanUrl(req.url);
-
+    // 判断是否是index.html文件
     if (url?.endsWith(".html") && req.headers["sec-fetch-dest"] !== "script") {
       const filename = getHtmlFilename(url, server);
       if (fs.existsSync(filename)) {
         try {
           let html = await fsp.readFile(filename, "utf-8");
+          // 得到注入脚本之后的html文件
           html = await server.transformIndexHtml(url, html, req.originalUrl);
+          // req: http请求
+          // res: http响应
+          // html: 要发送的内容
+          // "html": 指定响应的类型
           return send(req, res, html, "html", {
             headers: server.config.server.headers,
           });
@@ -62,13 +54,16 @@ export function indexHtmlMiddleware(
     next();
   };
 }
+
 /**去掉'/',得到文件名 */
 function getHtmlFilename(url: string, server: ViteDevServer) {
+  // decodeURIComponent处理URI组件的编码字符
   return decodeURIComponent(
     normalizePath(path.join(server.config.root, url.slice(1)))
   );
 }
-/**改造index.html */
+
+/**改造index.html,注入脚本 */
 export function createDevHtmlTransformFn(
   server: ViteDevServer
 ): (url: string, html: string, originalUrl: string) => Promise<string> {
@@ -80,7 +75,7 @@ export function createDevHtmlTransformFn(
       html,
       [
         ...preHooks,
-        devHtmlHook, // 主要调用这个钩子
+        devHtmlHook, // 主要调用这个钩子,将client脚本注入到script标签中
         ...normalHooks,
         ...postHooks,
       ],
@@ -93,36 +88,37 @@ export function createDevHtmlTransformFn(
     );
   };
 }
+
 /**拦截index.html，注入脚本 */
 const devHtmlHook: IndexHtmlTransformHook = async (
   html,
   { path: htmlPath, filename, server }
 ) => {
-  const { config, moduleGraph, watcher } = server!;
+  const { config } = server!;
   const base = config.base || "/";
-
-  let proxyModulePath: string;
   // @ts-ignore
-  let proxyModuleUrl: string;
-
+  let proxyModulePath: string;
+  // htmlPath = '/index.html'
   const trailingSlash = htmlPath.endsWith("/");
+  // 当htmlpath不以/结尾，且文件路径存在时
   if (!trailingSlash && fs.existsSync(filename)) {
     proxyModulePath = htmlPath;
-    proxyModuleUrl = joinUrlSegments(base, htmlPath);
   } else {
+    // 以\0开头的路径表示虚拟路径或特殊路径
     const validPath = `${htmlPath}${trailingSlash ? "index.html" : ""}`;
     proxyModulePath = `\0${validPath}`;
-    proxyModuleUrl = wrapId(proxyModulePath);
   }
 
   const s = new MagicString(html);
-  const styleUrl: AssetNode[] = [];
-
+  // html: HTML内容
+  // filename: html文件的路径
+  // node: node节点
   await traverseHtml(html, filename, (node) => {
+    // 不是node节点就直接返回
     if (!nodeIsElement(node)) {
       return;
     }
-
+    // 当前节点是script标签时
     if (node.nodeName === "script") {
       const { src, sourceCodeLocation } = getScriptInfo(node);
 
@@ -135,15 +131,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
           server as any
         );
       }
-    }
-
-    if (node.nodeName === "style" && node.childNodes.length) {
-      const children = node.childNodes[0] as DefaultTreeAdapterMap["textNode"];
-      styleUrl.push({
-        start: children.sourceCodeLocation!.startOffset,
-        end: children.sourceCodeLocation!.endOffset,
-        code: children.value,
-      });
     }
 
     const assetAttrs = assetAttrsConfig[node.nodeName];
@@ -161,18 +148,6 @@ const devHtmlHook: IndexHtmlTransformHook = async (
       }
     }
   });
-
-  await Promise.all(
-    styleUrl.map(async ({ start, end, code }, index) => {
-      const url = `${proxyModulePath}?html-proxy&direct&index=${index}.css`;
-
-      const mod = await moduleGraph.ensureEntryFromUrl(url, false);
-      ensureWatchedFile(watcher, mod.file, config.root);
-
-      const result = await server!.pluginContainer.transform(code, mod.id!);
-      s.overwrite(start, end, result?.code || "");
-    })
-  );
 
   html = s.toString();
 
@@ -192,17 +167,18 @@ const devHtmlHook: IndexHtmlTransformHook = async (
     ],
   };
 };
-/**调用transformRequest方法，对请求进行预处理 */
+/**
+ * 调用transformRequest方法，对请求进行预处理
+ *  包括路径重写、资源注入、请求过滤
+ * */
 function preTransformRequest(server: ViteDevServer, url: string, base: string) {
   if (!server.config.server.preTransformRequests) return;
-
   url = unwrapId(stripBase(url, base));
-
   server.transformRequest(url).catch((e) => {
     server.config.logger.error(e.message);
   });
 }
-
+/**对node路径进行重写 */
 const processNodeUrl = (
   attr: Token.Attribute,
   sourceCodeLocation: Token.Location,

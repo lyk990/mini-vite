@@ -19,7 +19,10 @@ const alias: Record<string, string | undefined> = {
   html: "text/html",
   json: "application/json",
 };
-
+/**
+ * 将经过转换后的 HTML 响应发送给客户端，
+ * 并指定内容类型和自定义的响应头部信息
+ */
 export function send(
   req: IncomingMessage,
   res: ServerResponse,

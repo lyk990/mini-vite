@@ -42,6 +42,7 @@ export const blankReplacer = (match: string): string =>
   " ".repeat(match.length);
 
 const postfixRE = /[?#].*$/s;
+/**将？#转换成'' */
 export function cleanUrl(url: string): string {
   return url.replace(postfixRE, "");
 }
@@ -197,7 +198,7 @@ export async function asyncFlatten<T>(arr: T[]): Promise<T[]> {
   } while (arr.some((v: any) => v?.then));
   return arr;
 }
-
+/**将多个URL片段组合成一个完整的URL路径 */
 export function joinUrlSegments(a: string, b: string): string {
   if (!a || !b) {
     return a || b || "";

@@ -58,7 +58,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       server = _server;
     },
 
-    async transform(source, importer, options) {
+    async transform(source, importer) {
       if (!server) {
         return null;
       }
@@ -253,6 +253,8 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               : `[detected api usage]`
           } ${prettyImporter}`
         );
+        // 注入热更新代码
+        // import.meta.hot = __vite__createHotContext("/src/Index.vue");
         str().prepend(
           `import { createHotContext as __vite__createHotContext } from "${clientPublicPath}";` +
             `import.meta.hot = __vite__createHotContext(${JSON.stringify(
