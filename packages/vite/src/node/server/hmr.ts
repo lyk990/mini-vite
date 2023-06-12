@@ -316,18 +316,6 @@ function error(pos: number) {
   throw err;
 }
 
-export function lexAcceptedHmrExports(
-  code: string,
-  start: number,
-  exportNames: Set<string>
-): boolean {
-  const urls = new Set<{ url: string; start: number; end: number }>();
-  lexAcceptedHmrDeps(code, start, urls);
-  for (const { url } of urls) {
-    exportNames.add(url);
-  }
-  return urls.size > 0;
-}
 const enum LexerState {
   inCall,
   inSingleQuoteString,
@@ -336,7 +324,8 @@ const enum LexerState {
   inArray,
 }
 const whitespaceRE = /\s/;
-
+// NOTE 
+/**对热更新依赖模块进行处理 */
 export function lexAcceptedHmrDeps(
   code: string,
   start: number,
@@ -432,19 +421,4 @@ export function lexAcceptedHmrDeps(
     }
   }
   return false;
-}
-
-export function handlePrunedModules(
-  mods: Set<ModuleNode>,
-  { ws }: ViteDevServer
-): void {
-  const t = Date.now();
-  mods.forEach((mod) => {
-    mod.lastHMRTimestamp = t;
-    debugHmr?.(`[dispose] ${colors.dim(mod.file)}`);
-  });
-  ws.send({
-    type: "prune",
-    paths: [...mods].map((m) => m.url),
-  });
 }

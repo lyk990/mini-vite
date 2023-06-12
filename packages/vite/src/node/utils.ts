@@ -211,19 +211,19 @@ export function joinUrlSegments(a: string, b: string): string {
   }
   return a + b;
 }
-
+/**给id加上前缀`/@id/`，区分不同类型的模块id */
 export function wrapId(id: string): string {
   return id.startsWith(VALID_ID_PREFIX)
     ? id
     : VALID_ID_PREFIX + id.replace("\0", NULL_BYTE_PLACEHOLDER);
 }
-
+/**移除前缀`/@id/` */
 export function unwrapId(id: string): string {
   return id.startsWith(VALID_ID_PREFIX)
     ? id.slice(VALID_ID_PREFIX.length).replace(NULL_BYTE_PLACEHOLDER, "\0")
     : id;
 }
-
+/**移除基础路径config.base */
 export function stripBase(path: string, base: string): string {
   if (path === base) {
     return "/";
@@ -294,6 +294,9 @@ export function generateCodeFrame(
 
 const replacePercentageRE = /%/g;
 export function injectQuery(url: string, queryToInject: string): string {
+  // NOTE 编码兼容性问题
+  // url 字符串中的 "%" 字符，将其转义为 "%25"，以避免 URL 编码问题。
+  // 使用替换后的 URL 和一个基础相对路径 "relative:///"。
   const resolvedUrl = new URL(
     url.replace(replacePercentageRE, "%25"),
     "relative:///"
@@ -301,6 +304,10 @@ export function injectQuery(url: string, queryToInject: string): string {
   const { search, hash } = resolvedUrl;
   let pathname = cleanUrl(url);
   pathname = isWindows ? slash(pathname) : pathname;
+  // 构建新的 URL 字符串，将注入的查询参数 queryToInject 添加到路径后面，
+  // 并添加原始的查询参数和哈希值。
+  // 如果原始的 URL 中已经有查询参数，
+  // 则在注入的查询参数前面添加 "&" 符号。
   return `${pathname}?${queryToInject}${search ? `&` + search.slice(1) : ""}${
     hash ?? ""
   }`;

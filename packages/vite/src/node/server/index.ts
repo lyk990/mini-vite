@@ -148,31 +148,36 @@ export async function createServer(
 export async function _createServer(
   inlineConfig: InlineConfig = {}
 ): Promise<ViteDevServer> {
+  // 解析vite配置项
   const config = await resolveConfig(inlineConfig, "serve");
 
   const { root, server: serverConfig } = config;
   const { middlewareMode } = serverConfig;
+  // 创建本地服务器中间件
   const middlewares = connect() as Connect.Server;
-
+  // 解析chokidar配置项
   const resolvedWatchOptions = resolveChokidarOptions(config, {
     disableGlobbing: true,
     ...serverConfig.watch,
   });
-
+  // 解析http配置
   const httpServer = await resolveHttpServer(middlewares);
+  // 创建ws服务器，与浏览器进行双向通信
   const ws = createWebSocketServer(httpServer, config);
-
+  // 实例化模块管理类
   const moduleGraph: ModuleGraph = new ModuleGraph((url) =>
     container.resolveId(url, undefined)
   );
+  // 用于插件管理
   const container = await createPluginContainer(config);
+  // 关闭http服务器
   const closeHttpServer = createServerCloseFn(httpServer);
-
+  // 热更新监听文件
   const watcher = chokidar.watch(
     [root, ...config.configFileDependencies, path.join(config.envDir, ".env*")],
     resolvedWatchOptions
   ) as FSWatcher;
-
+  // 触发热更新
   const onHMRUpdate = async (file: string, configOnly: boolean) => {
     if (serverConfig.hmr !== false) {
       try {
@@ -185,6 +190,7 @@ export async function _createServer(
       }
     }
   };
+  // 断开热更新
   const onFileAddUnlink = async (file: string) => {
     file = normalizePath(file);
     await handleFileAddUnlink(file, server);
@@ -194,7 +200,6 @@ export async function _createServer(
   watcher.on("change", async (file) => {
     file = normalizePath(file);
     moduleGraph.onFileChange(file);
-
     await onHMRUpdate(file, false);
   });
   // 新增文件时
@@ -239,6 +244,8 @@ export async function _createServer(
     },
     async close() {
       if (!middlewareMode) {
+        // NOTE 进程管理
+        // 终止进程
         process.off("SIGTERM", exitProcess);
         if (process.env.CI !== "true") {
           process.stdin.off("end", exitProcess);
@@ -268,6 +275,7 @@ export async function _createServer(
     _pendingRequests: new Map(),
     _shortcutsOptions: undefined,
   };
+  // transform起始方法
   server.transformIndexHtml = createDevHtmlTransformFn(server);
 
   if (!middlewareMode) {
@@ -283,17 +291,15 @@ export async function _createServer(
       process.stdin.on("end", exitProcess);
     }
   }
-
+  // configureServer是用于配置开发服务器的钩子
   const postHooks: ((() => void) | void)[] = [];
   for (const hook of config.getSortedPluginHooks("configureServer")) {
     postHooks.push(await hook(server));
   }
-
-  if (config.publicDir) {
-    middlewares.use(
-      servePublicMiddleware(config.publicDir, config.server.headers)
-    );
-  }
+  // 对public文件夹进行处理
+  middlewares.use(
+    servePublicMiddleware(config.publicDir, config.server.headers)
+  );
 
   middlewares.use(transformMiddleware(server));
   middlewares.use(serveStaticMiddleware(root, server));
@@ -388,9 +394,9 @@ async function restartServer(server: ViteDevServer) {
     shortcutsOptions.print = false;
     bindShortcuts(newServer, shortcutsOptions);
   }
-
   newServer._restartPromise = null;
 }
+
 /**获取vite.config.ts中的server配置项*/
 export function resolveServerOptions(
   root: string,
@@ -401,6 +407,7 @@ export function resolveServerOptions(
     ...(raw as Omit<ResolvedServerOptions, "sourcemapIgnoreList">),
     middlewareMode: !!raw?.middlewareMode,
   };
+
   let allowDirs = server.fs?.allow;
   const deny = server.fs?.deny || [".env", ".env.*", "*.{crt,pem}"];
 
@@ -409,7 +416,6 @@ export function resolveServerOptions(
   }
 
   allowDirs = allowDirs.map((i) => resolvedAllowDir(root, i));
-
   server.fs = {
     strict: server.fs?.strict ?? true,
     allow: allowDirs,
