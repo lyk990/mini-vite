@@ -1,13 +1,7 @@
 import { extname } from "node:path";
 import type { ModuleInfo, PartialResolvedId } from "rollup";
 import { isDirectCSSRequest } from "../plugins/css";
-import {
-  cleanUrl,
-  normalizePath,
-  removeImportQuery,
-  removeTimestampQuery,
-} from "../utils";
-import { FS_PREFIX } from "../constants";
+import { cleanUrl, removeImportQuery, removeTimestampQuery } from "../utils";
 import type { TransformResult } from "./transformRequest";
 
 export class ModuleNode {
@@ -46,11 +40,32 @@ export type ResolvedUrl = [
 ];
 
 export class ModuleGraph {
+  // key: '/src/main.ts'
+  // 将原始路径映射到模块对象中
+  // 主要用于模块热更新、服务端渲染、将 URL 转换为对应的模块路径，并加载相应的模块资源
   urlToModuleMap = new Map<string, ModuleNode>();
+  // key: 'C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite/mini-vite-example/src/main.ts'
+  // resolveId之后的路径与模块对象的映射，可用来快速查找和访问对应的模块节点。
+
+  // 主要用于查找对应的模块对象，获取模块的代码和其他相关信息
+  // 根据模块 ID 查找对应的模块对象，并获取其依赖关系，从而构建整个模块依赖图。
+  // 当一个模块发生变化时，可以根据模块 ID 从 idToModuleMap 中查找对应的模块对象，
+  // 然后通知客户端更新相应的模块
+  // 在开发环境下，存储已解析和加载的模块对象
   idToModuleMap = new Map<string, ModuleNode>();
+  // key: 'C:/Users/Administrator/Desktop/learn-Code/vite源码/mini-vite/mini-vite-example/src/main.ts'
+  // 文件路径与模块对象的映射，用来跟踪具有相同文件路径的模块节点（文件路径只有一个）
+  // 主要用于模块解析、模块依赖管理、模块热更新和模块缓存管理
   fileToModulesMap = new Map<string, Set<ModuleNode>>();
+  // 主要包括src/App.vue, node_modules中的第三方依赖等
+  // 主要作用是确保指定的模块路径是安全的，vite核心模块不会被修改或覆盖。
+  // 可以指定这些第三方模块的路径，确保它们不会被修改。
+  // 这有助于保护核心模块和第三方模块的完整性，并避免意外冲突和覆盖。
   safeModulesPath = new Set<string>();
 
+  // key: '/src/main.ts'
+  // 将未解析的 URL 与相应的模块进行关联
+  // 主要用于模块解析、模块加载、模块热更新和模块缓存管理等功
   _unresolvedUrlToModuleMap = new Map<
     string,
     Promise<ModuleNode> | ModuleNode
@@ -113,14 +128,6 @@ export class ModuleGraph {
       if (!importer.acceptedHmrDeps.has(mod)) {
         this.invalidateModule(importer, seen, timestamp, isHmr);
       }
-    });
-  }
-
-  invalidateAll(): void {
-    const timestamp = Date.now();
-    const seen = new Set<ModuleNode>();
-    this.idToModuleMap.forEach((mod) => {
-      this.invalidateModule(mod, seen, timestamp);
     });
   }
 
@@ -195,7 +202,7 @@ export class ModuleGraph {
     mod.importedBindings = importedBindings;
     return noLongerImported;
   }
-  /**确保url对应的入口文件存在 */
+
   async ensureEntryFromUrl(
     rawUrl: string,
     setIsSelfAccepting = true
@@ -208,28 +215,45 @@ export class ModuleGraph {
     setIsSelfAccepting = true,
     resolved?: PartialResolvedId
   ): Promise<ModuleNode> {
+    // 移除url上的时间戳查询参数,得到一个经过处理后的url
     rawUrl = removeImportQuery(removeTimestampQuery(rawUrl));
+    // 通过url判断_unresolvedUrlToModuleMap是否存在未解析的模块
+    // 有就直接返回，没有就接着往下处理
     let mod = this._getUnresolvedUrlToModule(rawUrl);
     if (mod) {
       return mod;
     }
+    // 异步地解析 URL 并创建相应的模块节点 (mod)
     const modPromise = (async () => {
+      // 获取解析后的 URL、解析后的标识符 resolvedId 和元数据 meta
       const [url, resolvedId, meta] = await this._resolveUrl(rawUrl, resolved);
+      // 通过 resolvedId从idToModuleMap 中找到对应的模块（mod）
       mod = this.idToModuleMap.get(resolvedId);
+      // 如果没有的话就创建一个新的mod
       if (!mod) {
         mod = new ModuleNode(url, setIsSelfAccepting);
 
         if (meta) mod.meta = meta;
+        // 将url与模块（mod）关联起来并存储到urlToModuleMap中
         this.urlToModuleMap.set(url, mod);
         mod.id = resolvedId;
+        // 模块id存到idToModuleMap中
         this.idToModuleMap.set(resolvedId, mod);
+        // 解析出file（文件绝对路径）
         const file = (mod.file = cleanUrl(resolvedId));
+        // 判断file是否已经存储到fileToModulesMap中
         let fileMappedModules = this.fileToModulesMap.get(file);
-
+        // 没有的话，file存到fileToModulesMap中
         if (!fileMappedModules) {
           fileMappedModules = new Set();
           this.fileToModulesMap.set(file, fileMappedModules);
         }
+        // fileToModulesMap是一个一对多的数据结构
+        // 它的key为文件路径，value为模块（mode）
+        // 有可能多个模块引用了同一个文件作为它们的依赖项
+        // 或者模块被多个入口文件引用，或者在多个地方被动态引入。
+        // 所以此处是将模块节点添加到与文件路径相关联的模块集合中，
+        // 以便在文件更新时进行批量处理和更新
         fileMappedModules.add(mod);
       } else if (!this.urlToModuleMap.has(url)) {
         this.urlToModuleMap.set(url, mod);
@@ -238,30 +262,11 @@ export class ModuleGraph {
       this._setUnresolvedUrlToModule(rawUrl, mod);
       return mod;
     })();
-
+    // 调用 _setUnresolvedUrlToModule 两次的目的是
+    // 为了确保未解析的 URL 在解析过程中能够正确关联到对应的模块节点，
+    // 并且在需要获取模块的地方能够等待解析的 Promise 完成。
     this._setUnresolvedUrlToModule(rawUrl, modPromise);
     return modPromise;
-  }
-
-  createFileOnlyEntry(file: string): ModuleNode {
-    file = normalizePath(file);
-    let fileMappedModules = this.fileToModulesMap.get(file);
-    if (!fileMappedModules) {
-      fileMappedModules = new Set();
-      this.fileToModulesMap.set(file, fileMappedModules);
-    }
-
-    const url = `${FS_PREFIX}${file}`;
-    for (const m of fileMappedModules) {
-      if (m.url === url || m.id === file) {
-        return m;
-      }
-    }
-
-    const mod = new ModuleNode(url);
-    mod.file = file;
-    fileMappedModules.add(mod);
-    return mod;
   }
 
   async resolveUrl(url: string): Promise<ResolvedUrl> {

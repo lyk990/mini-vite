@@ -38,7 +38,10 @@ export function transformRequest(
 ): Promise<TransformResult | null> {
   const cacheKey = (options.html ? "html:" : "") + url;
   const timestamp = Date.now();
-
+  // 检查缓存中是否存在正在处理的请求
+  // 如果存在，并且缓存的请求仍然有效,则直接使用缓存的请求结果；
+  // 否则，中止缓存的请求，并重新处理该请求。
+  // 可以避免重复处理相同的请求，并确保在模块状态发生变化时获取最新的结果。
   const pending = server._pendingRequests.get(cacheKey);
   if (pending) {
     return server.moduleGraph
@@ -52,7 +55,7 @@ export function transformRequest(
         }
       });
   }
-
+  // 利用pluginContainer和moduleGraph对资源进行转换处理，并将转换后的结果返回
   const request = doTransform(url, server, options, timestamp);
 
   let cleared = false;
@@ -68,9 +71,8 @@ export function transformRequest(
     timestamp,
     abort: clearCache,
   });
-  request.then(clearCache, clearCache);
 
-  return request;
+  return request.finally(clearCache);
 }
 /**transform核心方法 */
 async function doTransform(
@@ -83,19 +85,23 @@ async function doTransform(
 
   const { config, pluginContainer } = server;
   const prettyUrl = debugCache ? prettifyUrl(url, config.root) : "";
+  // 判断当前url有没有被加进模块信息中
   const module = await server.moduleGraph.getModuleByUrl(url);
-
+  // 如果有就命中缓存
   const cached = module && module.transformResult;
   if (cached) {
     debugCache?.(`[memory] ${prettyUrl}`);
     return cached;
   }
+  // 否则调用 PluginContainer 的 resolveId 和 load 方法对进行模块加载
   const id =
     module?.id ?? (await pluginContainer.resolveId(url, undefined))?.id ?? url;
+  // 对文件进行transfomr和load，将处理过后的资源文件放到模块管理图中
+  // 并将模块的文件添加到热更新监听器中
   const result = loadAndTransform(id, url, server, options, timestamp);
   return result;
 }
-
+/**tranform时，对文件资源进行处理，并添加到模块管理图中进行管理 */
 async function loadAndTransform(
   id: string,
   url: string,
@@ -161,7 +167,9 @@ async function loadAndTransform(
   if (code == null) {
     throw new Error(`Failed to load url`);
   }
+  // 创建ModuleNode
   const mod = await moduleGraph.ensureEntryFromUrl(url);
+  // 将模块添加进热更新监听列表中
   ensureWatchedFile(watcher, mod.file, root);
   const transformStart = debugTransform ? performance.now() : 0;
   const transformResult = await pluginContainer.transform(code, id, {
@@ -207,7 +215,7 @@ async function loadAndTransform(
     map,
     etag: getEtag(code, { weak: true }), // NOTE 协商缓存
   } as TransformResult;
-
+  // 检查模块是否过时，是否需要更新
   if (timestamp > mod.lastInvalidationTimestamp) {
     mod.transformResult = result;
   }

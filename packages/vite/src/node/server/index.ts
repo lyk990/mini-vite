@@ -360,9 +360,7 @@ async function restartServer(server: ViteDevServer) {
   }
 
   await server.close();
-
   newServer._restartPromise = server._restartPromise;
-
   Object.assign(server, newServer);
 
   const {

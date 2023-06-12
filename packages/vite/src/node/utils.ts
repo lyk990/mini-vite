@@ -675,11 +675,14 @@ export async function getLocalhostAddressIfDiffersFromDNS(): Promise<
 
 export const isImportRequest = (url: string): boolean =>
   importQueryRE.test(url);
-
+/**对URL进行美化处理，将其转换为更易读和美观的格式 */
 export function prettifyUrl(url: string, root: string): string {
+  // 移除url的时间戳查询参数
   url = removeTimestampQuery(url);
   const isAbsoluteFile = url.startsWith(root);
+  // 如果是绝对路径
   if (isAbsoluteFile || url.startsWith(FS_PREFIX)) {
+    // 转换成相对路径
     const file = path.relative(root, isAbsoluteFile ? url : fsPathFromId(url));
     return colors.dim(file);
   } else {

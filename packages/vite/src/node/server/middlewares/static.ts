@@ -120,7 +120,7 @@ export function isFileServingAllowed(
   if (!server.config.server.fs.strict) return true;
 
   const file = fsPathFromUrl(url);
-
+  // 当前文件url的绝对路径有没有被加进safeModulesPath中
   if (server.moduleGraph.safeModulesPath.has(file)) return true;
 
   if (server.config.server.fs.allow.some((dir) => isParentDirectory(dir, file)))

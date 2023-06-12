@@ -1,4 +1,4 @@
-import { CLIENT_DIR, CLIENT_PUBLIC_PATH, FS_PREFIX } from "../constants";
+import { CLIENT_PUBLIC_PATH, FS_PREFIX } from "../constants";
 import {
   cleanUrl,
   fsPathFromUrl,
@@ -7,16 +7,12 @@ import {
   isExternalUrl,
   isJSRequest,
   joinUrlSegments,
-  normalizePath,
   removeImportQuery,
   stripBase,
   stripBomTag,
   unwrapId,
   wrapId,
   transformStableResult,
-  createDebugger,
-  timeFrom,
-  prettifyUrl,
 } from "../utils";
 import path from "node:path";
 import { ViteDevServer } from "../server";
@@ -24,16 +20,10 @@ import { Plugin } from "../plugin";
 import { ImportSpecifier } from "es-module-lexer";
 import MagicString from "magic-string";
 import { ResolvedConfig } from "../config";
-import { debugHmr, lexAcceptedHmrDeps, normalizeHmrUrl } from "../server/hmr";
+import { lexAcceptedHmrDeps, normalizeHmrUrl } from "../server/hmr";
 import { isCSSRequest, isDirectCSSRequest } from "./css";
 import { init, parse as parseImports } from "es-module-lexer";
 import fs from "node:fs";
-import colors from "picocolors";
-import { findStaticImports, parseStaticImport } from "mlly";
-
-const clientDir = normalizePath(CLIENT_DIR);
-
-const debug = createDebugger("vite:import-analysis");
 
 const skipRE = /\.(?:map|json)(?:$|\?)/;
 export const canSkipImportAnalysis = (id: string): boolean =>
@@ -48,7 +38,6 @@ interface UrlPosition {
 export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
   const { root, base } = config;
   const clientPublicPath = path.posix.join(base, CLIENT_PUBLIC_PATH);
-  const enablePartialAccept = config.experimental?.hmrPartialAccept;
   let server: ViteDevServer;
 
   return {
@@ -63,13 +52,17 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
         return null;
       }
 
-      const prettyImporter = prettifyUrl(importer, root);
-
-      const start = performance.now();
+      // NOTE
+      // 在使用 es-module-lexer 之前，
+      // 必须先调用 init 函数进行初始化，确保解析器正常工作。
+      // 可用于加载WebAssembly 模块（使用 WebAssembly 字节码编译的二进制文件）
+      // es-module-lexer 使用 WebAssembly 来解析和分析JavaScript 模块中的 import 和 export 语句。
+      // 并提取相关的模块信息，如导入的模块路径、导出的标识符等
       await init;
       let imports!: readonly ImportSpecifier[];
       source = stripBomTag(source);
       try {
+        // 通过es-module-lexer提取导入导出代码信息
         [imports, exports] = parseImports(source);
       } catch (e: any) {
         this.error(
@@ -80,24 +73,24 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       }
 
       const { moduleGraph } = server;
+      // 从idToModuleMap中找到对应的模块节点
       const importerModule = moduleGraph.getModuleById(importer)!;
+      // 如果没有导入语句且没有添加过导入项
+      // 则将当前模块的 isSelfAccepting 标志设为 false，并打印相关信息。
       if (!imports.length && !(this as any)._addedImports) {
         importerModule.isSelfAccepting = false;
-        debug?.(
-          `${timeFrom(start)} ${colors.dim(`[no imports] ${prettyImporter}`)}`
-        );
         return source;
       }
 
       let hasHMR = false;
       let isSelfAccepting = false;
+      // 用于处理源代码的字符串操作
       let s: MagicString | undefined;
       const str = () => s || (s = new MagicString(source));
+      // 用于存储导入的 URL
       const importedUrls = new Set<string>();
       let isPartiallySelfAccepting = false;
-      const importedBindings = enablePartialAccept
-        ? new Map<string, Set<string>>()
-        : null;
+      const importedBindings = null;
       const toAbsoluteUrl = (url: string) =>
         path.posix.resolve(path.posix.dirname(importerModule.url), url);
 
@@ -192,7 +185,7 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
             if (specifier === clientPublicPath) {
               return;
             }
-            const [url, resolvedId] = await normalizeUrl(specifier, start);
+            const [url] = await normalizeUrl(specifier, start);
 
             server?.moduleGraph.safeModulesPath.add(fsPathFromUrl(url));
 
@@ -214,15 +207,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
               importedUrls.add(hmrUrl);
             }
 
-            if (enablePartialAccept && importedBindings) {
-              extractImportedBindings(
-                resolvedId,
-                source,
-                importSpecifier,
-                importedBindings
-              );
-            }
-
             if (
               !isDynamicImport &&
               isLocalImport &&
@@ -233,7 +217,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
                 config.logger.error(e.message);
               });
             }
-          } else if (!importer.startsWith(clientDir)) {
           }
         })
       );
@@ -242,17 +225,6 @@ export function importAnalysisPlugin(config: ResolvedConfig): Plugin {
       const acceptedExports = mergeAcceptedUrls(orderedAcceptedExports);
 
       if (hasHMR) {
-        debugHmr?.(
-          `${
-            isSelfAccepting
-              ? `[self-accepts]`
-              : isPartiallySelfAccepting
-              ? `[accepts-exports]`
-              : acceptedUrls.size
-              ? `[accepts-deps]`
-              : `[detected api usage]`
-          } ${prettyImporter}`
-        );
         // 注入热更新代码
         // import.meta.hot = __vite__createHotContext("/src/Index.vue");
         str().prepend(
@@ -301,47 +273,6 @@ function markExplicitImport(url: string) {
     return injectQuery(url, "import");
   }
   return url;
-}
-
-function extractImportedBindings(
-  id: string,
-  source: string,
-  importSpec: ImportSpecifier,
-  importedBindings: Map<string, Set<string>>
-) {
-  let bindings = importedBindings.get(id);
-  if (!bindings) {
-    bindings = new Set<string>();
-    importedBindings.set(id, bindings);
-  }
-
-  const isDynamic = importSpec.d > -1;
-  const isMeta = importSpec.d === -2;
-  if (isDynamic || isMeta) {
-    bindings.add("*");
-    return;
-  }
-
-  const exp = source.slice(importSpec.ss, importSpec.se);
-  const [match0] = findStaticImports(exp);
-  if (!match0) {
-    return;
-  }
-  const parsed = parseStaticImport(match0);
-  if (!parsed) {
-    return;
-  }
-  if (parsed.namespacedImport) {
-    bindings.add("*");
-  }
-  if (parsed.defaultImport) {
-    bindings.add("default");
-  }
-  if (parsed.namedImports) {
-    for (const name of Object.keys(parsed.namedImports)) {
-      bindings.add(name);
-    }
-  }
 }
 
 function mergeAcceptedUrls<T>(orderedUrls: Array<Set<T> | undefined>) {
