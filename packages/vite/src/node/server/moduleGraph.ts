@@ -139,13 +139,18 @@ export class ModuleGraph {
     acceptedExports: Set<string> | null,
     isSelfAccepting: boolean
   ): Promise<Set<ModuleNode> | undefined> {
+    // 是否接收自身模块的热更新
     mod.isSelfAccepting = isSelfAccepting;
+    // 将所有的imports模块存储到prevImports中
     const prevImports = mod.importedModules;
+    // 不会再被import
     let noLongerImported: Set<ModuleNode> | undefined;
-
+    // 存储异步解析的promise对象
     let resolvePromises = [];
+    // 存储每个异步解析的结果
     let resolveResults = new Array(importedModules.size);
     let index = 0;
+    // 绑定节点依赖关系
     for (const imported of importedModules) {
       const nextIndex = index++;
       if (typeof imported === "string") {
@@ -162,11 +167,14 @@ export class ModuleGraph {
     }
 
     if (resolvePromises.length) {
+      // 等待所有的异步解析操作完成
       await Promise.all(resolvePromises);
     }
-
+    // nextImports保存着所有解析出来的import模块的
     const nextImports = (mod.importedModules = new Set(resolveResults));
-
+    // prevImports存储着所有的imports模块
+    // 与nextImports做对比,判断模块是否已经被解析了
+    // 主要是为了更新模块的导入管理,移除不需要被导入的模块
     prevImports.forEach((dep) => {
       if (!nextImports.has(dep)) {
         dep.importers.delete(mod);
@@ -179,6 +187,7 @@ export class ModuleGraph {
     resolvePromises = [];
     resolveResults = new Array(acceptedModules.size);
     index = 0;
+    // 更新最新的热更新模块的信息
     for (const accepted of acceptedModules) {
       const nextIndex = index++;
       if (typeof accepted === "string") {
@@ -199,6 +208,7 @@ export class ModuleGraph {
     mod.acceptedHmrDeps = new Set(resolveResults);
 
     mod.acceptedHmrExports = acceptedExports;
+    // 当前模块导入的绑定关系的映射
     mod.importedBindings = importedBindings;
     return noLongerImported;
   }
