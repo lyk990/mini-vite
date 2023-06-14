@@ -26,6 +26,7 @@ async function createDepsOptimizer(config: ResolvedConfig): Promise<void> {
 
   let discover;
   if (!cachedMetadata) {
+    // 扫描node_modules中的依赖
     discover = discoverProjectDependencies(config);
     const deps = await discover.result;
     discover = undefined;

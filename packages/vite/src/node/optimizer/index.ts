@@ -89,6 +89,7 @@ export type ExportsData = {
 export async function loadCachedDepOptimizationMetadata(
   config: ResolvedConfig
 ): Promise<DepOptimizationMetadata | undefined> {
+  // 获取预构建依赖文件路径
   const depsCacheDir = getDepsCacheDir(config);
   let cachedMetadata: DepOptimizationMetadata | undefined;
   try {

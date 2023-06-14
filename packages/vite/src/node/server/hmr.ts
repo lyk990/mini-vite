@@ -182,7 +182,7 @@ async function readModifiedFile(file: string): Promise<string> {
     return content;
   }
 }
-/**根据模块之间的依赖关系,找到边界模块 */
+/**根据模块之间的依赖关系,找到热更新边界 */
 function propagateUpdate(
   node: ModuleNode,
   traversedModules: Set<ModuleNode>,
@@ -197,6 +197,7 @@ function propagateUpdate(
   traversedModules.add(node);
   // 判断模块是否已经被分析过，如果未被分析过，则返回
   // 当模块未被分析时，模块是否能够接受自身的热更新
+  // false代表没找到热更新边界
   if (node.id && node.isSelfAccepting === undefined) {
     debugHmr?.(
       `[propagate update] stop propagation because not analyzed: ${colors.dim(
@@ -211,6 +212,7 @@ function propagateUpdate(
     boundaries.push({ boundary: node, acceptedVia: node });
 
     for (const importer of node.importers) {
+      // TODO 为什么需要判断是不是css请求
       // 是 CSS 请求且不在热更新传播链中，
       // 则递归调用 propagateUpdate 来传播更新，同时将导入者添加到当前链中
       if (isCSSRequest(importer.url) && !currentChain.includes(importer)) {
@@ -250,7 +252,7 @@ const enum LexerState {
   inArray,
 }
 const whitespaceRE = /\s/;
-// TODO
+// TODO AST是怎么解析的
 /**对热更新依赖模块进行处理 */
 export function lexAcceptedHmrDeps(
   code: string,
