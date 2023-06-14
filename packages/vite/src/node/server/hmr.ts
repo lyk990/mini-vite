@@ -87,10 +87,10 @@ export function updateModules(
       continue;
     }
     // 收集边界模块和接受更新的模块。如果遇到了没有接受更新的模块,
-    // 则将 needFullReload 标记为 true，并跳过当前模块的处理
     const boundaries: { boundary: ModuleNode; acceptedVia: ModuleNode }[] = [];
     const hasDeadEnd = propagateUpdate(mod, traversedModules, boundaries);
     if (hasDeadEnd) {
+      // 则将 needFullReload 标记为 true，并跳过当前模块的处理
       needFullReload = true;
       continue;
     }
@@ -189,11 +189,14 @@ function propagateUpdate(
   boundaries: { boundary: ModuleNode; acceptedVia: ModuleNode }[],
   currentChain: ModuleNode[] = [node]
 ): boolean /* hasDeadEnd */ {
+  // 当前模块是否已经被遍历过了
+  // 遍历过了就无需再被遍历
   if (traversedModules.has(node)) {
     return false;
   }
   traversedModules.add(node);
-
+  // 判断模块是否已经被分析过，如果未被分析过，则返回
+  // 当模块未被分析时，模块是否能够接受自身的热更新
   if (node.id && node.isSelfAccepting === undefined) {
     debugHmr?.(
       `[propagate update] stop propagation because not analyzed: ${colors.dim(
@@ -204,9 +207,12 @@ function propagateUpdate(
   }
 
   if (node.isSelfAccepting) {
+    // 添加到热更新边界列表中
     boundaries.push({ boundary: node, acceptedVia: node });
 
     for (const importer of node.importers) {
+      // 是 CSS 请求且不在热更新传播链中，
+      // 则递归调用 propagateUpdate 来传播更新，同时将导入者添加到当前链中
       if (isCSSRequest(importer.url) && !currentChain.includes(importer)) {
         propagateUpdate(
           importer,
@@ -215,48 +221,6 @@ function propagateUpdate(
           currentChain.concat(importer)
         );
       }
-    }
-
-    return false;
-  }
-
-  if (node.acceptedHmrExports) {
-    boundaries.push({ boundary: node, acceptedVia: node });
-  } else {
-    if (!node.importers.size) {
-      return true;
-    }
-    if (
-      !isCSSRequest(node.url) &&
-      [...node.importers].every((i) => isCSSRequest(i.url))
-    ) {
-      return true;
-    }
-  }
-
-  for (const importer of node.importers) {
-    const subChain = currentChain.concat(importer);
-    if (importer.acceptedHmrDeps.has(node)) {
-      boundaries.push({ boundary: importer, acceptedVia: node });
-      continue;
-    }
-
-    if (node.id && node.acceptedHmrExports && importer.importedBindings) {
-      const importedBindingsFromNode = importer.importedBindings.get(node.id);
-      if (
-        importedBindingsFromNode &&
-        areAllImportsAccepted(importedBindingsFromNode, node.acceptedHmrExports)
-      ) {
-        continue;
-      }
-    }
-
-    if (currentChain.includes(importer)) {
-      return true;
-    }
-
-    if (propagateUpdate(importer, traversedModules, boundaries, subChain)) {
-      return true;
     }
   }
   return false;
@@ -267,18 +231,6 @@ export function normalizeHmrUrl(url: string): string {
     url = wrapId(url);
   }
   return url;
-}
-
-function areAllImportsAccepted(
-  importedBindings: Set<string>,
-  acceptedExports: Set<string>
-) {
-  for (const binding of importedBindings) {
-    if (!acceptedExports.has(binding)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 function error(pos: number) {

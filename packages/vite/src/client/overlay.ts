@@ -202,7 +202,7 @@ export class ErrorOverlay extends HTMLElement {
     this.parentNode?.removeChild(this);
   }
 }
-
+// TODO 什么是错误覆盖层?
 export const overlayId = "vite-error-overlay";
 const { customElements } = globalThis;
 if (customElements && !customElements.get(overlayId)) {

@@ -118,6 +118,7 @@ function cleanUrl(pathname: string): string {
 }
 
 let isFirstUpdate = true;
+// 失效的link元素
 const outdatedLinkTags = new WeakSet<HTMLLinkElement>();
 
 async function handleMessage(payload: HMRPayload) {
@@ -125,6 +126,7 @@ async function handleMessage(payload: HMRPayload) {
     case "connected":
       console.debug(`[vite] connected.`);
       sendMessageBuffer();
+      // 心跳检测
       setInterval(() => {
         if (socket.readyState === socket.OPEN) {
           socket.send('{"type":"ping"}');
@@ -133,21 +135,29 @@ async function handleMessage(payload: HMRPayload) {
       break;
     case "update":
       notifyListeners("vite:beforeUpdate", payload);
+      // 如果是第一次更新或存在错误覆盖层
+      // 则通过重新加载页面来刷新应用程序。
       if (isFirstUpdate && hasErrorOverlay()) {
         window.location.reload();
         return;
       } else {
+        // 清除错误覆盖层
+        // 并将isFirstUpdate设置为false
         clearErrorOverlay();
         isFirstUpdate = false;
       }
       await Promise.all(
         payload.updates.map(async (update): Promise<void> => {
+          // 更新类型是 "js-update"的话
           if (update.type === "js-update") {
+            // 添加到更新队列中进行更新
             return queueUpdate(fetchUpdate(update));
           }
 
           const { path, timestamp } = update;
           const searchUrl = cleanUrl(path);
+          // 通过 href 匹配
+          // 将其替换为新的<link>元素，以实现 CSS 的热更新效果
           const el = Array.from(
             document.querySelectorAll<HTMLLinkElement>("link")
           ).find(
@@ -164,16 +174,21 @@ async function handleMessage(payload: HMRPayload) {
           }t=${timestamp}`;
 
           return new Promise((resolve) => {
+            // 设置其 href 属性为更新后的路径，
             const newLinkTag = el.cloneNode() as HTMLLinkElement;
             newLinkTag.href = new URL(newPath, el.href).href;
+            // 移除el元素
             const removeOldEl = () => {
               el.remove();
               console.debug(`[vite] css hot updated: ${searchUrl}`);
               resolve();
             };
+            // 监听新<link>元素的 "load" 和 "error" 事件，
+            // 在加载完成后移除旧的<link>元素，
             newLinkTag.addEventListener("load", removeOldEl);
             newLinkTag.addEventListener("error", removeOldEl);
             outdatedLinkTags.add(el);
+            // 同时将新<link>元素插入到旧的<link>元素后面
             el.after(newLinkTag);
           });
         })
@@ -201,6 +216,7 @@ async function handleMessage(payload: HMRPayload) {
         location.reload();
       }
       break;
+    // 模块在页面上不被导入时触发
     case "prune":
       notifyListeners("vite:beforePrune", payload);
       payload.paths.forEach((path) => {
@@ -289,7 +305,7 @@ async function waitForSuccessfulPing(
         },
       });
       return true;
-    } catch(e) {}
+    } catch (e) {}
     return false;
   };
 
@@ -335,7 +351,10 @@ if ("document" in globalThis) {
 }
 
 let lastInsertedStyle: HTMLStyleElement | undefined;
-
+/**
+ * 根据给定的 id 查找对应的样式元素。
+ * 如果找不到对应的样式元素，则会创建一个新的 <style> 元素
+ */
 export function updateStyle(id: string, content: string): void {
   let style = sheetsMap.get(id);
   if (!style) {
@@ -374,23 +393,28 @@ async function fetchUpdate({
   timestamp,
   explicitImportRequired,
 }: Update) {
+  // 获取需要热更新相应的模块对象
   const mod = hotModulesMap.get(path);
   if (!mod) {
     return;
   }
 
   let fetchedModule: ModuleNamespace | undefined;
+  // 判断是否为自身更新
   const isSelfUpdate = path === acceptedPath;
-
+  // 模快中符合条件的回调函数
   const qualifiedCallbacks = mod.callbacks.filter(({ deps }) =>
     deps.includes(acceptedPath)
   );
 
   if (isSelfUpdate || qualifiedCallbacks.length > 0) {
+    // 检查是否存在之前的清理器
     const disposer = disposeMap.get(acceptedPath);
+    // 如果存在，则调用清理器进行清理操作。
     if (disposer) await disposer(dataMap.get(acceptedPath));
     const [acceptedPathWithoutQuery, query] = acceptedPath.split(`?`);
     try {
+      // 使用import语法获取更新后的模块内容
       fetchedModule = await import(
         base +
           acceptedPathWithoutQuery.slice(1) +
@@ -404,7 +428,9 @@ async function fetchUpdate({
   }
 
   return () => {
+    // 遍历符合条件的回调函数列表（qualifiedCallbacks），
     for (const { deps, fn } of qualifiedCallbacks) {
+      // 并调用每个回调函数，传递更新模块的内容作为参数
       fn(deps.map((dep) => (dep === acceptedPath ? fetchedModule : undefined)));
     }
     const loggedPath = isSelfUpdate ? path : `${acceptedPath} via ${path}`;
@@ -413,8 +439,10 @@ async function fetchUpdate({
 }
 
 function sendMessageBuffer() {
+  // socket.readyState为1时,表示 WebSocket 连接已经建立并且可用。
   if (socket.readyState === 1) {
     messageBuffer.forEach((msg) => socket.send(msg));
+    // 清空消息，表示所有的消息都已经成功发送。
     messageBuffer.length = 0;
   }
 }
@@ -433,8 +461,10 @@ type CustomListenersMap = Map<string, ((data: any) => void)[]>;
 
 const hotModulesMap = new Map<string, HotModule>();
 const disposeMap = new Map<string, (data: any) => void | Promise<void>>();
+// 存储在页面上不再被导入的模块
 const pruneMap = new Map<string, (data: any) => void | Promise<void>>();
 const dataMap = new Map<string, any>();
+// 存储自定义事件监听器
 const customListenersMap: CustomListenersMap = new Map();
 const ctxToListenersMap = new Map<string, CustomListenersMap>();
 
@@ -463,7 +493,7 @@ export function createHotContext(ownerPath: string): ViteHotContext {
 
   const newListeners: CustomListenersMap = new Map();
   ctxToListenersMap.set(ownerPath, newListeners);
-
+  // 将当前模块的接收模块信息和更新回调存储到hotModulesMap
   function acceptDeps(deps: string[], callback: HotCallback["fn"] = () => {}) {
     const mod: HotModule = hotModulesMap.get(ownerPath) || {
       id: ownerPath,
@@ -475,7 +505,7 @@ export function createHotContext(ownerPath: string): ViteHotContext {
     });
     hotModulesMap.set(ownerPath, mod);
   }
-
+  // import.meta.hot多种方法的实现
   const hot: ViteHotContext = {
     get data() {
       return dataMap.get(ownerPath);
@@ -496,7 +526,11 @@ export function createHotContext(ownerPath: string): ViteHotContext {
     acceptExports(_, callback) {
       acceptDeps([ownerPath], ([mod]) => callback?.(mod));
     },
-
+    // 当一个模块需要更新时，旧模块的状态可能需要被清理，
+    // 以避免与更新后的模块状态冲突或产生副作用
+    // 通过调用 dispose(cb)，可以将清理器函数与对应的模块路径关联起来，
+    // 以便在更新模块之前执行清理操作
+    // 清理器函数 cb 可以是一个异步函数，
     dispose(cb) {
       disposeMap.set(ownerPath, cb);
     },
