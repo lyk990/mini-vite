@@ -99,6 +99,11 @@ export class ModuleGraph {
     if (mods) {
       const seen = new Set<ModuleNode>();
       mods.forEach((mod) => {
+        // 对受到文件变化影响的模块的标记成失效状态
+        // 为了确保模块系统能够及时更新和重新加载这些模块
+        // 文件发生变化,或文件删除时,将其标记为失效状态
+        // 然后,模块系统在下一次需要使用到这些模块时，
+        // 会重新加载、解析和执行这些模块，从而使模块的最新状态得以反映出来
         this.invalidateModule(mod, seen);
       });
     }
